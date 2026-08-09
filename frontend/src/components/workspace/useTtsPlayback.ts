@@ -327,7 +327,7 @@ export function useTtsPlayback(params: {
             const lostMs =
               ((groupSegs.length - pieces.length) * MERGED_UTTERANCE_PADDING_MS) /
               Math.max(0.1, playbackSpeed)
-            extra = lostMs / (ttsWordInterval * 1500)
+            extra = lostMs / (ttsWordInterval * 1000)
           }
 
           // Keep a small gap at each internal (punctuation) boundary; the rest
@@ -395,7 +395,7 @@ export function useTtsPlayback(params: {
 
         utterance.onend = () => {
           if (abandonedUtterances.has(utterance)) return
-          const gapMs = compensatedGap(ttsWordInterval * 1500 * segment.gapMultiplier)
+          const gapMs = compensatedGap(ttsWordInterval * 1000 * segment.gapMultiplier)
           const groupId = groupIdOf[segIdx]
           const isLastOfGroup =
             segIdx + 1 >= segments.length || groupIdOf[segIdx + 1] !== groupId
