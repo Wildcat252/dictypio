@@ -176,6 +176,7 @@ export interface LessonSessionRecord {
   correct_chars: number
   hint_count: number
   incorrect_chars: number
+  typing_ms: number
 }
 
 export async function getLessonSessions(videoId: number): Promise<LessonSessionRecord[]> {
@@ -191,6 +192,7 @@ export async function saveLessonSession(body: {
   correct_chars: number
   hint_count: number
   incorrect_chars: number
+  typing_ms: number
 }): Promise<LessonSessionRecord> {
   const { data } = await api.post<LessonSessionRecord>('/api/user/lesson-sessions', body)
   return data
@@ -204,6 +206,7 @@ export async function upsertCurrentLessonSession(body: {
   correct_chars: number
   hint_count: number
   incorrect_chars: number
+  typing_ms: number
 }): Promise<LessonSessionRecord> {
   const { data } = await api.put<LessonSessionRecord>('/api/user/lesson-sessions/current', body)
   return data

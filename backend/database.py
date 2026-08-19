@@ -160,6 +160,9 @@ class LessonSession(Base):
     correct_chars = Column(Integer, nullable=False, default=0)
     hint_count = Column(Integer, nullable=False, default=0)
     incorrect_chars = Column(Integer, nullable=False, default=0)
+    # Summed per-sentence typing time: first keystroke of a sentence until it is
+    # fully correct. Drives the sidebar's words-per-minute figure.
+    typing_ms = Column(Integer, nullable=False, default=0)
 
     user = relationship("User", back_populates="lesson_sessions")
     video = relationship("Video", backref="lesson_sessions")
@@ -190,6 +193,16 @@ def migrate_db():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE videos ADD COLUMN audio_file_path VARCHAR"))
                 print("Database migrated: Added audio_file_path column to videos table")
+
+        # Typing time per session, for the sidebar's WPM stat
+        if 'lesson_sessions' in table_names:
+            columns = inspector.get_columns('lesson_sessions')
+            column_names = [col['name'] if isinstance(col, dict) else col.name for col in columns]
+
+            if 'typing_ms' not in column_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE lesson_sessions ADD COLUMN typing_ms INTEGER NOT NULL DEFAULT 0"))
+                print("Database migrated: Added typing_ms to lesson_sessions")
 
         # --- User and user_id migrations ---
         if 'users' in table_names:

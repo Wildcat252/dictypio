@@ -30,6 +30,8 @@ export interface VideoSessionScores {
   correctChars: number
   incorrectChars: number
   hintCount: number
+  // Summed per-sentence typing time in ms (first keystroke -> sentence correct).
+  typingMs: number
 }
 
 interface WorkspaceState {
@@ -63,6 +65,7 @@ const defaultScores: VideoSessionScores = {
   correctChars: 0,
   incorrectChars: 0,
   hintCount: 0,
+  typingMs: 0,
 }
 
 const STORAGE_KEY = 'ear2finger-workspace-progress'
@@ -245,7 +248,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [wordHintIndex, setWordHintIndex] = useState<number | null>(initialState.wordHintIndex)
   const [wordHintUsed, setWordHintUsed] = useState<boolean[]>(p.wordHintUsed ?? initialState.wordHintUsed)
   const [wordErrorChars, setWordErrorChars] = useState<number[]>(p.wordErrorChars ?? initialState.wordErrorChars)
-  const [videoSessionScores, setVideoSessionScores] = useState<VideoSessionScores>(p.videoSessionScores ?? { ...defaultScores })
+  const [videoSessionScores, setVideoSessionScores] = useState<VideoSessionScores>({ ...defaultScores, ...(p.videoSessionScores ?? {}) })
 
   const resetVideoSessionScores = useCallback(() => {
     setVideoSessionScores({ ...defaultScores })
