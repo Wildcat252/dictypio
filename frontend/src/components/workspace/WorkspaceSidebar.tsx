@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   api,
   createPlaylist,
@@ -15,6 +15,17 @@ function formatDuration(seconds: number) {
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+// Standard typing-test convention: a "word" is 5 characters. correct_chars counts
+// only forward-typed characters that keep the normalized prefix valid
+// (DictationArea), so backspace-and-retype is not re-credited -- this is net
+// correct keystrokes / 5, deliberately a little below a raw character count.
+function computeWpm(correctChars: number, typingMs: number): number | null {
+  if (!typingMs || typingMs < 1000 || !correctChars) return null
+  const wpm = (correctChars / 5) / (typingMs / 60000)
+  if (!Number.isFinite(wpm) || wpm <= 0 || wpm > 300) return null
+  return Math.round(wpm)
 }
 
 /**
@@ -49,18 +60,20 @@ export function WorkspaceSidebar({
     setSelectedLesson,
     setSentences,
     setSentencesVideoId,
+    videoSessionScores,
   } = useWorkspace()
 
   const [lessonMenuOpen, setLessonMenuOpen] = useState<number | null>(null)
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false)
-  const [lessonProgress, setLessonProgress] = useState<Record<number, number>>({})
+  // undefined = not fetched yet; null = fetched, no session on record.
+  const [lessonStats, setLessonStats] = useState<Record<number, LessonSessionRecord | null>>({})
 
   // Preload most recent lesson history per video to drive sidebar progress bars.
   useEffect(() => {
     if (!lessons.length) return
     const missingIds = lessons
       .map((l) => l.video_id)
-      .filter((id) => lessonProgress[id] === undefined)
+      .filter((id) => lessonStats[id] === undefined)
     if (!missingIds.length) return
 
       ; (async () => {
@@ -68,16 +81,43 @@ export function WorkspaceSidebar({
           missingIds.map(async (videoId) => {
             try {
               const sessions = await getLessonSessions(videoId)
-              const latest = sessions[0] as LessonSessionRecord | undefined
-              const sentences = latest?.sentences_practiced ?? 0
-              setLessonProgress((prev) => (prev[videoId] === undefined ? { ...prev, [videoId]: sentences } : prev))
+              const latest = (sessions[0] as LessonSessionRecord | undefined) ?? null
+              setLessonStats((prev) => (prev[videoId] === undefined ? { ...prev, [videoId]: latest } : prev))
             } catch {
               // ignore per-video errors
             }
           })
         )
       })()
-  }, [lessons, lessonProgress])
+  }, [lessons, lessonStats])
+
+  // The bulk prefetch above caches per video and never refetches, so a lesson
+  // you just practiced would keep a stale figure. Refresh both the lesson being
+  // opened and the one being left. handleLessonSelect fires its save without
+  // awaiting it and the autosave is debounced, so give those a beat to land.
+  const prevVideoIdRef = useRef<number | null>(null)
+  useEffect(() => {
+    const nextId = selectedLesson?.video_id ?? null
+    const prevId = prevVideoIdRef.current
+    prevVideoIdRef.current = nextId
+    const ids = [...new Set([nextId, prevId])].filter((x): x is number => x !== null)
+    if (!ids.length) return
+    let cancelled = false
+    const timer = setTimeout(() => {
+      ids.forEach(async (id) => {
+        try {
+          const sessions = await getLessonSessions(id)
+          if (!cancelled) setLessonStats((prev) => ({ ...prev, [id]: sessions[0] ?? null }))
+        } catch {
+          // ignore per-video errors
+        }
+      })
+    }, 1200)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [selectedLesson?.video_id])
 
   const handleNewPlaylist = async () => {
     const name = window.prompt('New playlist name:', 'My Playlist')
@@ -274,7 +314,14 @@ export function WorkspaceSidebar({
 
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {lessons.map((lesson) => {
-              const practicedSentences = lessonProgress[lesson.video_id] ?? 0
+              const latestSession = lessonStats[lesson.video_id] ?? null
+              const practicedSentences = latestSession?.sentences_practiced ?? 0
+              const isSelected = selectedLesson?.id === lesson.id
+              // The open lesson's stored record lags the debounced autosave, so
+              // read its speed from live state instead.
+              const wpm = isSelected
+                ? computeWpm(videoSessionScores.correctChars, videoSessionScores.typingMs)
+                : computeWpm(latestSession?.correct_chars ?? 0, latestSession?.typing_ms ?? 0)
               const totalSentences = lesson.sentence_count || 0
               const progressFraction =
                 totalSentences > 0 ? Math.max(0, Math.min(1, practicedSentences / totalSentences)) : 0
@@ -368,12 +415,15 @@ export function WorkspaceSidebar({
                       )}
                     </div>
                     <div
-                      className={`flex justify-between text-[11px] ${selectedLesson?.id === lesson.id ? 'text-gray-300' : 'text-gray-600'
+                      className={`flex justify-between gap-2 text-[11px] ${isSelected ? 'text-gray-300' : 'text-gray-600'
                         }`}
                     >
                       <span className="truncate">Duration: {formatDuration(lesson.duration)}</span>
-                      <span className="ml-2 whitespace-nowrap">
+                      <span className="whitespace-nowrap">
                         Sentences: {lesson.sentence_count}
+                      </span>
+                      <span className="whitespace-nowrap" title="Typing speed on your latest session">
+                        {wpm !== null ? `${wpm} WPM` : '— WPM'}
                       </span>
                     </div>
                     <div className="mt-1 h-1 w-full rounded-full bg-gray-200 overflow-hidden">

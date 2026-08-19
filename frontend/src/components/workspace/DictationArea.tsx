@@ -17,6 +17,7 @@ interface InputFeedback {
 export function DictationArea({
   currentSentence,
   isCurrentSentenceFullyCorrect,
+  onTypingActivity,
   wordInputRefs,
   normalizeWord,
   isPunctuationOnlyToken,
@@ -36,6 +37,8 @@ export function DictationArea({
 }: {
   currentSentence: Sentence | null
   isCurrentSentenceFullyCorrect: boolean
+  // Called on every character typed, so Workspace can time the sentence.
+  onTypingActivity: () => void
   wordInputRefs: MutableRefObject<(HTMLInputElement | null)[]>
   normalizeWord: (w: string) => string
   isPunctuationOnlyToken: (token: string) => boolean
@@ -253,6 +256,7 @@ export function DictationArea({
                             disabled={Boolean(isCurrentSentenceFullyCorrect)}
                             value={value}
                             onChange={(e) => {
+                              onTypingActivity()
                               const v = e.target.value
                               const prev = wordInputs[idx] ?? ''
                               // Count a wrong character event when the normalized prefix first diverges

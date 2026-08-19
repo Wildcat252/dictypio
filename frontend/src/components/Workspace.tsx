@@ -25,6 +25,13 @@ import LessonHistory from './LessonHistory'
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 
+// A single sentence never contributes more than this to the typing clock, so
+// walking away mid-sentence cannot wreck the WPM figure.
+const MAX_SENTENCE_TYPING_MS = 120_000
+// A pause longer than this between keystrokes counts as "stopped typing"
+// rather than "waiting for the next word to be spoken".
+const TYPING_IDLE_GAP_MS = 30_000
+
 const TRANSLATE_LANGUAGES = [
   { code: 'vi', label: 'Tiếng Việt' },
   { code: 'zh-CN', label: '中文' },
@@ -95,6 +102,28 @@ export default function Workspace() {
     const pad = (n: number) => n.toString().padStart(2, '0')
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
   }
+
+  // Per-sentence typing stopwatch feeding the sidebar's WPM stat. Time is
+  // measured from the first keystroke of a sentence until it reads fully
+  // correct; sentences abandoned without completing are never counted.
+  const typingStartRef = useRef<number | null>(null)
+  const lastKeystrokeRef = useRef<number | null>(null)
+  const sentenceElapsedRef = useRef(0)
+  const sentenceCountedRef = useRef(false)
+
+  const noteTypingActivity = useCallback(() => {
+    const now = Date.now()
+    const last = lastKeystrokeRef.current
+    if (typingStartRef.current === null) {
+      typingStartRef.current = now
+    } else if (last !== null && now - last > TYPING_IDLE_GAP_MS) {
+      // A gap this long means the user stepped away rather than waited for
+      // speech: bank what was actually typed and restart the clock.
+      sentenceElapsedRef.current += Math.max(0, last - typingStartRef.current)
+      typingStartRef.current = now
+    }
+    lastKeystrokeRef.current = now
+  }, [])
 
   const sessionStartedAtRef = useRef<string>(getLocalDateTimeString())
   const sessionSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -271,6 +300,7 @@ export default function Workspace() {
         correct_chars: videoSessionScores.correctChars,
         hint_count: videoSessionScores.hintCount,
         incorrect_chars: videoSessionScores.incorrectChars,
+        typing_ms: videoSessionScores.typingMs,
       }).catch(() => { })
     }
     sessionStartedAtRef.current = getLocalDateTimeString()
@@ -310,6 +340,7 @@ export default function Workspace() {
             correctChars: latest.correct_chars,
             incorrectChars: latest.incorrect_chars,
             hintCount: latest.hint_count,
+            typingMs: latest.typing_ms ?? 0,
           })
           userInitiatedSentenceChangeRef.current = true
           setCurrentSentenceIndex(targetIndex)
@@ -474,10 +505,35 @@ export default function Workspace() {
   // Play a celebration chime on the false→true edge of full correctness.
   // Initialized to the current value so a restored-complete sentence stays silent on mount.
   const prevFullyCorrectRef = useRef<boolean>(Boolean(isCurrentSentenceFullyCorrect))
+
+  // Declared above the edge effect below so that on an index-change commit this
+  // runs first: a stale-input spurious `true` then has no running clock to bank.
+  useEffect(() => {
+    typingStartRef.current = null
+    lastKeystrokeRef.current = null
+    sentenceElapsedRef.current = 0
+    sentenceCountedRef.current = false
+  }, [currentSentenceIndex, selectedLesson?.id])
+
   useEffect(() => {
     const now = Boolean(isCurrentSentenceFullyCorrect)
-    if (now && !prevFullyCorrectRef.current && audio.correctEnabled) {
-      playCelebrationChime(correctChimeOptions)
+    if (now && !prevFullyCorrectRef.current) {
+      if (!sentenceCountedRef.current && typingStartRef.current !== null) {
+        // End the span at the last keystroke rather than now: correctness can
+        // also flip long afterwards by toggling ignoreCase/ignorePunctuation.
+        const end = lastKeystrokeRef.current ?? typingStartRef.current
+        const span = Math.min(
+          sentenceElapsedRef.current + Math.max(0, end - typingStartRef.current),
+          MAX_SENTENCE_TYPING_MS
+        )
+        if (span > 0) {
+          setVideoSessionScores((s) => ({ ...s, typingMs: s.typingMs + span }))
+        }
+        sentenceCountedRef.current = true
+      }
+      if (audio.correctEnabled) {
+        playCelebrationChime(correctChimeOptions)
+      }
     }
     prevFullyCorrectRef.current = now
   }, [isCurrentSentenceFullyCorrect, audio, currentSentenceIndex])
@@ -503,6 +559,7 @@ export default function Workspace() {
       correct_chars: videoSessionScores.correctChars,
       hint_count: videoSessionScores.hintCount,
       incorrect_chars: videoSessionScores.incorrectChars,
+      typing_ms: videoSessionScores.typingMs,
     }
     if (sessionSaveTimeoutRef.current) clearTimeout(sessionSaveTimeoutRef.current)
     sessionSaveTimeoutRef.current = setTimeout(() => {
@@ -519,6 +576,7 @@ export default function Workspace() {
     videoSessionScores.correctChars,
     videoSessionScores.hintCount,
     videoSessionScores.incorrectChars,
+    videoSessionScores.typingMs,
   ])
 
   const isLessonFinished =
@@ -540,6 +598,7 @@ export default function Workspace() {
       correctChars: session.correct_chars,
       incorrectChars: session.incorrect_chars,
       hintCount: session.hint_count,
+      typingMs: session.typing_ms ?? 0,
     })
 
     // Restore sentence index and audio position
@@ -660,6 +719,7 @@ export default function Workspace() {
           <DictationArea
             currentSentence={currentSentence}
             isCurrentSentenceFullyCorrect={Boolean(isCurrentSentenceFullyCorrect)}
+            onTypingActivity={noteTypingActivity}
             wordInputRefs={wordInputRefs}
             normalizeWord={normalizeWord}
             isPunctuationOnlyToken={isPunctuationOnlyToken}
