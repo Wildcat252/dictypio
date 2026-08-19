@@ -436,20 +436,22 @@ export function useTtsPlayback(params: {
         speakUtterance(utterance)
       }
 
-      // Skip the rest of the current word — cut off its speech, drop the
-      // remaining gap and any pending punctuation names — and jump straight
-      // to the next word. The skipped word's input is left as-is.
+      // Skip the rest of the current group — cut off its speech, drop the
+      // remaining gap and any pending words/punctuation names — and jump
+      // straight to the next group. The unit is the whole group, so with
+      // Words/Gap = 8 one press moves on by 8 words, never into the middle of
+      // the run that is currently being spoken. The skipped inputs are left as-is.
       ttsSkipWordRef.current = () => {
         if (currentSegIdx < 0) return
-        const tokenIdx = segments[currentSegIdx].tokenIdx
+        const groupId = groupIdOf[currentSegIdx]
         if (currentUtterance) abandonedUtterances.add(currentUtterance)
         if (wordQueueTimeoutRef.current) {
           clearTimeout(wordQueueTimeoutRef.current)
           wordQueueTimeoutRef.current = null
         }
-        wordQueueIndexRef.current = tokenIdx + 1
+        wordQueueIndexRef.current = (groupId + 1) * groupSize
         let next = currentSegIdx + 1
-        while (next < segments.length && segments[next].tokenIdx === tokenIdx) next++
+        while (next < segments.length && groupIdOf[next] === groupId) next++
         if (next < segments.length) {
           speakSegment(next)
         } else {
@@ -459,27 +461,24 @@ export function useTtsPlayback(params: {
         }
       }
 
-      // Go back to the previous word: cut off the current speech and restart
-      // from the first segment of the preceding token. On the first word it
-      // simply replays that word from its start.
+      // Go back one group: cut off the current speech and restart from the
+      // first segment of the preceding group — the mirror of Skip, so both
+      // move by the same unit. A press part-way through a group restarts that
+      // group; on the first group it simply replays it from its start.
       ttsPrevWordRef.current = () => {
         if (currentSegIdx < 0) return
-        const tokenIdx = segments[currentSegIdx].tokenIdx
+        const groupId = groupIdOf[currentSegIdx]
         if (currentUtterance) abandonedUtterances.add(currentUtterance)
         if (wordQueueTimeoutRef.current) {
           clearTimeout(wordQueueTimeoutRef.current)
           wordQueueTimeoutRef.current = null
         }
-        // First segment of the current token; if we are already there, step to
-        // the token before it so a mid-word press does not just restart it.
-        let start = currentSegIdx
-        while (start > 0 && segments[start - 1].tokenIdx === tokenIdx) start--
+        let start = groupFirstSeg.get(groupId) ?? currentSegIdx
         if (start === currentSegIdx && start > 0) {
-          const prevTokenIdx = segments[start - 1].tokenIdx
-          start--
-          while (start > 0 && segments[start - 1].tokenIdx === prevTokenIdx) start--
+          const prevGroupId = groupIdOf[start - 1]
+          start = groupFirstSeg.get(prevGroupId) ?? start - 1
         }
-        wordQueueIndexRef.current = segments[start].tokenIdx
+        wordQueueIndexRef.current = groupIdOf[start] * groupSize
         speakSegment(start)
       }
 

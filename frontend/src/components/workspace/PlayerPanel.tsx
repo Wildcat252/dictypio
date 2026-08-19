@@ -378,7 +378,7 @@ export function PlayerPanel({
           <button
             type="button"
             onClick={() => ttsPrevWord()}
-            title={`Go back to the previous word (${displayKey(keybinds.prevWord)})`}
+            title={`Go back to the previous group of words (${displayKey(keybinds.prevWord)})`}
             className="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-800 transition-colors"
           >
             ⏮ Prev
@@ -388,7 +388,7 @@ export function PlayerPanel({
           <button
             type="button"
             onClick={() => ttsSkipWord()}
-            title={`Skip the current word and jump to the next one (${displayKey(keybinds.skipWord)})`}
+            title={`Skip the rest of the current group of words and jump to the next one (${displayKey(keybinds.skipWord)})`}
             className="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-800 transition-colors"
           >
             Skip ⏭
