@@ -52,7 +52,7 @@ interface WorkspaceState {
   ttsVoiceName: string
   ttsWordByWord: boolean
   ttsWordInterval: number
-  ttsWordsPerGap: number
+  ttsLettersPerGap: number
   ttsWordRepeat: number
   wordInputs: string[]
   wordHintIndex: number | null
@@ -85,7 +85,7 @@ type DurableSettings = {
   playbackSpeed: number
   ttsWordByWord: boolean
   ttsWordInterval: number
-  ttsWordsPerGap: number
+  ttsLettersPerGap: number
   ttsWordRepeat: number
 }
 
@@ -129,7 +129,7 @@ const initialState: WorkspaceState = {
   ttsVoiceName: '',
   ttsWordByWord: false,
   ttsWordInterval: 0.5,
-  ttsWordsPerGap: 1,
+  ttsLettersPerGap: 40,
   ttsWordRepeat: 1,
   wordInputs: [],
   wordHintIndex: null,
@@ -156,7 +156,7 @@ type WorkspaceContextValue = WorkspaceState & {
   setTtsVoiceName: (v: string) => void
   setTtsWordByWord: (v: boolean) => void
   setTtsWordInterval: (v: number) => void
-  setTtsWordsPerGap: (v: number) => void
+  setTtsLettersPerGap: (v: number) => void
   setTtsWordRepeat: (v: number) => void
   setWordInputs: (v: string[] | ((prev: string[]) => string[])) => void
   setWordHintIndex: (v: number | null) => void
@@ -210,7 +210,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [])
   const [ttsWordByWord, setTtsWordByWord] = useState<boolean>(durable.ttsWordByWord ?? p.ttsWordByWord ?? initialState.ttsWordByWord)
   const [ttsWordInterval, setTtsWordInterval] = useState<number>(durable.ttsWordInterval ?? p.ttsWordInterval ?? initialState.ttsWordInterval)
-  const [ttsWordsPerGap, setTtsWordsPerGap] = useState<number>(durable.ttsWordsPerGap ?? p.ttsWordsPerGap ?? initialState.ttsWordsPerGap)
+  const [ttsLettersPerGap, setTtsLettersPerGap] = useState<number>(durable.ttsLettersPerGap ?? p.ttsLettersPerGap ?? initialState.ttsLettersPerGap)
   const [ttsWordRepeat, setTtsWordRepeat] = useState<number>(durable.ttsWordRepeat ?? p.ttsWordRepeat ?? initialState.ttsWordRepeat)
 
   // Persist playback, grading and word-by-word settings across app restarts
@@ -226,7 +226,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           playbackSpeed,
           ttsWordByWord,
           ttsWordInterval,
-          ttsWordsPerGap,
+          ttsLettersPerGap,
           ttsWordRepeat,
         })
       )
@@ -241,7 +241,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     playbackSpeed,
     ttsWordByWord,
     ttsWordInterval,
-    ttsWordsPerGap,
+    ttsLettersPerGap,
     ttsWordRepeat,
   ])
   const [wordInputs, setWordInputs] = useState<string[]>(p.wordInputs ?? initialState.wordInputs)
@@ -274,7 +274,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         ttsVoiceName,
         ttsWordByWord,
         ttsWordInterval,
-        ttsWordsPerGap,
+        ttsLettersPerGap,
         ttsWordRepeat,
         wordInputs,
         wordHintIndex,
@@ -304,7 +304,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     ttsVoiceName,
     ttsWordByWord,
     ttsWordInterval,
-    ttsWordsPerGap,
+    ttsLettersPerGap,
     ttsWordRepeat,
     wordInputs,
     wordHintIndex,
@@ -348,8 +348,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTtsWordByWord,
     ttsWordInterval,
     setTtsWordInterval,
-    ttsWordsPerGap,
-    setTtsWordsPerGap,
+    ttsLettersPerGap,
+    setTtsLettersPerGap,
     ttsWordRepeat,
     setTtsWordRepeat,
     wordInputs,

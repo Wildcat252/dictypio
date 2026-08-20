@@ -35,7 +35,7 @@ const SPOKEN_PUNCTUATION: Record<string, string> = {
 
 /**
  * Drives speech-synthesis playback for text:// lessons, including word-by-word
- * mode, the Words/Gap grouping, sentence repeat and the pause interval.
+ * mode, the Letters/Gap grouping, sentence repeat and the pause interval.
  *
  * Refs shared with the audio player and lesson handling are passed in; refs
  * used only by speech are owned here.
@@ -66,7 +66,7 @@ export function useTtsPlayback(params: {
     ttsVoiceName,
     ttsWordByWord,
     ttsWordInterval,
-    ttsWordsPerGap,
+    ttsLettersPerGap,
     ttsWordRepeat,
   } = useWorkspace()
 
@@ -250,6 +250,38 @@ export function useTtsPlayback(params: {
       const words = currentSentence.sentence_text.split(/\s+/).filter(Boolean)
       if (words.length === 0) { onSentenceFinished(); return }
 
+      // Chop the sentence into groups of roughly this many letters, never
+      // splitting a word: a word that would push the group over budget starts
+      // the next group instead, so the budget is never exceeded. A group always
+      // holds at least one word, so a word longer than the whole budget simply
+      // forms its own group.
+      //
+      // Groups therefore vary in word count, which is why membership is looked
+      // up in these tables rather than computed by dividing the token index.
+      const letterBudget = Math.max(1, Math.floor(ttsLettersPerGap || 1))
+      // Same normalization the gap scaling uses: letters/digits, no punctuation.
+      const letterCount = (token: string) => token.replace(/[^\w]/g, '').length
+
+      const tokenGroupId: number[] = []
+      const groupFirstToken: number[] = []
+      {
+        let gid = 0
+        let used = 0
+        words.forEach((token, tokenIdx) => {
+          const n = letterCount(token)
+          if (used > 0 && used + n > letterBudget) {
+            gid++
+            used = 0
+          }
+          if (groupFirstToken[gid] === undefined) groupFirstToken[gid] = tokenIdx
+          tokenGroupId[tokenIdx] = gid
+          used += n
+        })
+      }
+      // When no group holds more than one word, keep the original
+      // one-word-at-a-time path untouched.
+      const hasMultiWordGroup = tokenGroupId.some((g, i) => i > 0 && tokenGroupId[i - 1] === g)
+
       // Expand each token into speech segments so the Word Gap also separates a
       // word from its spoken punctuation: "Hello," -> "Hello" (gap) "comma" (gap).
       // Punctuation-name segments use half the base gap (typing them is one
@@ -290,10 +322,9 @@ export function useTtsPlayback(params: {
       // utterance so it is spoken naturally ("how are you"), not as separate
       // words with the engine's boundary between them. The pause that follows
       // accumulates every gap the group's words would each have earned.
-      const groupSize = Math.max(1, Math.floor(ttsWordsPerGap || 1))
-      if (groupSize > 1) {
+      if (hasMultiWordGroup) {
         // Group by token, not segment, so a word and its punctuation stay together
-        const groupOf = (tokenIdx: number) => Math.floor(tokenIdx / groupSize)
+        const groupOf = (tokenIdx: number) => tokenGroupId[tokenIdx]
         const out: TtsSegment[] = []
         let i = 0
         while (i < segments.length) {
@@ -351,11 +382,11 @@ export function useTtsPlayback(params: {
       let currentUtterance: SpeechSynthesisUtterance | null = null
 
       // How many times each unit is spoken before moving on (1 = say it once).
-      // The unit is the whole group, so with Words/Gap > 1 the entire phrase —
+      // The unit is the whole group, so a multi-word group has its entire phrase —
       // punctuation included — repeats as one piece rather than each word
       // repeating on its own.
       const wordRepeats = Math.max(1, Math.min(5, Math.floor(ttsWordRepeat || 1)))
-      const groupIdOf = segments.map((seg) => Math.floor(seg.tokenIdx / groupSize))
+      const groupIdOf = segments.map((seg) => tokenGroupId[seg.tokenIdx])
       const groupFirstSeg = new Map<number, number>()
       groupIdOf.forEach((gid, i) => {
         if (!groupFirstSeg.has(gid)) groupFirstSeg.set(gid, i)
@@ -438,9 +469,9 @@ export function useTtsPlayback(params: {
 
       // Skip the rest of the current group — cut off its speech, drop the
       // remaining gap and any pending words/punctuation names — and jump
-      // straight to the next group. The unit is the whole group, so with
-      // Words/Gap = 8 one press moves on by 8 words, never into the middle of
-      // the run that is currently being spoken. The skipped inputs are left as-is.
+      // straight to the next group. The unit is the whole group, so one press
+      // moves on by a whole letter-budget's worth of words, never into the
+      // middle of the run being spoken. The skipped inputs are left as-is.
       ttsSkipWordRef.current = () => {
         if (currentSegIdx < 0) return
         const groupId = groupIdOf[currentSegIdx]
@@ -449,7 +480,7 @@ export function useTtsPlayback(params: {
           clearTimeout(wordQueueTimeoutRef.current)
           wordQueueTimeoutRef.current = null
         }
-        wordQueueIndexRef.current = (groupId + 1) * groupSize
+        wordQueueIndexRef.current = groupFirstToken[groupId + 1] ?? words.length
         let next = currentSegIdx + 1
         while (next < segments.length && groupIdOf[next] === groupId) next++
         if (next < segments.length) {
@@ -478,7 +509,7 @@ export function useTtsPlayback(params: {
           const prevGroupId = groupIdOf[start - 1]
           start = groupFirstSeg.get(prevGroupId) ?? start - 1
         }
-        wordQueueIndexRef.current = groupIdOf[start] * groupSize
+        wordQueueIndexRef.current = groupFirstToken[groupIdOf[start]]
         speakSegment(start)
       }
 
@@ -546,7 +577,7 @@ export function useTtsPlayback(params: {
     availableVoices,
     ttsWordByWord,
     ttsWordInterval,
-    ttsWordsPerGap,
+    ttsLettersPerGap,
     ttsWordRepeat,
   ])
 
