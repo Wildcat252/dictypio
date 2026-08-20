@@ -67,8 +67,8 @@ export function PlayerPanel({
     setTtsWordByWord,
     ttsWordInterval,
     setTtsWordInterval,
-    ttsWordsPerGap,
-    setTtsWordsPerGap,
+    ttsLettersPerGap,
+    setTtsLettersPerGap,
     ttsWordRepeat,
     setTtsWordRepeat,
     videoSessionScores,
@@ -326,15 +326,15 @@ export function PlayerPanel({
         )}
         {isTextLesson && ttsWordByWord && (
           <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs">
-            <span>Words/Gap:</span>
+            <span>Letters/Gap:</span>
             <input
-              key={ttsWordsPerGap}
+              key={ttsLettersPerGap}
               type="number"
-              defaultValue={ttsWordsPerGap}
+              defaultValue={ttsLettersPerGap}
               min={1}
-              max={20}
+              max={120}
               step={1}
-              title="Speak this many words before pausing (1–20). The pause adds up their gaps."
+              title="Speak about this many letters before pausing (1–120). Words are never split — a word that would exceed the budget starts the next group."
               onKeyDown={(e) => {
                 // Keep keystrokes local so global shortcuts (-, =, Enter…) don't fire
                 e.stopPropagation()
@@ -343,9 +343,9 @@ export function PlayerPanel({
               onBlur={(e) => {
                 const v = parseInt(e.currentTarget.value, 10)
                 if (Number.isFinite(v)) {
-                  setTtsWordsPerGap(Math.min(20, Math.max(1, v)))
+                  setTtsLettersPerGap(Math.min(120, Math.max(1, v)))
                 } else {
-                  e.currentTarget.value = String(ttsWordsPerGap)
+                  e.currentTarget.value = String(ttsLettersPerGap)
                 }
               }}
               className="w-12 bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-xs text-white text-right focus:outline-none focus:border-gray-500"
