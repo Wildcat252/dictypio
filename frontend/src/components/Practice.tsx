@@ -130,14 +130,12 @@ export default function Practice() {
     Promise.all([getUserStats(), getPracticeWordStates()])
       .then(([stats, states]) => {
         const deleted = new Set(states.deleted)
-        const tricky = [...(stats.top_incorrect_words ?? [])]
-          .filter(
-            (w) =>
-              (w.latest_spell_retry_times ?? 1) >= 3 &&
-              (w.hint_count ?? 0) > 0 &&
-              !deleted.has(w.word)
-          )
-          .sort((a, b) => (b.latest_spell_retry_times ?? 0) - (a.latest_spell_retry_times ?? 0))
+        // The server decides what counts as tricky and in what order; re-filtering
+        // or re-sorting here would silently override that rule. Only words the
+        // user explicitly deleted are dropped.
+        const tricky = [...(stats.top_incorrect_words ?? [])].filter(
+          (w) => !deleted.has(w.word)
+        )
         setTrickyWords(tricky)
         setCustomWords(states.custom)
         setBinned(states.binned)
