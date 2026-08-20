@@ -402,12 +402,16 @@ async def get_user_stats(
         )
 
     # Sort top words, emphasizing words that were recently retried.
-    # "Tricky" means the most recent attempt needed 3 or more tries *and* the
-    # word ever needed a hint — both signs of trouble must be present.
+    # A word is "tricky" either way round:
+    #   - the most recent attempt needed 3 or more tries AND it ever needed a
+    #     hint (both signs of trouble present at once), or
+    #   - it needed a hint on 2 or more separate occasions, however few tries
+    #     each attempt took: reaching for the hint twice is itself the signal.
     tricky_word_stats = [
         ws
         for ws in word_stats
-        if ws.latest_spell_retry_times >= 3.0 and ws.hint_count > 0
+        if (ws.latest_spell_retry_times >= 3.0 and ws.hint_count > 0)
+        or ws.hint_count >= 2
     ]
 
     top_incorrect_words = sorted(
