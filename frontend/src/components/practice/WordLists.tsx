@@ -86,7 +86,7 @@ export function WordLists({
         {!tableVisible ? null : (
           <>
         <p className="text-xs text-gray-500 mb-4">
-          Words your last attempt needed 3+ tries on and where you used a hint. Click one to
+          Words you asked for the hint on twice within the same sentence. Click one to
           practice it, or remove it once you've learnt it.
         </p>
 
