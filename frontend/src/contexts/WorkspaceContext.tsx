@@ -56,7 +56,9 @@ interface WorkspaceState {
   ttsWordRepeat: number
   wordInputs: string[]
   wordHintIndex: number | null
-  wordHintUsed: boolean[]
+  // Hint reveals per word in the current sentence. A count, not a flag, so
+  // reaching for the hint twice on one word is distinguishable from once.
+  wordHintCounts: number[]
   wordErrorChars: number[]
   videoSessionScores: VideoSessionScores
 }
@@ -133,7 +135,7 @@ const initialState: WorkspaceState = {
   ttsWordRepeat: 1,
   wordInputs: [],
   wordHintIndex: null,
-  wordHintUsed: [],
+  wordHintCounts: [],
   wordErrorChars: [],
   videoSessionScores: { ...defaultScores },
 }
@@ -160,7 +162,7 @@ type WorkspaceContextValue = WorkspaceState & {
   setTtsWordRepeat: (v: number) => void
   setWordInputs: (v: string[] | ((prev: string[]) => string[])) => void
   setWordHintIndex: (v: number | null) => void
-  setWordHintUsed: (v: boolean[] | ((prev: boolean[]) => boolean[])) => void
+  setWordHintCounts: (v: number[] | ((prev: number[]) => number[])) => void
   setWordErrorChars: (v: number[] | ((prev: number[]) => number[])) => void
   setVideoSessionScores: (v: VideoSessionScores | ((prev: VideoSessionScores) => VideoSessionScores)) => void
   resetVideoSessionScores: () => void
@@ -246,7 +248,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   ])
   const [wordInputs, setWordInputs] = useState<string[]>(p.wordInputs ?? initialState.wordInputs)
   const [wordHintIndex, setWordHintIndex] = useState<number | null>(initialState.wordHintIndex)
-  const [wordHintUsed, setWordHintUsed] = useState<boolean[]>(p.wordHintUsed ?? initialState.wordHintUsed)
+  const [wordHintCounts, setWordHintCounts] = useState<number[]>(p.wordHintCounts ?? initialState.wordHintCounts)
   const [wordErrorChars, setWordErrorChars] = useState<number[]>(p.wordErrorChars ?? initialState.wordErrorChars)
   const [videoSessionScores, setVideoSessionScores] = useState<VideoSessionScores>({ ...defaultScores, ...(p.videoSessionScores ?? {}) })
 
@@ -278,7 +280,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         ttsWordRepeat,
         wordInputs,
         wordHintIndex,
-        wordHintUsed,
+        wordHintCounts,
         wordErrorChars,
         videoSessionScores,
       }
@@ -308,7 +310,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     ttsWordRepeat,
     wordInputs,
     wordHintIndex,
-    wordHintUsed,
+    wordHintCounts,
     wordErrorChars,
     videoSessionScores,
   ])
@@ -356,8 +358,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setWordInputs,
     wordHintIndex,
     setWordHintIndex,
-    wordHintUsed,
-    setWordHintUsed,
+    wordHintCounts,
+    setWordHintCounts,
     wordErrorChars,
     setWordErrorChars,
     videoSessionScores,

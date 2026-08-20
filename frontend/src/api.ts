@@ -27,6 +27,8 @@ export interface WordStat {
   error_char_rate: number
   average_spell_retry_times: number
   latest_spell_retry_times: number
+  /** Sentences in which the hint was revealed 2+ times on this one word. */
+  repeat_hint_count: number
 }
 
 export interface DailyUserStats {

@@ -60,7 +60,7 @@ export default function Workspace() {
     ignorePunctuation,
     ignoreCase,
     wordInputs,
-    wordHintUsed,
+    wordHintCounts,
     wordErrorChars,
     videoSessionScores,
     setVideoSessionScores,
@@ -631,6 +631,9 @@ export default function Workspace() {
     const correctWords: string[] = []
     const incorrectWords: string[] = []
     const hintWords: string[] = []
+    // Words the hint was revealed on 2+ times within THIS sentence — a much
+    // stronger signal of trouble than needing it once.
+    const repeatHintWords: string[] = []
 
     words.forEach((w, idx) => {
       const input = (wordInputs[idx] ?? '').trim()
@@ -640,8 +643,12 @@ export default function Workspace() {
       } else {
         incorrectWords.push(w)
       }
-      if (wordHintUsed[idx]) {
+      const hints = wordHintCounts[idx] ?? 0
+      if (hints > 0) {
         hintWords.push(w)
+      }
+      if (hints >= 2) {
+        repeatHintWords.push(w)
       }
     })
 
@@ -652,6 +659,7 @@ export default function Workspace() {
       correct_words: correctWords,
       incorrect_words: incorrectWords,
       hint_words: hintWords,
+      repeat_hint_words: repeatHintWords,
       error_chars: wordErrorChars,
       completed: Boolean(isCurrentSentenceFullyCorrect),
     }
@@ -668,7 +676,7 @@ export default function Workspace() {
     currentSentence,
     selectedLesson,
     wordInputs,
-    wordHintUsed,
+    wordHintCounts,
     ignoreCase,
     ignorePunctuation,
     isCurrentSentenceFullyCorrect,
