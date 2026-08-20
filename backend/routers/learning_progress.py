@@ -430,6 +430,11 @@ async def get_user_stats(
     top_incorrect_words = sorted(
         tricky_word_stats,
         key=lambda ws: (
+            # Peeking twice at one word in a single sentence is the strongest
+            # signal, and it ranks first: such a word is typically typed right
+            # after the peek, so its retry count is ~1 and every other key
+            # would bury it at the bottom of the board.
+            ws.repeat_hint_count,
             ws.latest_spell_retry_times,
             ws.hint_count,
             ws.incorrect_count,
