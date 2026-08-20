@@ -39,6 +39,7 @@ function customStat(word: string): WordStat {
     error_char_rate: 0,
     average_spell_retry_times: 1,
     latest_spell_retry_times: 1,
+    repeat_hint_count: 0,
   }
 }
 

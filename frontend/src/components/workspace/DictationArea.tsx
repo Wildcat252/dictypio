@@ -62,7 +62,7 @@ export function DictationArea({
     setWordInputs,
     wordHintIndex,
     setWordHintIndex,
-    setWordHintUsed,
+    setWordHintCounts,
     setWordErrorChars,
     setVideoSessionScores,
   } = useWorkspace()
@@ -124,10 +124,10 @@ export function DictationArea({
       const ti = targetIdx
       setWordHintIndex(ti)
       setVideoSessionScores((s) => ({ ...s, hintCount: s.hintCount + 1 }))
-      setWordHintUsed((prev) => {
+      setWordHintCounts((prev) => {
         const next = [...prev]
-        while (next.length <= ti) next.push(false)
-        next[ti] = true
+        while (next.length <= ti) next.push(0)
+        next[ti] = (next[ti] ?? 0) + 1
         return next
       })
       wordInputRefs.current[ti]?.focus()
@@ -139,7 +139,7 @@ export function DictationArea({
       prevSentenceKeyRef.current = null
       setWordInputs([])
       setWordHintIndex(null)
-      setWordHintUsed([])
+      setWordHintCounts([])
       setWordErrorChars([])
       return
     }
@@ -148,7 +148,7 @@ export function DictationArea({
       const words = currentSentence.sentence_text.split(/\s+/).filter(Boolean)
       setWordInputs(words.map(() => ''))
       setWordHintIndex(null)
-      setWordHintUsed(words.map(() => false))
+      setWordHintCounts(words.map(() => 0))
       setWordErrorChars(words.map(() => 0))
       wordInputRefs.current = []
     }
@@ -355,10 +355,10 @@ export function DictationArea({
                                   } else {
                                     setWordHintIndex(idx)
                                     setVideoSessionScores((s) => ({ ...s, hintCount: s.hintCount + 1 }))
-                                    setWordHintUsed((prev) => {
+                                    setWordHintCounts((prev) => {
                                       const next = [...prev]
-                                      while (next.length <= idx) next.push(false)
-                                      next[idx] = true
+                                      while (next.length <= idx) next.push(0)
+                                      next[idx] = (next[idx] ?? 0) + 1
                                       return next
                                     })
                                   }
