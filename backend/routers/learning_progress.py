@@ -410,22 +410,15 @@ async def get_user_stats(
             )
         )
 
-    # Sort top words, emphasizing words that were recently retried.
-    # A word is "tricky" either way round:
-    #   - the most recent attempt needed 3 or more tries AND it ever needed a
-    #     hint (both signs of trouble present at once), or
-    #   - the hint was revealed 2+ times on that one word inside a single
-    #     sentence, however few tries the attempt took. Peeking twice at the
-    #     same word in one go is itself the signal.
-    # Note the second rule counts repeats WITHIN a sentence, not a word that
-    # merely needed one hint in each of two different sentences -- that caught
-    # every common short word.
-    tricky_word_stats = [
-        ws
-        for ws in word_stats
-        if (ws.latest_spell_retry_times >= 3.0 and ws.hint_count > 0)
-        or ws.repeat_hint_count > 0
-    ]
+    # A word is "tricky" on one signal only: the hint was revealed 2 or more
+    # times on that one word inside a single sentence. Peeking twice in one go
+    # is a deliberate admission that the word did not stick.
+    #
+    # This counts repeats WITHIN a sentence, not a word that merely needed one
+    # hint in each of two different sentences -- that caught every common short
+    # word. Retry counts no longer qualify a word on their own: fumbling the
+    # spelling a few times is ordinary, reaching for the answer twice is not.
+    tricky_word_stats = [ws for ws in word_stats if ws.repeat_hint_count > 0]
 
     top_incorrect_words = sorted(
         tricky_word_stats,
