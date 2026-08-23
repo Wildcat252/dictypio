@@ -27,6 +27,8 @@ export interface WordStat {
   error_char_rate: number
   average_spell_retry_times: number
   latest_spell_retry_times: number
+  /** Sentences in which the hint was revealed 2+ times on this one word. */
+  repeat_hint_count: number
 }
 
 export interface DailyUserStats {
@@ -176,6 +178,7 @@ export interface LessonSessionRecord {
   correct_chars: number
   hint_count: number
   incorrect_chars: number
+  typing_ms: number
 }
 
 export async function getLessonSessions(videoId: number): Promise<LessonSessionRecord[]> {
@@ -191,6 +194,7 @@ export async function saveLessonSession(body: {
   correct_chars: number
   hint_count: number
   incorrect_chars: number
+  typing_ms: number
 }): Promise<LessonSessionRecord> {
   const { data } = await api.post<LessonSessionRecord>('/api/user/lesson-sessions', body)
   return data
@@ -204,6 +208,7 @@ export async function upsertCurrentLessonSession(body: {
   correct_chars: number
   hint_count: number
   incorrect_chars: number
+  typing_ms: number
 }): Promise<LessonSessionRecord> {
   const { data } = await api.put<LessonSessionRecord>('/api/user/lesson-sessions/current', body)
   return data

@@ -25,6 +25,13 @@ import LessonHistory from './LessonHistory'
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 
+// A single sentence never contributes more than this to the typing clock, so
+// walking away mid-sentence cannot wreck the WPM figure.
+const MAX_SENTENCE_TYPING_MS = 120_000
+// A pause longer than this between keystrokes counts as "stopped typing"
+// rather than "waiting for the next word to be spoken".
+const TYPING_IDLE_GAP_MS = 30_000
+
 const TRANSLATE_LANGUAGES = [
   { code: 'vi', label: 'Tiếng Việt' },
   { code: 'zh-CN', label: '中文' },
@@ -53,7 +60,7 @@ export default function Workspace() {
     ignorePunctuation,
     ignoreCase,
     wordInputs,
-    wordHintUsed,
+    wordHintCounts,
     wordErrorChars,
     videoSessionScores,
     setVideoSessionScores,
@@ -95,6 +102,28 @@ export default function Workspace() {
     const pad = (n: number) => n.toString().padStart(2, '0')
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
   }
+
+  // Per-sentence typing stopwatch feeding the sidebar's WPM stat. Time is
+  // measured from the first keystroke of a sentence until it reads fully
+  // correct; sentences abandoned without completing are never counted.
+  const typingStartRef = useRef<number | null>(null)
+  const lastKeystrokeRef = useRef<number | null>(null)
+  const sentenceElapsedRef = useRef(0)
+  const sentenceCountedRef = useRef(false)
+
+  const noteTypingActivity = useCallback(() => {
+    const now = Date.now()
+    const last = lastKeystrokeRef.current
+    if (typingStartRef.current === null) {
+      typingStartRef.current = now
+    } else if (last !== null && now - last > TYPING_IDLE_GAP_MS) {
+      // A gap this long means the user stepped away rather than waited for
+      // speech: bank what was actually typed and restart the clock.
+      sentenceElapsedRef.current += Math.max(0, last - typingStartRef.current)
+      typingStartRef.current = now
+    }
+    lastKeystrokeRef.current = now
+  }, [])
 
   const sessionStartedAtRef = useRef<string>(getLocalDateTimeString())
   const sessionSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -271,6 +300,7 @@ export default function Workspace() {
         correct_chars: videoSessionScores.correctChars,
         hint_count: videoSessionScores.hintCount,
         incorrect_chars: videoSessionScores.incorrectChars,
+        typing_ms: videoSessionScores.typingMs,
       }).catch(() => { })
     }
     sessionStartedAtRef.current = getLocalDateTimeString()
@@ -310,6 +340,7 @@ export default function Workspace() {
             correctChars: latest.correct_chars,
             incorrectChars: latest.incorrect_chars,
             hintCount: latest.hint_count,
+            typingMs: latest.typing_ms ?? 0,
           })
           userInitiatedSentenceChangeRef.current = true
           setCurrentSentenceIndex(targetIndex)
@@ -474,10 +505,35 @@ export default function Workspace() {
   // Play a celebration chime on the false→true edge of full correctness.
   // Initialized to the current value so a restored-complete sentence stays silent on mount.
   const prevFullyCorrectRef = useRef<boolean>(Boolean(isCurrentSentenceFullyCorrect))
+
+  // Declared above the edge effect below so that on an index-change commit this
+  // runs first: a stale-input spurious `true` then has no running clock to bank.
+  useEffect(() => {
+    typingStartRef.current = null
+    lastKeystrokeRef.current = null
+    sentenceElapsedRef.current = 0
+    sentenceCountedRef.current = false
+  }, [currentSentenceIndex, selectedLesson?.id])
+
   useEffect(() => {
     const now = Boolean(isCurrentSentenceFullyCorrect)
-    if (now && !prevFullyCorrectRef.current && audio.correctEnabled) {
-      playCelebrationChime(correctChimeOptions)
+    if (now && !prevFullyCorrectRef.current) {
+      if (!sentenceCountedRef.current && typingStartRef.current !== null) {
+        // End the span at the last keystroke rather than now: correctness can
+        // also flip long afterwards by toggling ignoreCase/ignorePunctuation.
+        const end = lastKeystrokeRef.current ?? typingStartRef.current
+        const span = Math.min(
+          sentenceElapsedRef.current + Math.max(0, end - typingStartRef.current),
+          MAX_SENTENCE_TYPING_MS
+        )
+        if (span > 0) {
+          setVideoSessionScores((s) => ({ ...s, typingMs: s.typingMs + span }))
+        }
+        sentenceCountedRef.current = true
+      }
+      if (audio.correctEnabled) {
+        playCelebrationChime(correctChimeOptions)
+      }
     }
     prevFullyCorrectRef.current = now
   }, [isCurrentSentenceFullyCorrect, audio, currentSentenceIndex])
@@ -503,6 +559,7 @@ export default function Workspace() {
       correct_chars: videoSessionScores.correctChars,
       hint_count: videoSessionScores.hintCount,
       incorrect_chars: videoSessionScores.incorrectChars,
+      typing_ms: videoSessionScores.typingMs,
     }
     if (sessionSaveTimeoutRef.current) clearTimeout(sessionSaveTimeoutRef.current)
     sessionSaveTimeoutRef.current = setTimeout(() => {
@@ -519,6 +576,7 @@ export default function Workspace() {
     videoSessionScores.correctChars,
     videoSessionScores.hintCount,
     videoSessionScores.incorrectChars,
+    videoSessionScores.typingMs,
   ])
 
   const isLessonFinished =
@@ -540,6 +598,7 @@ export default function Workspace() {
       correctChars: session.correct_chars,
       incorrectChars: session.incorrect_chars,
       hintCount: session.hint_count,
+      typingMs: session.typing_ms ?? 0,
     })
 
     // Restore sentence index and audio position
@@ -572,6 +631,9 @@ export default function Workspace() {
     const correctWords: string[] = []
     const incorrectWords: string[] = []
     const hintWords: string[] = []
+    // Words the hint was revealed on 2+ times within THIS sentence — a much
+    // stronger signal of trouble than needing it once.
+    const repeatHintWords: string[] = []
 
     words.forEach((w, idx) => {
       const input = (wordInputs[idx] ?? '').trim()
@@ -581,8 +643,12 @@ export default function Workspace() {
       } else {
         incorrectWords.push(w)
       }
-      if (wordHintUsed[idx]) {
+      const hints = wordHintCounts[idx] ?? 0
+      if (hints > 0) {
         hintWords.push(w)
+      }
+      if (hints >= 2) {
+        repeatHintWords.push(w)
       }
     })
 
@@ -593,6 +659,7 @@ export default function Workspace() {
       correct_words: correctWords,
       incorrect_words: incorrectWords,
       hint_words: hintWords,
+      repeat_hint_words: repeatHintWords,
       error_chars: wordErrorChars,
       completed: Boolean(isCurrentSentenceFullyCorrect),
     }
@@ -609,7 +676,7 @@ export default function Workspace() {
     currentSentence,
     selectedLesson,
     wordInputs,
-    wordHintUsed,
+    wordHintCounts,
     ignoreCase,
     ignorePunctuation,
     isCurrentSentenceFullyCorrect,
@@ -617,7 +684,7 @@ export default function Workspace() {
 
 
   return (
-    <div className="h-screen min-h-0 flex flex-col bg-white">
+    <div className="h-screen min-h-0 flex flex-col bg-transparent text-slate-100">
       {/* Header */}
       <AppHeader
         active="workspace"
@@ -638,7 +705,7 @@ export default function Workspace() {
         />
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 p-3 md:p-4 gap-3 md:gap-4">
+        <main className="flex-1 flex flex-col overflow-hidden bg-abyss-950/40 p-3 md:p-4 gap-3 md:gap-4">
           <PlayerPanel
             audioRef={audioRef}
             audioBlobUrl={audioBlobUrl}
@@ -660,6 +727,7 @@ export default function Workspace() {
           <DictationArea
             currentSentence={currentSentence}
             isCurrentSentenceFullyCorrect={Boolean(isCurrentSentenceFullyCorrect)}
+            onTypingActivity={noteTypingActivity}
             wordInputRefs={wordInputRefs}
             normalizeWord={normalizeWord}
             isPunctuationOnlyToken={isPunctuationOnlyToken}
@@ -681,44 +749,44 @@ export default function Workspace() {
       </div>
 
       {/* Bottom bar: import progress + shortcuts */}
-      <footer className="flex-shrink-0 border-t border-gray-200 bg-gray-50 px-3 md:px-4 py-2 md:py-1.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-6 text-xs text-gray-600">
+      <footer className="flex-shrink-0 border-t border-cyan-500/20 bg-abyss-900/90 backdrop-blur-md px-3 md:px-4 py-2 md:py-1.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-6 text-xs text-slate-300">
         <div className="flex-1 min-w-0 md:pr-4">
           {isImportInProgress && (
             <div className="flex items-center gap-3">
-              <span className="whitespace-nowrap text-indigo-800">Importing lesson…</span>
-              <div className="h-1.5 w-full bg-indigo-200 rounded-full overflow-hidden">
+              <span className="whitespace-nowrap text-cyan-400 font-medium animate-pulse">Importing lesson…</span>
+              <div className="h-1.5 w-full bg-abyss-800 rounded-full overflow-hidden border border-cyan-500/30">
                 <div
-                  className="h-full w-2/5 bg-indigo-600 rounded-full"
+                  className="h-full w-2/5 bg-gradient-to-r from-cyan-400 to-teal-400 rounded-full shadow-glow-cyan"
                   style={{ animation: 'importProgress 1.5s ease-in-out infinite' }}
                 />
               </div>
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 md:gap-4 flex-wrap justify-start md:justify-end">
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.playPause)}</kbd> play/pause</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.replay)}</kbd> replay</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.prevSentence)}</kbd> previous</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.nextSentence)}</kbd> next</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">Shift+Space</kbd> previous word</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">Space</kbd> next word</span>
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-start md:justify-end">
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.playPause)}</kbd> play/pause</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.replay)}</kbd> replay</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.prevSentence)}</kbd> previous</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.nextSentence)}</kbd> next</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">Shift+Space</kbd> prev word</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">Space</kbd> next word</span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">Tab</kbd> reveal hint
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">Tab</kbd> hint
           </span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.speedDown)}</kbd> / <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.speedUp)}</kbd> speed
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.speedDown)}</kbd>/<kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.speedUp)}</kbd> speed
           </span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.wordByWord)}</kbd> WbW
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.wordByWord)}</kbd> WbW
           </span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.prevWord)}</kbd> prev word
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.prevWord)}</kbd> prev
           </span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.skipWord)}</kbd> skip word
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.skipWord)}</kbd> skip
           </span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">{displayKey(keybinds.translate)}</kbd> translate
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.translate)}</kbd> translate
           </span>
         </div>
       </footer>
@@ -743,11 +811,11 @@ export default function Workspace() {
         {notifications.map((note) => (
           <div
             key={note.id}
-            className={`w-full md:min-w-[260px] md:w-auto rounded-lg shadow-lg border px-4 py-3 text-sm font-medium ${note.type === 'success'
-              ? 'bg-green-50 text-green-800 border-green-200'
+            className={`w-full md:min-w-[280px] md:w-auto rounded-xl shadow-xl border px-4 py-3 text-sm font-semibold backdrop-blur-md transition-all ${note.type === 'success'
+              ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/40 shadow-glow-emerald'
               : note.type === 'error'
-                ? 'bg-red-50 text-red-800 border-red-200'
-                : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                ? 'bg-rose-950/90 text-rose-200 border-rose-500/40 shadow-glow-rose'
+                : 'bg-cyan-950/90 text-cyan-200 border-cyan-500/40 shadow-glow-cyan'
               }`}
             role="status"
           >

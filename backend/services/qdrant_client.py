@@ -39,6 +39,8 @@ from database import (
     SessionLocal,
     Video,
 )
+from fastapi import HTTPException
+
 from services.ai_client_factory import make_embeddings_for_user
 
 logger = logging.getLogger(__name__)
@@ -263,11 +265,23 @@ def _embed_texts(db: Session, user_id: int, texts: Sequence[str]) -> List[List[f
 
     Embeddings are provider-agnostic and do not require an API key; the user_id
     is used only for logging and future per-user overrides.
+
+    Semantic indexing is an optional extra: without a Gemini API key configured
+    there is simply nothing to embed with, which is an ordinary state rather
+    than a failure. Return no vectors so callers skip quietly instead of every
+    lesson save raising through the background task and logging a traceback.
     """
     if not texts:
         return []
 
-    embeddings = make_embeddings_for_user(user_id=user_id, db=db)
+    try:
+        embeddings = make_embeddings_for_user(user_id=user_id, db=db)
+    except HTTPException:
+        logger.debug(
+            "qdrant: no Gemini API key for user_id=%s; skipping semantic indexing",
+            user_id,
+        )
+        return []
     # embed_documents expects a list of strings and returns a list of vectors
     vectors = embeddings.embed_documents(list(texts))
     return [list(vec) for vec in vectors]
@@ -480,7 +494,7 @@ def ingest_sentences_for_video(video_id: int, user_id: int) -> None:
         vectors = _embed_texts(db, user_id=user_id, texts=texts)
 
         if not vectors:
-            logger.warning(
+            logger.debug(
                 "qdrant: embedding returned no vectors for video_id=%s user_id=%s",
                 video_id,
                 user_id,
@@ -666,7 +680,7 @@ def ingest_learning_progress_event(learning_progress_id: int) -> None:
 
         vectors = _embed_texts(db, user_id=lp.user_id, texts=[summary_text])
         if not vectors:
-            logger.warning(
+            logger.debug(
                 "qdrant: no vector produced for LearningProgress id=%s",
                 learning_progress_id,
             )
@@ -799,7 +813,7 @@ def ingest_lesson_session_event(lesson_session_id: int) -> None:
 
         vectors = _embed_texts(db, user_id=session.user_id, texts=[summary_text])
         if not vectors:
-            logger.warning(
+            logger.debug(
                 "qdrant: no vector produced for LessonSession id=%s",
                 lesson_session_id,
             )

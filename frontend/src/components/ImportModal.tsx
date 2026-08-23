@@ -110,17 +110,17 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-abyss-900/95 backdrop-blur-xl rounded-2xl border border-cyan-500/30 shadow-[0_0_60px_rgba(0,0,0,0.8),0_0_25px_rgba(6,182,212,0.15)] max-w-md w-full max-h-[90vh] overflow-y-auto text-slate-100">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Import YouTube Audio & Subtitles</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-300 via-teal-200 to-sky-300 bg-clip-text text-transparent">Import Lesson</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -128,13 +128,13 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
 
           <>
             {/* Import Type Tabs */}
-            <div className="flex border-b border-gray-200 mb-6">
+            <div className="flex border-b border-cyan-500/20 mb-6">
               <button
                 type="button"
-                className={`flex-1 pb-2 text-center font-medium text-sm ${
+                className={`flex-1 pb-2.5 text-center font-semibold text-sm transition-all ${
                   importType === 'youtube'
-                    ? 'border-b-2 border-indigo-500 text-indigo-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
                 onClick={() => setImportType('youtube')}
               >
@@ -142,10 +142,10 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
               </button>
               <button
                 type="button"
-                className={`flex-1 pb-2 text-center font-medium text-sm ${
+                className={`flex-1 pb-2.5 text-center font-semibold text-sm transition-all ${
                   importType === 'text'
-                    ? 'border-b-2 border-indigo-500 text-indigo-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
                 onClick={() => setImportType('text')}
               >
@@ -156,7 +156,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
             {/* YouTube URL Input */}
             {importType === 'youtube' ? (
               <div className="mb-6">
-                <label htmlFor="youtube-url" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="youtube-url" className="block text-sm font-semibold text-cyan-300 mb-2">
                   YouTube URL
                 </label>
                 <input
@@ -165,13 +165,13 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-white placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
                 />
               </div>
             ) : (
               <>
                 <div className="mb-4">
-                  <label htmlFor="text-title" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="text-title" className="block text-sm font-semibold text-cyan-300 mb-2">
                     Title
                   </label>
                   <input
@@ -180,11 +180,11 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                     value={textTitle}
                     onChange={(e) => setTextTitle(e.target.value)}
                     placeholder="Enter a title for this lesson..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-white placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
                   />
                 </div>
                 <div className="mb-6">
-                  <label htmlFor="text-content" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="text-content" className="block text-sm font-semibold text-cyan-300 mb-2">
                     Paragraph Content
                   </label>
                   <textarea
@@ -193,7 +193,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                     value={textContent}
                     onChange={(e) => setTextContent(e.target.value)}
                     placeholder="Paste the paragraph text to practice..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-white placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 resize-none transition-all"
                   />
                 </div>
               </>
@@ -201,7 +201,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
 
             {/* Playlist Selection */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-cyan-300 mb-2">
                 Select Playlist
               </label>
 
@@ -210,10 +210,10 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                 {playlists.map((playlist) => (
                   <label
                     key={playlist.id}
-                    className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                    className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all ${
                       selectedPlaylistId === playlist.id
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-cyan-400/70 bg-cyan-950/60 shadow-glow-cyan'
+                        : 'border-cyan-500/20 bg-abyss-800/50 hover:border-cyan-500/40 hover:bg-abyss-800/80'
                     }`}
                   >
                     <input
@@ -222,19 +222,19 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                       value={playlist.id}
                       checked={selectedPlaylistId === playlist.id}
                       onChange={() => setSelectedPlaylistId(playlist.id)}
-                      className="mr-3"
+                      className="mr-3 accent-cyan-400"
                     />
-                    <div className="flex flex-row items-center w-full justify-between pl-2 pr-1 sm:px-8">
-                      <div className="text-sm text-gray-900">{playlist.name}</div>
-                      <div className="text-xs text-gray-500">{playlist.video_count} videos</div>
+                    <div className="flex flex-row items-center w-full justify-between pl-2 pr-1 sm:px-6">
+                      <div className="text-sm font-medium text-slate-100">{playlist.name}</div>
+                      <div className="text-xs text-cyan-400/80 font-mono">{playlist.video_count} videos</div>
                     </div>
                   </label>
                 ))}
               </div>
 
               {/* Create New Playlist */}
-              <div className="border-t border-gray-200 pt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="border-t border-cyan-500/20 pt-4">
+                <label className="block text-sm font-semibold text-cyan-300 mb-2">
                   Or Create New Playlist
                 </label>
                 <div className="flex gap-2">
@@ -243,7 +243,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                     value={newPlaylistName}
                     onChange={(e) => setNewPlaylistName(e.target.value)}
                     placeholder="Enter playlist name..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="flex-1 px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-white placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         handleCreatePlaylist()
@@ -253,24 +253,24 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                   <button
                     onClick={handleCreatePlaylist}
                     disabled={isCreatingPlaylist || !newPlaylistName.trim()}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                    className="px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-glow-cyan transition-all"
                   >
-                    {isCreatingPlaylist ? 'Creating...' : 'Create'}
+                    {isCreatingPlaylist ? 'Creating…' : 'Create'}
                   </button>
                 </div>
               </div>
             </div>
 
             {error && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-800">{error}</p>
+              <div className="mb-4 bg-rose-950/70 border border-rose-500/40 rounded-xl p-3.5">
+                <p className="text-sm text-rose-300">{error}</p>
               </div>
             )}
 
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2.5 border border-cyan-500/30 bg-abyss-800/80 text-slate-200 font-semibold rounded-xl hover:text-cyan-300 hover:border-cyan-400/60 hover:bg-abyss-750 transition-all"
               >
                 Cancel
               </button>
@@ -281,7 +281,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                     ? !youtubeUrl.trim() || !selectedPlaylistId
                     : !textTitle.trim() || !textContent.trim() || !selectedPlaylistId
                 }
-                className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-cyan-500 via-teal-500 to-sky-600 hover:from-cyan-400 hover:via-teal-400 hover:to-sky-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-glow-cyan transition-all transform hover:scale-[1.02] active:scale-[0.98]"
               >
                 Import
               </button>

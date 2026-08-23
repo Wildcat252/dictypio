@@ -67,8 +67,8 @@ export function PlayerPanel({
     setTtsWordByWord,
     ttsWordInterval,
     setTtsWordInterval,
-    ttsWordsPerGap,
-    setTtsWordsPerGap,
+    ttsLettersPerGap,
+    setTtsLettersPerGap,
     ttsWordRepeat,
     setTtsWordRepeat,
     videoSessionScores,
@@ -79,9 +79,9 @@ export function PlayerPanel({
   const sentenceCount = sentences.length
 
   return (
-    <div className="w-full max-w-4xl mx-auto shrink-0 bg-white rounded-xl border border-gray-200 p-3 md:p-4">
+    <div className="w-full max-w-4xl mx-auto shrink-0 bg-abyss-900/90 backdrop-blur-md rounded-2xl border border-cyan-500/25 p-3.5 md:p-4 shadow-glass-glow">
       <div className="mb-3 md:mb-4 text-center">
-        <h1 className="text-lg md:text-xl font-semibold text-gray-900 text-center line-clamp-2">
+        <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-slate-100 via-cyan-100 to-teal-200 bg-clip-text text-transparent text-center line-clamp-2 tracking-wide">
           {selectedLesson?.title || 'Select a lesson'}
         </h1>
       </div>
@@ -108,7 +108,7 @@ export function PlayerPanel({
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4 mb-3 md:mb-4">
         {/* Media Player */}
-        <div className="flex-1 flex items-center gap-2 min-w-0 w-full">
+        <div className="flex-1 flex items-center gap-2.5 min-w-0 w-full">
           <button
             onClick={() => {
               if (currentSentenceIndex > 0) {
@@ -126,9 +126,10 @@ export function PlayerPanel({
               }
             }}
             disabled={currentSentenceIndex === 0}
-            className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Previous sentence"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
             </svg>
           </button>
@@ -146,14 +147,15 @@ export function PlayerPanel({
               }
             }}
             disabled={!selectedLesson || !sentences.length}
-            className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
+            title={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             ) : (
-              <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
               </svg>
             )}
@@ -178,10 +180,10 @@ export function PlayerPanel({
               }
             }}
             disabled={!selectedLesson || !sentences.length}
-            className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Replay current sentence"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311V15a.75.75 0 01-1.5 0v-3.5a.75.75 0 01.75-.75H8.5a.75.75 0 010 1.5H7.058l.162.162a4 4 0 006.693-1.793.75.75 0 011.399.555zM4.688 8.576a5.5 5.5 0 019.201-2.466l.312.311V5a.75.75 0 011.5 0v3.5a.75.75 0 01-.75.75H11.5a.75.75 0 010-1.5h1.442l-.162-.162a4 4 0 00-6.693 1.793.75.75 0 11-1.399-.555z" clipRule="evenodd" />
             </svg>
           </button>
@@ -211,20 +213,20 @@ export function PlayerPanel({
               setIsPlaying(true)
             }}
             disabled={currentSentenceIndex >= sentences.length - 1}
-            className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Next sentence"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0011 6v2.798l-5.445-3.63z" />
             </svg>
           </button>
-          <div className="flex-1 flex items-center gap-2 min-w-0">
+          <div className="flex-1 flex items-center gap-3 min-w-0">
             <div
-              className="flex-1 min-w-0 h-2 rounded-full overflow-hidden relative pointer-events-none"
+              className="flex-1 min-w-0 h-2.5 rounded-full overflow-hidden relative pointer-events-none bg-abyss-950 border border-cyan-500/20"
               aria-hidden
             >
-              <div className="absolute inset-0 bg-gray-200 rounded-full" />
               <div
-                className="absolute inset-y-0 left-0 bg-indigo-600 rounded-full origin-left"
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 rounded-full origin-left shadow-glow-cyan"
                 style={{
                   width: `${isTextLesson
                     ? sentences.length > 0
@@ -238,16 +240,16 @@ export function PlayerPanel({
                 }}
               />
             </div>
-            <span className="text-sm text-gray-600 min-w-[3rem]">
+            <span className="text-xs text-slate-300 font-mono min-w-[3.5rem]">
               {isTextLesson ? (
-                <span className="text-gray-500 bg-gray-200 text-xs rounded-full px-2 py-1">
+                <span className="text-cyan-300 bg-abyss-800/80 border border-cyan-500/30 text-xs font-semibold rounded-full px-2.5 py-0.5 shadow-sm">
                   Sentence {currentSentenceIndex + 1} / {sentences.length}
                 </span>
               ) : (
                 <>
-                  {formatTime(currentTime)} / {formatTime(totalDuration)}
+                  <span className="text-slate-300">{formatTime(currentTime)}</span> / <span className="text-slate-400">{formatTime(totalDuration)}</span>
                   {sentenceCount > 0 && (
-                    <span className="ml-2 text-gray-500 bg-gray-200 text-xs rounded-full px-2 py-1">
+                    <span className="ml-2 text-cyan-300 bg-abyss-800/80 border border-cyan-500/30 text-xs font-semibold rounded-full px-2 py-0.5 shadow-sm">
                       {currentSentenceIndex + 1} / {sentenceCount}
                     </span>
                   )}
@@ -259,20 +261,20 @@ export function PlayerPanel({
       </div>
 
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+      <div className="flex flex-wrap items-center gap-2 md:gap-2.5">
         <div className="relative group">
-          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs cursor-pointer">
+          <div className="bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60">
             <span>Speed: {playbackSpeed}x</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg text-gray-900 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 min-w-[120px]">
+          <div className="absolute top-full left-0 mt-1.5 bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 min-w-[120px] py-1">
             {SPEED_OPTIONS.map((speed) => (
               <button
                 key={speed}
                 onClick={() => setPlaybackSpeed(speed)}
-                className={`w-full text-left px-4 py-2 text-xs text-gray-900 hover:bg-gray-100 ${playbackSpeed === speed ? 'bg-gray-100 font-semibold' : ''
+                className={`w-full text-left px-3.5 py-1.5 text-xs transition-colors ${playbackSpeed === speed ? 'bg-cyan-950/60 text-cyan-300 font-semibold' : 'hover:bg-abyss-800 text-slate-200'
                   }`}
               >
                 {speed}x
@@ -282,9 +284,9 @@ export function PlayerPanel({
         </div>
         {isTextLesson && (
           <div
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs cursor-pointer transition-colors ${ttsWordByWord
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-900 text-white'
+            className={`px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
+              ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-cyan-400 shadow-glow-cyan'
+              : 'bg-abyss-800/90 text-slate-300 border-cyan-500/30 hover:border-cyan-400/50 hover:bg-abyss-750'
               }`}
             onClick={() => {
               // Reset word queue before toggling so the effect re-enters cleanly
@@ -296,8 +298,8 @@ export function PlayerPanel({
           </div>
         )}
         {isTextLesson && ttsWordByWord && (
-          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs">
-            <span>Word Gap:</span>
+          <div className="bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300">
+            <span className="text-cyan-300 font-medium">Word Gap:</span>
             <input
               key={ttsWordInterval}
               type="number"
@@ -307,7 +309,6 @@ export function PlayerPanel({
               step={0.05}
               title="Seconds between spoken words (0–10)"
               onKeyDown={(e) => {
-                // Keep keystrokes local so global shortcuts (-, =, Enter…) don't fire
                 e.stopPropagation()
                 if (e.key === 'Enter') e.currentTarget.blur()
               }}
@@ -319,53 +320,52 @@ export function PlayerPanel({
                   e.currentTarget.value = String(ttsWordInterval)
                 }
               }}
-              className="w-14 bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-xs text-white text-right focus:outline-none focus:border-gray-500"
+              className="w-14 bg-abyss-950 border border-cyan-500/40 rounded-lg px-1.5 py-0.5 text-xs text-cyan-200 text-right focus:outline-none focus:ring-1 focus:ring-cyan-400"
             />
             <span>s</span>
           </div>
         )}
         {isTextLesson && ttsWordByWord && (
-          <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs">
-            <span>Words/Gap:</span>
+          <div className="bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300">
+            <span className="text-cyan-300 font-medium">Letters/Gap:</span>
             <input
-              key={ttsWordsPerGap}
+              key={ttsLettersPerGap}
               type="number"
-              defaultValue={ttsWordsPerGap}
+              defaultValue={ttsLettersPerGap}
               min={1}
-              max={20}
+              max={120}
               step={1}
-              title="Speak this many words before pausing (1–20). The pause adds up their gaps."
+              title="Speak about this many letters before pausing (1–120). Words are never split — a word that would exceed the budget starts the next group."
               onKeyDown={(e) => {
-                // Keep keystrokes local so global shortcuts (-, =, Enter…) don't fire
                 e.stopPropagation()
                 if (e.key === 'Enter') e.currentTarget.blur()
               }}
               onBlur={(e) => {
                 const v = parseInt(e.currentTarget.value, 10)
                 if (Number.isFinite(v)) {
-                  setTtsWordsPerGap(Math.min(20, Math.max(1, v)))
+                  setTtsLettersPerGap(Math.min(120, Math.max(1, v)))
                 } else {
-                  e.currentTarget.value = String(ttsWordsPerGap)
+                  e.currentTarget.value = String(ttsLettersPerGap)
                 }
               }}
-              className="w-12 bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-xs text-white text-right focus:outline-none focus:border-gray-500"
+              className="w-12 bg-abyss-950 border border-cyan-500/40 rounded-lg px-1.5 py-0.5 text-xs text-cyan-200 text-right focus:outline-none focus:ring-1 focus:ring-cyan-400"
             />
           </div>
         )}
         {isTextLesson && ttsWordByWord && (
           <div className="relative group">
-            <div className="bg-gray-900 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs cursor-pointer">
-              <span>Repeat word: {ttsWordRepeat}x</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60">
+              <span>Repeat: {ttsWordRepeat}x</span>
+              <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
-            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg text-gray-900 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 min-w-[120px]">
+            <div className="absolute top-full left-0 mt-1.5 bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 min-w-[120px] py-1">
               {WORD_REPEAT_OPTIONS.map((n) => (
                 <button
                   key={n}
                   onClick={() => setTtsWordRepeat(n)}
-                  className={`w-full text-left px-4 py-2 text-xs text-gray-900 hover:bg-gray-100 ${ttsWordRepeat === n ? 'bg-gray-100 font-semibold' : ''
+                  className={`w-full text-left px-3.5 py-1.5 text-xs transition-colors ${ttsWordRepeat === n ? 'bg-cyan-950/60 text-cyan-300 font-semibold' : 'hover:bg-abyss-800 text-slate-200'
                     }`}
                 >
                   {n}x
@@ -378,8 +378,8 @@ export function PlayerPanel({
           <button
             type="button"
             onClick={() => ttsPrevWord()}
-            title={`Go back to the previous word (${displayKey(keybinds.prevWord)})`}
-            className="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-800 transition-colors"
+            title={`Go back to previous word (${displayKey(keybinds.prevWord)})`}
+            className="bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
           >
             ⏮ Prev
           </button>
@@ -388,30 +388,30 @@ export function PlayerPanel({
           <button
             type="button"
             onClick={() => ttsSkipWord()}
-            title={`Skip the current word and jump to the next one (${displayKey(keybinds.skipWord)})`}
-            className="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-gray-800 transition-colors"
+            title={`Skip word (${displayKey(keybinds.skipWord)})`}
+            className="bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
           >
             Skip ⏭
           </button>
         )}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto md:ml-auto justify-end">
-          <div className="flex items-center gap-1" title="Correct keystrokes in this video">
-            <div className="w-3 h-3 bg-green-500 rounded-full" />
-            <span className="text-sm text-gray-700">{videoSessionScores.correctChars}</span>
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto md:ml-auto justify-end">
+          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-emerald-500/30 rounded-lg px-2.5 py-1" title="Correct keystrokes">
+            <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-glow-emerald" />
+            <span className="text-xs font-mono font-semibold text-emerald-300">{videoSessionScores.correctChars}</span>
           </div>
-          <div className="flex items-center gap-1" title="Hints used in this video">
-            <div className="w-3 h-3 bg-yellow-500 rounded-full" />
-            <span className="text-sm text-gray-700">{videoSessionScores.hintCount}</span>
+          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-amber-500/30 rounded-lg px-2.5 py-1" title="Hints used">
+            <div className="w-2.5 h-2.5 bg-amber-400 rounded-full shadow-glow-amber" />
+            <span className="text-xs font-mono font-semibold text-amber-300">{videoSessionScores.hintCount}</span>
           </div>
-          <div className="flex items-center gap-1" title="Incorrect keystrokes in this video">
-            <div className="w-3 h-3 bg-red-500 rounded-full" />
-            <span className="text-sm text-gray-700">{videoSessionScores.incorrectChars}</span>
+          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-rose-500/30 rounded-lg px-2.5 py-1" title="Incorrect keystrokes">
+            <div className="w-2.5 h-2.5 bg-rose-400 rounded-full shadow-glow-rose" />
+            <span className="text-xs font-mono font-semibold text-rose-300">{videoSessionScores.incorrectChars}</span>
           </div>
           {selectedLesson && (
             <button
               type="button"
               onClick={() => onAskCoach(selectedLesson.video_id)}
-              className="ml-4 inline-flex items-center rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300"
+              className="ml-2 inline-flex items-center rounded-full border border-cyan-400/50 bg-gradient-to-r from-cyan-950/80 to-teal-950/80 px-3.5 py-1 text-xs font-semibold text-cyan-300 hover:text-white hover:bg-cyan-900/60 shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95"
             >
               Ask coach
             </button>

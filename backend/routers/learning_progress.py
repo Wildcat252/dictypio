@@ -36,6 +36,8 @@ class WordStat(BaseModel):
     error_char_rate: float
     average_spell_retry_times: float  # avg attempts to spell this word (1 + error_char_events / occurrences)
     latest_spell_retry_times: float  # retry count (1 + error_chars) for the most recent occurrence of this word
+    # Sentences in which the hint was revealed 2+ times on this one word
+    repeat_hint_count: int = 0
 
 
 class DistributionStats(BaseModel):
@@ -247,6 +249,8 @@ async def get_user_stats(
     word_error_chars: Dict[str, int] = {}
     # Per-word latest retry (1 + error_chars) for most recent occurrence
     word_latest_retry: Dict[str, float] = {}
+    # Sentences in which the hint was revealed 2+ times on that one word
+    word_repeat_hint: Dict[str, int] = {}
 
     # Daily aggregations (keyed by YYYY-MM-DD)
     daily: Dict[str, Dict[str, Any]] = {}
@@ -268,6 +272,7 @@ async def get_user_stats(
 
         incorrect_words = data.get("incorrect_words") or []
         hint_words = data.get("hint_words") or data.get("hinted_words") or []
+        repeat_hint_words = data.get("repeat_hint_words") or []
         correct_words = data.get("correct_words") or []
         words_field = data.get("words") or []
         error_chars_field = data.get("error_chars") or []
@@ -284,6 +289,7 @@ async def get_user_stats(
 
         incorrect_words = _as_words(incorrect_words)
         hint_words = _as_words(hint_words)
+        repeat_hint_words = _as_words(repeat_hint_words)
         correct_words = _as_words(correct_words)
         words_field = _as_words(words_field)
 
@@ -324,6 +330,8 @@ async def get_user_stats(
         for w in hint_words:
             st = word_counts.setdefault(w, {"total": 0, "incorrect": 0, "hint": 0})
             st["hint"] += 1
+        for w in repeat_hint_words:
+            word_repeat_hint[w] = word_repeat_hint.get(w, 0) + 1
 
         # Aggregate per-word error character counts and latest retry if provided
         if isinstance(words_field, list) and isinstance(error_chars_field, list) and len(words_field) == len(error_chars_field):
@@ -398,21 +406,28 @@ async def get_user_stats(
                 error_char_rate=err_chars / float(total),
                 average_spell_retry_times=avg_retry,
                 latest_spell_retry_times=latest_retry,
+                repeat_hint_count=word_repeat_hint.get(w, 0),
             )
         )
 
-    # Sort top words, emphasizing words that were recently retried.
-    # "Tricky" means the most recent attempt needed 3 or more tries *and* the
-    # word ever needed a hint — both signs of trouble must be present.
-    tricky_word_stats = [
-        ws
-        for ws in word_stats
-        if ws.latest_spell_retry_times >= 3.0 and ws.hint_count > 0
-    ]
+    # A word is "tricky" on one signal only: the hint was revealed 2 or more
+    # times on that one word inside a single sentence. Peeking twice in one go
+    # is a deliberate admission that the word did not stick.
+    #
+    # This counts repeats WITHIN a sentence, not a word that merely needed one
+    # hint in each of two different sentences -- that caught every common short
+    # word. Retry counts no longer qualify a word on their own: fumbling the
+    # spelling a few times is ordinary, reaching for the answer twice is not.
+    tricky_word_stats = [ws for ws in word_stats if ws.repeat_hint_count > 0]
 
     top_incorrect_words = sorted(
         tricky_word_stats,
         key=lambda ws: (
+            # Peeking twice at one word in a single sentence is the strongest
+            # signal, and it ranks first: such a word is typically typed right
+            # after the peek, so its retry count is ~1 and every other key
+            # would bury it at the bottom of the board.
+            ws.repeat_hint_count,
             ws.latest_spell_retry_times,
             ws.hint_count,
             ws.incorrect_count,

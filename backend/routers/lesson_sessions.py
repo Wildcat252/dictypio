@@ -22,6 +22,7 @@ class LessonSessionOut(BaseModel):
     correct_chars: int
     hint_count: int
     incorrect_chars: int
+    typing_ms: int = 0
 
     class Config:
         from_attributes = True
@@ -35,6 +36,7 @@ class LessonSessionSave(BaseModel):
     correct_chars: int = 0
     hint_count: int = 0
     incorrect_chars: int = 0
+    typing_ms: int = 0
 
 
 @router.get("/lessons/{video_id}/sessions", response_model=List[LessonSessionOut])
@@ -95,6 +97,7 @@ async def save_lesson_session(
         existing.correct_chars = body.correct_chars
         existing.hint_count = body.hint_count
         existing.incorrect_chars = body.incorrect_chars
+        existing.typing_ms = max(existing.typing_ms or 0, body.typing_ms)
         db.commit()
         db.refresh(existing)
         # Index/update this session as a learning event in Qdrant.
@@ -113,6 +116,7 @@ async def save_lesson_session(
         correct_chars=body.correct_chars,
         hint_count=body.hint_count,
         incorrect_chars=body.incorrect_chars,
+        typing_ms=body.typing_ms,
     )
     db.add(session)
     db.commit()
@@ -160,6 +164,8 @@ async def upsert_current_session(
         existing.correct_chars = body.correct_chars
         existing.hint_count = body.hint_count
         existing.incorrect_chars = body.incorrect_chars
+        # Never let a stale client bundle sending 0 wipe a live session's total.
+        existing.typing_ms = max(existing.typing_ms or 0, body.typing_ms)
         if body.ended_at is not None:
             existing.ended_at = body.ended_at
         db.commit()
@@ -180,6 +186,7 @@ async def upsert_current_session(
         correct_chars=body.correct_chars,
         hint_count=body.hint_count,
         incorrect_chars=body.incorrect_chars,
+        typing_ms=body.typing_ms,
     )
     db.add(session)
     db.commit()

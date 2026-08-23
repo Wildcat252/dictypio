@@ -112,20 +112,20 @@ export default function YouTubeProcessor() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-100 text-left">
+    <div className="min-h-screen bg-abyss-800/60 text-left">
       <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 space-y-6 pb-12">
       {/* YouTube URL Input Form */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white mb-4">
+      <div className="bg-abyss-800/80 dark:bg-abyss-850 rounded-lg shadow-xl p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-slate-200 dark:text-white mb-4">
           Process YouTube Video
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-slate-400 dark:text-slate-500 mb-6">
           Enter a YouTube video URL to extract subtitles and segment them into sentences for dictation practice.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="youtube-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="youtube-url" className="block text-sm font-medium text-slate-300 dark:text-slate-500 mb-2">
               YouTube URL
             </label>
             <input
@@ -134,7 +134,7 @@ export default function YouTubeProcessor() {
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               placeholder="https://www.youtube.com/watch?v=..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 border border-cyan-500/30 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500/40 focus:border-transparent dark:bg-abyss-750 dark:text-white"
               disabled={processing}
             />
           </div>
@@ -142,7 +142,7 @@ export default function YouTubeProcessor() {
           <button
             type="submit"
             disabled={processing || !youtubeUrl.trim()}
-            className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+            className="w-full px-6 py-3 bg-cyan-600 shadow-glow-cyan hover:bg-cyan-500 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
           >
             {processing ? (
               <span className="flex items-center justify-center">
@@ -159,17 +159,17 @@ export default function YouTubeProcessor() {
         </form>
 
         {error && (
-          <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <p className="text-red-800 dark:text-red-200">{error}</p>
+          <div className="mt-4 bg-rose-500/10 dark:bg-red-900/20 border border-rose-500/30 dark:border-red-800 rounded-lg p-4">
+            <p className="text-rose-300 dark:text-rose-200">{error}</p>
           </div>
         )}
 
         {processResult && (
           <div className="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-            <p className="text-green-800 dark:text-green-200 font-semibold mb-2">
+            <p className="text-emerald-300 dark:text-emerald-200 font-semibold mb-2">
               {processResult.message}
             </p>
-            <div className="text-sm text-green-700 dark:text-green-300">
+            <div className="text-sm text-emerald-300 dark:text-emerald-300">
               <p><strong>Title:</strong> {processResult.title}</p>
               <p><strong>Duration:</strong> {formatDuration(processResult.duration)}</p>
               <p><strong>Sentences:</strong> {processResult.sentence_count}</p>
@@ -179,14 +179,14 @@ export default function YouTubeProcessor() {
       </div>
 
       {/* Processed Videos List */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 sm:p-6">
+      <div className="bg-abyss-800/80 dark:bg-abyss-850 rounded-lg shadow-xl p-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-white">
+          <h2 className="text-xl sm:text-2xl font-semibold text-slate-200 dark:text-white">
             Processed Videos
           </h2>
           <button
             onClick={fetchVideos}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors text-sm"
+            className="px-4 py-2 bg-gray-200 dark:bg-abyss-750 hover:bg-abyss-750 dark:hover:bg-gray-600 text-slate-200 dark:text-white rounded-lg transition-colors text-sm"
           >
             Refresh
           </button>
@@ -194,12 +194,12 @@ export default function YouTubeProcessor() {
 
         {loadingVideos ? (
           <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading videos...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+            <p className="mt-4 text-slate-400 dark:text-slate-500">Loading videos...</p>
           </div>
         ) : videos.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-slate-400 dark:text-slate-500">
               No videos processed yet. Process a YouTube video to get started.
             </p>
           </div>
@@ -210,20 +210,20 @@ export default function YouTubeProcessor() {
                 key={video.id}
                 className={`border rounded-lg p-4 cursor-pointer transition-all ${
                   selectedVideo?.id === video.id
-                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
+                    ? 'border-cyan-400 bg-cyan-500/10 shadow-glow-cyan'
+                    : 'border-cyan-500/20 hover:border-cyan-400/60'
                 }`}
                 onClick={() => handleVideoSelect(video)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 dark:text-white mb-1">
+                    <h3 className="font-semibold text-slate-200 dark:text-white mb-1">
                       {video.title || 'Untitled Video'}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 break-all">
+                    <p className="text-sm text-slate-400 dark:text-slate-500 mb-2 break-all">
                       {video.youtube_url}
                     </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
                       <span>Duration: {formatDuration(video.duration)}</span>
                       <span>Sentences: {video.sentence_count}</span>
                     </div>
@@ -237,36 +237,36 @@ export default function YouTubeProcessor() {
 
       {/* Sentences Display */}
       {selectedVideo && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white mb-4 break-words">
+        <div className="bg-abyss-800/80 dark:bg-abyss-850 rounded-lg shadow-xl p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-slate-200 dark:text-white mb-4 break-words">
             Sentences from: {selectedVideo.title || 'Untitled Video'}
           </h2>
 
           {loadingSentences ? (
             <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-              <p className="mt-4 text-gray-600 dark:text-gray-400">Loading sentences...</p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+              <p className="mt-4 text-slate-400 dark:text-slate-500">Loading sentences...</p>
             </div>
           ) : sentences.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-600 dark:text-gray-400">No sentences found.</p>
+              <p className="text-slate-400 dark:text-slate-500">No sentences found.</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {sentences.map((sentence) => (
                 <div
                   key={sentence.id}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  className="border border-cyan-500/20 dark:border-cyan-500/30 rounded-lg p-4 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <span className="text-xs font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    <span className="text-xs font-mono text-slate-400 dark:text-slate-500 bg-abyss-800/60 dark:bg-abyss-750 px-2 py-1 rounded">
                       {formatTime(sentence.start_time)} - {formatTime(sentence.end_time)}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
                       #{sentence.sentence_index + 1}
                     </span>
                   </div>
-                  <p className="text-gray-800 dark:text-white">
+                  <p className="text-slate-200 dark:text-white">
                     {sentence.sentence_text}
                   </p>
                 </div>

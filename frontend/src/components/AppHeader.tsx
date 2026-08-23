@@ -81,15 +81,20 @@ interface AppHeaderProps {
   sidebarControlsId?: string
 }
 
-/** Shared top bar: logo, optional sidebar toggle, and the page nav. */
+/** Shared top bar: logo, optional sidebar toggle, and the page nav with Deep Sea glow styling. */
 export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHeaderProps) {
   const navigate = useNavigate()
 
   return (
-    <header className="bg-white border-b border-gray-200 px-3 py-2 md:px-4 md:py-3 flex flex-wrap items-center justify-between gap-y-2 gap-x-2 md:flex-nowrap md:gap-0">
-      <div className="flex items-center gap-2 order-1 shrink-0">
-        <img src="/icon.png" alt="Ear2Finger" className="w-8 h-8" />
-        <span className="text-lg font-semibold text-gray-900">Ear2Finger</span>
+    <header className="bg-abyss-900/90 backdrop-blur-md border-b border-cyan-500/20 px-3 py-2 md:px-4 md:py-2.5 flex flex-wrap items-center justify-between gap-y-2 gap-x-2 md:flex-nowrap md:gap-0 shadow-[0_4px_24px_rgba(0,0,0,0.5)] z-30">
+      <div className="flex items-center gap-2.5 order-1 shrink-0">
+        <div className="relative group">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-teal-400 rounded-lg blur-xs opacity-60 group-hover:opacity-100 transition duration-300"></div>
+          <img src="/icon.png" alt="Ear2Finger" className="relative w-8 h-8 rounded-lg" />
+        </div>
+        <span className="text-lg font-bold bg-gradient-to-r from-cyan-300 via-teal-200 to-sky-300 bg-clip-text text-transparent tracking-wide">
+          Ear2Finger
+        </span>
         {onToggleSidebar && (
           <button
             type="button"
@@ -97,7 +102,7 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
             title="Toggle sidebar"
             aria-label="Toggle sidebar"
             aria-controls={sidebarControlsId}
-            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-abyss-800 border border-transparent hover:border-cyan-500/30 transition-all duration-150"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
               <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -107,12 +112,12 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
         )}
       </div>
 
-      <nav className="order-3 basis-full flex flex-wrap items-center gap-1 md:order-2 md:basis-auto md:flex-nowrap">
+      <nav className="order-3 basis-full flex flex-wrap items-center gap-1.5 md:order-2 md:basis-auto md:flex-nowrap">
         {NAV_ITEMS.map((item) =>
           item.page === active ? (
             <button
               key={item.page}
-              className="px-2 py-2 md:px-4 bg-gray-900 text-white rounded-lg flex items-center gap-1.5 md:gap-2 text-sm md:text-base"
+              className="px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-cyan-500 via-teal-500 to-sky-600 text-white font-semibold rounded-lg flex items-center gap-1.5 md:gap-2 text-sm md:text-sm shadow-glow-cyan transition-transform scale-[1.02]"
             >
               {item.icon}
               {item.label}
@@ -121,7 +126,7 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
             <button
               key={item.page}
               onClick={() => navigate(item.path)}
-              className="px-2 py-2 md:px-4 text-gray-600 hover:bg-gray-100 rounded-lg flex items-center gap-1.5 md:gap-2 text-sm md:text-base"
+              className="px-3 py-1.5 md:px-4 md:py-2 text-slate-300 hover:text-cyan-300 hover:bg-abyss-800/90 border border-transparent hover:border-cyan-500/30 rounded-lg flex items-center gap-1.5 md:gap-2 text-sm md:text-sm transition-all duration-150"
             >
               {item.icon}
               {item.label}

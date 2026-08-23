@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { estimatedVoiceLatency, isNetworkVoice, recordVoiceLatency } from '../../voices'
 
 // Scales the word-by-word TTS gap exponentially by word length so longer words
 // give more time to type: 0.5x under 3 letters (quick words need less time),
@@ -21,7 +22,7 @@ const MERGED_UTTERANCE_PADDING_MS = 180
 
 // Gap after a spoken punctuation name, and the gap kept before it when words
 // are grouped, so "Hello" and "comma" never run together.
-const PUNCT_GAP_MULTIPLIER = 0.2
+const PUNCT_GAP_MULTIPLIER = 0.1
 
 // Common punctuation spoken by name in word-by-word mode so the learner
 // knows to type it: "hello," is read as "hello" (word gap) "comma".
@@ -34,7 +35,7 @@ const SPOKEN_PUNCTUATION: Record<string, string> = {
 
 /**
  * Drives speech-synthesis playback for text:// lessons, including word-by-word
- * mode, the Words/Gap grouping, sentence repeat and the pause interval.
+ * mode, the Letters/Gap grouping, sentence repeat and the pause interval.
  *
  * Refs shared with the audio player and lesson handling are passed in; refs
  * used only by speech are owned here.
@@ -65,7 +66,7 @@ export function useTtsPlayback(params: {
     ttsVoiceName,
     ttsWordByWord,
     ttsWordInterval,
-    ttsWordsPerGap,
+    ttsLettersPerGap,
     ttsWordRepeat,
   } = useWorkspace()
 
@@ -209,17 +210,23 @@ export function useTtsPlayback(params: {
     //    delay before calling speak() avoids this. So we queue a silent "primer"
     //    utterance immediately before the real one; the warm-up eats the primer
     //    instead of the sentence, since the two play back-to-back with no idle gap.
+    //
+    // The primer is skipped for cloud voices: their delay is a network round-trip,
+    // not engine warm-up, so priming buys nothing and costs a second round-trip
+    // (doubling the very latency it is meant to hide).
     const speakUtterance = (utterance: SpeechSynthesisUtterance) => {
       if (ttsSpeakTimeoutRef.current) {
         clearTimeout(ttsSpeakTimeoutRef.current)
         ttsSpeakTimeoutRef.current = null
       }
       const primeAndSpeak = () => {
-        const primer = new SpeechSynthesisUtterance('.')
-        primer.volume = 0
-        primer.rate = utterance.rate
-        if (utterance.voice) primer.voice = utterance.voice
-        synth.speak(primer)
+        if (!isNetworkVoice(utterance.voice)) {
+          const primer = new SpeechSynthesisUtterance('.')
+          primer.volume = 0
+          primer.rate = utterance.rate
+          if (utterance.voice) primer.voice = utterance.voice
+          synth.speak(primer)
+        }
         synth.speak(utterance)
       }
       if (synth.speaking || synth.pending || ttsCancelPendingRef.current) {
@@ -242,6 +249,38 @@ export function useTtsPlayback(params: {
       // --- Word-by-word mode ---
       const words = currentSentence.sentence_text.split(/\s+/).filter(Boolean)
       if (words.length === 0) { onSentenceFinished(); return }
+
+      // Chop the sentence into groups of roughly this many letters, never
+      // splitting a word: a word that would push the group over budget starts
+      // the next group instead, so the budget is never exceeded. A group always
+      // holds at least one word, so a word longer than the whole budget simply
+      // forms its own group.
+      //
+      // Groups therefore vary in word count, which is why membership is looked
+      // up in these tables rather than computed by dividing the token index.
+      const letterBudget = Math.max(1, Math.floor(ttsLettersPerGap || 1))
+      // Same normalization the gap scaling uses: letters/digits, no punctuation.
+      const letterCount = (token: string) => token.replace(/[^\w]/g, '').length
+
+      const tokenGroupId: number[] = []
+      const groupFirstToken: number[] = []
+      {
+        let gid = 0
+        let used = 0
+        words.forEach((token, tokenIdx) => {
+          const n = letterCount(token)
+          if (used > 0 && used + n > letterBudget) {
+            gid++
+            used = 0
+          }
+          if (groupFirstToken[gid] === undefined) groupFirstToken[gid] = tokenIdx
+          tokenGroupId[tokenIdx] = gid
+          used += n
+        })
+      }
+      // When no group holds more than one word, keep the original
+      // one-word-at-a-time path untouched.
+      const hasMultiWordGroup = tokenGroupId.some((g, i) => i > 0 && tokenGroupId[i - 1] === g)
 
       // Expand each token into speech segments so the Word Gap also separates a
       // word from its spoken punctuation: "Hello," -> "Hello" (gap) "comma" (gap).
@@ -283,10 +322,9 @@ export function useTtsPlayback(params: {
       // utterance so it is spoken naturally ("how are you"), not as separate
       // words with the engine's boundary between them. The pause that follows
       // accumulates every gap the group's words would each have earned.
-      const groupSize = Math.max(1, Math.floor(ttsWordsPerGap || 1))
-      if (groupSize > 1) {
+      if (hasMultiWordGroup) {
         // Group by token, not segment, so a word and its punctuation stay together
-        const groupOf = (tokenIdx: number) => Math.floor(tokenIdx / groupSize)
+        const groupOf = (tokenIdx: number) => tokenGroupId[tokenIdx]
         const out: TtsSegment[] = []
         let i = 0
         while (i < segments.length) {
@@ -320,7 +358,7 @@ export function useTtsPlayback(params: {
             const lostMs =
               ((groupSegs.length - pieces.length) * MERGED_UTTERANCE_PADDING_MS) /
               Math.max(0.1, playbackSpeed)
-            extra = lostMs / (ttsWordInterval * 1500)
+            extra = lostMs / (ttsWordInterval * 1000)
           }
 
           // Keep a small gap at each internal (punctuation) boundary; the rest
@@ -344,15 +382,28 @@ export function useTtsPlayback(params: {
       let currentUtterance: SpeechSynthesisUtterance | null = null
 
       // How many times each unit is spoken before moving on (1 = say it once).
-      // The unit is the whole group, so with Words/Gap > 1 the entire phrase —
+      // The unit is the whole group, so a multi-word group has its entire phrase —
       // punctuation included — repeats as one piece rather than each word
       // repeating on its own.
       const wordRepeats = Math.max(1, Math.min(5, Math.floor(ttsWordRepeat || 1)))
-      const groupIdOf = segments.map((seg) => Math.floor(seg.tokenIdx / groupSize))
+      const groupIdOf = segments.map((seg) => tokenGroupId[seg.tokenIdx])
       const groupFirstSeg = new Map<number, number>()
       groupIdOf.forEach((gid, i) => {
         if (!groupFirstSeg.has(gid)) groupFirstSeg.set(gid, i)
       })
+
+      // A cloud voice stays silent until its audio comes back from the server, so
+      // what the learner actually hears between words is the gap PLUS that
+      // round-trip — the Word Gap setting stops meaning what it says. Subtracting
+      // the measured round-trip from the gap we wait folds the latency into the
+      // pause instead of adding to it. Local voices keep their existing timing.
+      const compensatedGap = (gapMs: number) => {
+        if (!isNetworkVoice(selectedVoice)) return gapMs
+        const latency = estimatedVoiceLatency(selectedVoice?.name)
+        // Always keep a real pause, so words never run together even if the
+        // round-trip is longer than the gap itself.
+        return Math.max(gapMs * 0.25, gapMs - latency)
+      }
 
       const speakSegment = (segIdx: number, pass = 1) => {
         if (segIdx >= segments.length) {
@@ -366,9 +417,16 @@ export function useTtsPlayback(params: {
         currentSegIdx = segIdx
         currentUtterance = utterance
 
+        // Time from speak() to first audio, fed back into the gap compensation above.
+        let spokenAt = 0
+        utterance.onstart = () => {
+          if (abandonedUtterances.has(utterance) || !selectedVoice || !spokenAt) return
+          recordVoiceLatency(selectedVoice.name, performance.now() - spokenAt)
+        }
+
         utterance.onend = () => {
           if (abandonedUtterances.has(utterance)) return
-          const gapMs = ttsWordInterval * 1500 * segment.gapMultiplier
+          const gapMs = compensatedGap(ttsWordInterval * 1000 * segment.gapMultiplier)
           const groupId = groupIdOf[segIdx]
           const isLastOfGroup =
             segIdx + 1 >= segments.length || groupIdOf[segIdx + 1] !== groupId
@@ -405,23 +463,26 @@ export function useTtsPlayback(params: {
           setIsPlaying(false)
         }
 
+        spokenAt = performance.now()
         speakUtterance(utterance)
       }
 
-      // Skip the rest of the current word — cut off its speech, drop the
-      // remaining gap and any pending punctuation names — and jump straight
-      // to the next word. The skipped word's input is left as-is.
+      // Skip the rest of the current group — cut off its speech, drop the
+      // remaining gap and any pending words/punctuation names — and jump
+      // straight to the next group. The unit is the whole group, so one press
+      // moves on by a whole letter-budget's worth of words, never into the
+      // middle of the run being spoken. The skipped inputs are left as-is.
       ttsSkipWordRef.current = () => {
         if (currentSegIdx < 0) return
-        const tokenIdx = segments[currentSegIdx].tokenIdx
+        const groupId = groupIdOf[currentSegIdx]
         if (currentUtterance) abandonedUtterances.add(currentUtterance)
         if (wordQueueTimeoutRef.current) {
           clearTimeout(wordQueueTimeoutRef.current)
           wordQueueTimeoutRef.current = null
         }
-        wordQueueIndexRef.current = tokenIdx + 1
+        wordQueueIndexRef.current = groupFirstToken[groupId + 1] ?? words.length
         let next = currentSegIdx + 1
-        while (next < segments.length && segments[next].tokenIdx === tokenIdx) next++
+        while (next < segments.length && groupIdOf[next] === groupId) next++
         if (next < segments.length) {
           speakSegment(next)
         } else {
@@ -431,27 +492,24 @@ export function useTtsPlayback(params: {
         }
       }
 
-      // Go back to the previous word: cut off the current speech and restart
-      // from the first segment of the preceding token. On the first word it
-      // simply replays that word from its start.
+      // Go back one group: cut off the current speech and restart from the
+      // first segment of the preceding group — the mirror of Skip, so both
+      // move by the same unit. A press part-way through a group restarts that
+      // group; on the first group it simply replays it from its start.
       ttsPrevWordRef.current = () => {
         if (currentSegIdx < 0) return
-        const tokenIdx = segments[currentSegIdx].tokenIdx
+        const groupId = groupIdOf[currentSegIdx]
         if (currentUtterance) abandonedUtterances.add(currentUtterance)
         if (wordQueueTimeoutRef.current) {
           clearTimeout(wordQueueTimeoutRef.current)
           wordQueueTimeoutRef.current = null
         }
-        // First segment of the current token; if we are already there, step to
-        // the token before it so a mid-word press does not just restart it.
-        let start = currentSegIdx
-        while (start > 0 && segments[start - 1].tokenIdx === tokenIdx) start--
+        let start = groupFirstSeg.get(groupId) ?? currentSegIdx
         if (start === currentSegIdx && start > 0) {
-          const prevTokenIdx = segments[start - 1].tokenIdx
-          start--
-          while (start > 0 && segments[start - 1].tokenIdx === prevTokenIdx) start--
+          const prevGroupId = groupIdOf[start - 1]
+          start = groupFirstSeg.get(prevGroupId) ?? start - 1
         }
-        wordQueueIndexRef.current = segments[start].tokenIdx
+        wordQueueIndexRef.current = groupFirstToken[groupIdOf[start]]
         speakSegment(start)
       }
 
@@ -519,7 +577,7 @@ export function useTtsPlayback(params: {
     availableVoices,
     ttsWordByWord,
     ttsWordInterval,
-    ttsWordsPerGap,
+    ttsLettersPerGap,
     ttsWordRepeat,
   ])
 

@@ -7,23 +7,23 @@
   100% { transform: translateX(400%); }
 }
 
-/* Correct input: green glow + subtle scale */
+/* Correct input: bioluminescent emerald glow + subtle scale */
 @keyframes correctGlow {
   0% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
     transform: scale(1);
   }
   40% {
-    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+    box-shadow: 0 0 25px 8px rgba(16, 185, 129, 0.45);
     transform: scale(1.04);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     transform: scale(1);
   }
 }
 
-/* Wrong input: shake + red flash */
+/* Wrong input: shake + coral flash */
 @keyframes wrongShake {
   0%, 100% { transform: translateX(0); }
   15% { transform: translateX(-6px); }
@@ -36,8 +36,8 @@
 
 @keyframes wrongFlash {
   0%, 100% { background-color: transparent; }
-  20% { background-color: rgba(239, 68, 68, 0.15); }
-  50% { background-color: rgba(239, 68, 68, 0.08); }
+  20% { background-color: rgba(244, 63, 94, 0.25); box-shadow: 0 0 15px rgba(244, 63, 94, 0.5); }
+  50% { background-color: rgba(244, 63, 94, 0.1); }
 }
 
 .input-feedback-correct {
@@ -48,19 +48,15 @@
   animation: wrongShake 0.45s ease-out, wrongFlash 0.5s ease-out;
 }
 
-/*
- * App UI is light-themed (Tailwind grays / white). Default :root must use dark text so
- * inherited color stays readable on bg-white when the OS prefers dark mode — otherwise
- * the old Vite template (light text on #242424) made dropdowns and panels invisible.
- */
+/* Deep Sea Theme Base */
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light;
-  color: #213547;
-  background-color: #ffffff;
+  color-scheme: dark;
+  color: #f1f5f9;
+  background-color: #060d1a;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -68,11 +64,44 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+::selection {
+  background: rgba(6, 182, 212, 0.35);
+  color: #ffffff;
+}
+
 body {
   margin: 0;
   display: flex;
   min-width: 320px;
   min-height: 100vh;
+  background-color: #060d1a;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6, 182, 212, 0.12), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 90%, rgba(20, 184, 166, 0.08), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 10% 80%, rgba(56, 189, 248, 0.07), transparent 70%);
+  background-attachment: fixed;
+  color: #f1f5f9;
+}
+
+/* Custom Sleek Oceanic Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #060d1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #132547;
+  border-radius: 9999px;
+  border: 1px solid rgba(6, 182, 212, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0ea5e9;
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
 }
 
 /* Mobile: top-aligned full-width app; desktop unchanged */
@@ -97,5 +126,5 @@ body {
   width: 100%;
   margin: 0 auto;
   text-align: center;
+  background: transparent;
 }
-

@@ -30,6 +30,8 @@ export interface VideoSessionScores {
   correctChars: number
   incorrectChars: number
   hintCount: number
+  // Summed per-sentence typing time in ms (first keystroke -> sentence correct).
+  typingMs: number
 }
 
 interface WorkspaceState {
@@ -50,11 +52,13 @@ interface WorkspaceState {
   ttsVoiceName: string
   ttsWordByWord: boolean
   ttsWordInterval: number
-  ttsWordsPerGap: number
+  ttsLettersPerGap: number
   ttsWordRepeat: number
   wordInputs: string[]
   wordHintIndex: number | null
-  wordHintUsed: boolean[]
+  // Hint reveals per word in the current sentence. A count, not a flag, so
+  // reaching for the hint twice on one word is distinguishable from once.
+  wordHintCounts: number[]
   wordErrorChars: number[]
   videoSessionScores: VideoSessionScores
 }
@@ -63,6 +67,7 @@ const defaultScores: VideoSessionScores = {
   correctChars: 0,
   incorrectChars: 0,
   hintCount: 0,
+  typingMs: 0,
 }
 
 const STORAGE_KEY = 'ear2finger-workspace-progress'
@@ -82,7 +87,7 @@ type DurableSettings = {
   playbackSpeed: number
   ttsWordByWord: boolean
   ttsWordInterval: number
-  ttsWordsPerGap: number
+  ttsLettersPerGap: number
   ttsWordRepeat: number
 }
 
@@ -126,11 +131,11 @@ const initialState: WorkspaceState = {
   ttsVoiceName: '',
   ttsWordByWord: false,
   ttsWordInterval: 0.5,
-  ttsWordsPerGap: 1,
+  ttsLettersPerGap: 40,
   ttsWordRepeat: 1,
   wordInputs: [],
   wordHintIndex: null,
-  wordHintUsed: [],
+  wordHintCounts: [],
   wordErrorChars: [],
   videoSessionScores: { ...defaultScores },
 }
@@ -153,11 +158,11 @@ type WorkspaceContextValue = WorkspaceState & {
   setTtsVoiceName: (v: string) => void
   setTtsWordByWord: (v: boolean) => void
   setTtsWordInterval: (v: number) => void
-  setTtsWordsPerGap: (v: number) => void
+  setTtsLettersPerGap: (v: number) => void
   setTtsWordRepeat: (v: number) => void
   setWordInputs: (v: string[] | ((prev: string[]) => string[])) => void
   setWordHintIndex: (v: number | null) => void
-  setWordHintUsed: (v: boolean[] | ((prev: boolean[]) => boolean[])) => void
+  setWordHintCounts: (v: number[] | ((prev: number[]) => number[])) => void
   setWordErrorChars: (v: number[] | ((prev: number[]) => number[])) => void
   setVideoSessionScores: (v: VideoSessionScores | ((prev: VideoSessionScores) => VideoSessionScores)) => void
   resetVideoSessionScores: () => void
@@ -207,7 +212,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [])
   const [ttsWordByWord, setTtsWordByWord] = useState<boolean>(durable.ttsWordByWord ?? p.ttsWordByWord ?? initialState.ttsWordByWord)
   const [ttsWordInterval, setTtsWordInterval] = useState<number>(durable.ttsWordInterval ?? p.ttsWordInterval ?? initialState.ttsWordInterval)
-  const [ttsWordsPerGap, setTtsWordsPerGap] = useState<number>(durable.ttsWordsPerGap ?? p.ttsWordsPerGap ?? initialState.ttsWordsPerGap)
+  const [ttsLettersPerGap, setTtsLettersPerGap] = useState<number>(durable.ttsLettersPerGap ?? p.ttsLettersPerGap ?? initialState.ttsLettersPerGap)
   const [ttsWordRepeat, setTtsWordRepeat] = useState<number>(durable.ttsWordRepeat ?? p.ttsWordRepeat ?? initialState.ttsWordRepeat)
 
   // Persist playback, grading and word-by-word settings across app restarts
@@ -223,7 +228,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           playbackSpeed,
           ttsWordByWord,
           ttsWordInterval,
-          ttsWordsPerGap,
+          ttsLettersPerGap,
           ttsWordRepeat,
         })
       )
@@ -238,14 +243,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     playbackSpeed,
     ttsWordByWord,
     ttsWordInterval,
-    ttsWordsPerGap,
+    ttsLettersPerGap,
     ttsWordRepeat,
   ])
   const [wordInputs, setWordInputs] = useState<string[]>(p.wordInputs ?? initialState.wordInputs)
   const [wordHintIndex, setWordHintIndex] = useState<number | null>(initialState.wordHintIndex)
-  const [wordHintUsed, setWordHintUsed] = useState<boolean[]>(p.wordHintUsed ?? initialState.wordHintUsed)
+  const [wordHintCounts, setWordHintCounts] = useState<number[]>(p.wordHintCounts ?? initialState.wordHintCounts)
   const [wordErrorChars, setWordErrorChars] = useState<number[]>(p.wordErrorChars ?? initialState.wordErrorChars)
-  const [videoSessionScores, setVideoSessionScores] = useState<VideoSessionScores>(p.videoSessionScores ?? { ...defaultScores })
+  const [videoSessionScores, setVideoSessionScores] = useState<VideoSessionScores>({ ...defaultScores, ...(p.videoSessionScores ?? {}) })
 
   const resetVideoSessionScores = useCallback(() => {
     setVideoSessionScores({ ...defaultScores })
@@ -271,11 +276,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         ttsVoiceName,
         ttsWordByWord,
         ttsWordInterval,
-        ttsWordsPerGap,
+        ttsLettersPerGap,
         ttsWordRepeat,
         wordInputs,
         wordHintIndex,
-        wordHintUsed,
+        wordHintCounts,
         wordErrorChars,
         videoSessionScores,
       }
@@ -301,11 +306,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     ttsVoiceName,
     ttsWordByWord,
     ttsWordInterval,
-    ttsWordsPerGap,
+    ttsLettersPerGap,
     ttsWordRepeat,
     wordInputs,
     wordHintIndex,
-    wordHintUsed,
+    wordHintCounts,
     wordErrorChars,
     videoSessionScores,
   ])
@@ -345,16 +350,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTtsWordByWord,
     ttsWordInterval,
     setTtsWordInterval,
-    ttsWordsPerGap,
-    setTtsWordsPerGap,
+    ttsLettersPerGap,
+    setTtsLettersPerGap,
     ttsWordRepeat,
     setTtsWordRepeat,
     wordInputs,
     setWordInputs,
     wordHintIndex,
     setWordHintIndex,
-    wordHintUsed,
-    setWordHintUsed,
+    wordHintCounts,
+    setWordHintCounts,
     wordErrorChars,
     setWordErrorChars,
     videoSessionScores,
