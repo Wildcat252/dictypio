@@ -602,7 +602,7 @@ export default function Practice() {
   }
 
   const underlineClass = !value
-    ? 'border-b-2 border-gray-300'
+    ? 'border-b-2 border-cyan-500/30'
     : isCorrect
       ? 'border-b-4 border-green-500'
       : normalizeWord(target).startsWith(normalizeWord(value))
@@ -616,7 +616,7 @@ export default function Practice() {
   )
 
   return (
-    <div className="h-screen min-h-0 flex flex-col bg-white">
+    <div className="h-screen min-h-0 flex flex-col bg-abyss-800/80">
       {/* Header */}
       <AppHeader
         active="practice"
@@ -638,18 +638,18 @@ export default function Practice() {
           displayOf={displayOf}
         />
 
-        <main className="flex-1 bg-gray-50 overflow-y-auto min-h-0 p-4 md:p-6">
+        <main className="flex-1 bg-abyss-900/60 overflow-y-auto min-h-0 p-4 md:p-6">
         <div className="max-w-4xl mx-auto w-full space-y-6">
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</div>
+            <div className="text-sm text-rose-400 bg-rose-500/10 px-3 py-2 rounded-lg">{error}</div>
           )}
 
           {loading ? (
-            <p className="text-sm text-gray-600">Loading your tricky words…</p>
+            <p className="text-sm text-slate-400">Loading your tricky words…</p>
           ) : allWords.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-              <p className="text-sm text-gray-700 font-medium">Nothing to practice right now.</p>
-              <p className="text-xs text-gray-500 mt-1">
+            <div className="bg-abyss-800/80 rounded-xl border border-cyan-500/20 p-6 text-center">
+              <p className="text-sm text-slate-300 font-medium">Nothing to practice right now.</p>
+              <p className="text-xs text-slate-400 mt-1">
                 Words you misspell during dictation show up here so you can drill them.
               </p>
             </div>
@@ -708,32 +708,32 @@ export default function Practice() {
       </div>
 
       {/* Bottom bar: keyboard shortcuts */}
-      <footer className="flex-shrink-0 border-t border-gray-200 bg-gray-50 px-3 md:px-4 py-2 md:py-1.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-6 text-xs text-gray-600">
+      <footer className="flex-shrink-0 border-t border-cyan-500/20 bg-abyss-900/60 px-3 md:px-4 py-2 md:py-1.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-6 text-xs text-slate-400">
         <div className="flex-1 min-w-0 md:pr-4">
           {words.length > 0 && (
             <span className="whitespace-nowrap">
               Word {index + 1} of {words.length}
-              {binList.length > 0 && <span className="text-gray-400"> · {binList.length} in bin</span>}
+              {binList.length > 0 && <span className="text-slate-500"> · {binList.length} in bin</span>}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 md:gap-4 flex-wrap justify-start md:justify-end">
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">Enter</kbd> replay</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">[</kbd> previous</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">]</kbd> next</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">/</kbd> random</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">\</kbd> spell</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">Tab</kbd> reveal hint</span>
-          <span><kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">`</kbd> translate</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">Enter</kbd> replay</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">[</kbd> previous</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">]</kbd> next</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">/</kbd> random</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">\</kbd> spell</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">Tab</kbd> reveal hint</span>
+          <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">`</kbd> translate</span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">-</kbd>
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">-</kbd>
             {' / '}
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">=</kbd> speed
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">=</kbd> speed
           </span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">Shift</kbd>
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">Shift</kbd>
             {' + '}
-            <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono">Delete</kbd> bin word
+            <kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">Delete</kbd> bin word
           </span>
         </div>
       </footer>
