@@ -537,10 +537,10 @@ export default function Settings() {
                 <div className="flex-1 space-y-3 text-left">
                   <div className="flex items-center gap-3">
                     <div className="w-20 h-20 rounded-2xl border border-cyan-500/20 bg-abyss-900/60 flex items-center justify-center shadow-sm">
-                      <img src="/icon.png" alt="Ear2Finger" className="w-14 h-14 rounded-xl" />
+                      <img src="/logo.svg" alt="Dictypio" className="w-14 h-14 rounded-xl" />
                     </div>
                     <div className="text-left">
-                      <p className="text-lg font-semibold text-slate-100">Ear2Finger</p>
+                      <p className="text-lg font-semibold text-slate-100">Dictypio</p>
                       <p className="text-[12px] text-slate-400">Dictation workspace powered by YouTube & AI.</p>
                     </div>
                   </div>
@@ -549,7 +549,7 @@ export default function Settings() {
                   </h2>
 
                   <p className="text-sm text-slate-400 leading-relaxed">
-                    Ear2Finger converts YouTube videos with subtitles into sentence-by-sentence
+                    Dictypio converts YouTube videos with subtitles into sentence-by-sentence
                     dictation lessons. Practice with per-word inputs, get real-time feedback, and
                     use your AI coach to recommend what to study next.
                   </p>
@@ -613,7 +613,7 @@ export default function Settings() {
                         </dt>
                         <dd className="mt-0.5">
                           <a
-                            href="https://github.com/stephenyin/Ear2Finger"
+                            href="https://github.com/Wildcat252/Dictypio"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-sm text-slate-200 hover:text-cyan-200 hover:underline"
@@ -626,7 +626,7 @@ export default function Settings() {
                             >
                               <path d="M12 0.5C5.373 0.5 0 5.872 0 12.5c0 5.297 3.438 9.787 8.205 11.387.6.111.82-.261.82-.58 0-.287-.011-1.243-.017-2.255-3.338.726-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.809 1.304 3.495.997.108-.775.42-1.305.763-1.605-2.665-.304-5.467-1.332-5.467-5.93 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.42 11.42 0 0 1 3.003-.404c1.018.005 2.045.138 3.003.404 2.291-1.552 3.297-1.23 3.297-1.23.655 1.652.243 2.873.119 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.624-5.48 5.921.431.372.815 1.102.815 2.222 0 1.604-.015 2.896-.015 3.289 0 .321.216.697.825.579C20.565 22.283 24 17.793 24 12.5 24 5.872 18.627 0.5 12 0.5z" />
                             </svg>
-                            <span className="truncate max-w-[16rem]">stephenyin/Ear2Finger</span>
+                            <span className="truncate max-w-[16rem]">Wildcat252/Dictypio</span>
                           </a>
                         </dd>
                       </div>
