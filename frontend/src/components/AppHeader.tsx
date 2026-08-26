@@ -90,10 +90,10 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
       <div className="flex items-center gap-2.5 order-1 shrink-0">
         <div className="relative group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-teal-400 rounded-lg blur-xs opacity-60 group-hover:opacity-100 transition duration-300"></div>
-          <img src="/icon.png" alt="Ear2Finger" className="relative w-8 h-8 rounded-lg" />
+          <img src="/logo.svg" alt="Dictypio" className="relative w-8 h-8 rounded-lg" />
         </div>
         <span className="text-lg font-bold bg-gradient-to-r from-cyan-300 via-teal-200 to-sky-300 bg-clip-text text-transparent tracking-wide">
-          Ear2Finger
+          Dictypio
         </span>
         {onToggleSidebar && (
           <button

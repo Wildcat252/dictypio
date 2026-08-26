@@ -536,7 +536,7 @@ app.whenReady().then(async () => {
       }
       await dialog.showMessageBox({
         type: 'error',
-        title: 'Ear2Finger',
+        title: 'Dictypio',
         message: 'Could not start the application.',
         detail: `${msg}\n\nLogs:\n${logLines.join('\n')}`,
       })

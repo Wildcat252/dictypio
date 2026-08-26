@@ -352,7 +352,7 @@ export default function Dashboard() {
                         Recommended YouTube channels
                       </h3>
                       <p className="text-[11px] text-slate-400 mb-2">
-                        Clear English audio and good subtitles, great for importing into Ear2Finger.
+                        Clear English audio and good subtitles, great for importing into Dictypio.
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {[
@@ -484,7 +484,7 @@ export default function Dashboard() {
                       Recommended YouTube channels
                     </h3>
                     <p className="text-xs text-slate-400 mb-4">
-                      These channels offer clear English audio and high‑quality subtitles, making them ideal for listening, dictation, and Ear2Finger practice.
+                      These channels offer clear English audio and high‑quality subtitles, making them ideal for listening, dictation, and Dictypio practice.
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {[
