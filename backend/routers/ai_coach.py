@@ -16,6 +16,11 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import User, Video, get_db
 from routers.learning_progress import UserStats as StatsModel, get_user_stats
+from config import (
+    LIBRETRANSLATE_API_KEY,
+    LIBRETRANSLATE_TIMEOUT,
+    LIBRETRANSLATE_URL,
+)
 from services.ai_client_factory import make_llm_for_user
 from services.qdrant_client import search_sentences_by_queries
 
@@ -328,9 +333,49 @@ async def generate_coach_feedback(
     return CoachFeedbackResponse(summary=summary, suggestions=suggestions)
 
 
+# LibreTranslate has no "zh" or "zh-CN"; it splits Chinese by script instead.
+# Codes the app already sends that LibreTranslate spells differently go here.
+_LIBRETRANSLATE_LANG_OVERRIDES = {"zh-CN": "zh-Hans", "zh-TW": "zh-Hant"}
+
+
+async def _translate_via_libretranslate(text: str, target_lang: str) -> str:
+    """Translate through a self-hosted LibreTranslate instance."""
+    payload = {
+        "q": text,
+        "source": "auto",
+        "target": _LIBRETRANSLATE_LANG_OVERRIDES.get(target_lang, target_lang),
+        "format": "text",
+    }
+    if LIBRETRANSLATE_API_KEY:
+        payload["api_key"] = LIBRETRANSLATE_API_KEY
+
+    async with httpx.AsyncClient(timeout=LIBRETRANSLATE_TIMEOUT) as client:
+        resp = await client.post(f"{LIBRETRANSLATE_URL}/translate", json=payload)
+        resp.raise_for_status()
+    return (resp.json().get("translatedText") or "").strip()
+
+
+async def _translate_via_google(text: str, target_lang: str) -> str:
+    """Translate through Google Translate's free web endpoint (no API key)."""
+    params = {
+        "client": "gtx",
+        "sl": "auto",
+        "tl": target_lang,
+        "dt": "t",
+        "q": text,
+    }
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(
+            "https://translate.googleapis.com/translate_a/single", params=params
+        )
+        resp.raise_for_status()
+    data = resp.json()
+    return "".join(seg[0] for seg in (data[0] or []) if seg and seg[0]).strip()
+
+
 @router.post("/ai/translate", response_model=TranslateResponse)
 async def translate_text(body: TranslateRequest) -> TranslateResponse:
-    """Translate text via Google Translate's free web endpoint (no API key)."""
+    """Translate text, preferring self-hosted LibreTranslate over Google."""
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Text to translate is empty.")
@@ -339,29 +384,30 @@ async def translate_text(body: TranslateRequest) -> TranslateResponse:
     if not re.fullmatch(r"[a-zA-Z-]{2,8}", target_lang):
         raise HTTPException(status_code=400, detail="Invalid target language code.")
 
-    params = {
-        "client": "gtx",
-        "sl": "auto",
-        "tl": target_lang,
-        "dt": "t",
-        "q": text,
-    }
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.get(
-                "https://translate.googleapis.com/translate_a/single", params=params
+        translation = await _translate_via_libretranslate(text, target_lang)
+    except Exception as libre_exc:
+        # Expected whenever the container is not running: log and keep going, so
+        # a missing LibreTranslate degrades to Google instead of breaking Translate.
+        logger.warning(
+            "ai_translate: LibreTranslate at %s failed (%s); falling back to Google",
+            LIBRETRANSLATE_URL,
+            libre_exc,
+        )
+        try:
+            translation = await _translate_via_google(text, target_lang)
+        except Exception as google_exc:
+            logger.exception(
+                "ai_translate: Google fallback failed as well: %s", google_exc
             )
-            resp.raise_for_status()
-        data = resp.json()
-        translation = "".join(
-            seg[0] for seg in (data[0] or []) if seg and seg[0]
-        ).strip()
-    except Exception as exc:
-        logger.exception("ai_translate: translation request failed: %s", exc)
-        raise HTTPException(
-            status_code=502,
-            detail="Translation service is unavailable. Check your internet connection.",
-        ) from exc
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    f"Both translation sources failed. LibreTranslate at "
+                    f"{LIBRETRANSLATE_URL} said: {libre_exc}. The Google fallback "
+                    f"said: {google_exc}."
+                ),
+            ) from google_exc
 
     if not translation:
         raise HTTPException(

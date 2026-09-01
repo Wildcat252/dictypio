@@ -30,3 +30,15 @@ GEMINI_EMBEDDING_MODEL = (os.getenv("GEMINI_EMBEDDING_MODEL") or "gemini-embeddi
 #   curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_API_KEY"
 # then set GEMINI_MODEL to a model name (e.g. gemini-3-flash-preview, gemini-1.5-flash-8b).
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+
+# LibreTranslate, self-hosted. Start it with:
+#   docker run -ti --rm -p 5000:5000 libretranslate/libretranslate
+# Sentence translation prefers this and falls back to Google's free web endpoint
+# when it is unreachable, so the feature keeps working with no container running.
+LIBRETRANSLATE_URL = (
+    os.getenv("LIBRETRANSLATE_URL") or "http://localhost:5000"
+).strip().rstrip("/")
+# Only needed by a hosted instance that requires one; a local container does not.
+LIBRETRANSLATE_API_KEY = (os.getenv("LIBRETRANSLATE_API_KEY") or "").strip() or None
+# Kept short by default: every miss is paid before the Google fallback runs.
+LIBRETRANSLATE_TIMEOUT = float(os.getenv("LIBRETRANSLATE_TIMEOUT", "15"))
