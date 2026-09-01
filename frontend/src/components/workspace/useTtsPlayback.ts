@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { estimatedVoiceLatency, isNetworkVoice, recordVoiceLatency } from '../../voices'
+import {
+  MIN_VOICE_POOL,
+  chunkIndexForWord,
+  orderPoolForSentence,
+  resolveVoicePool,
+  splitTextForVoices,
+  voiceForRepeat,
+} from '../../voiceRotation'
 
 // Scales the word-by-word TTS gap exponentially by word length so longer words
 // give more time to type: 0.5x under 3 letters (quick words need less time),
@@ -65,6 +73,10 @@ export function useTtsPlayback(params: {
     repeatCount,
     pauseInterval,
     ttsVoiceName,
+    ttsMultiVoice,
+    ttsVoiceNames,
+    ttsMultiVoiceMode,
+    ttsVoiceOrder,
     ttsWordByWord,
     ttsWordInterval,
     ttsLettersPerGap,
@@ -146,11 +158,41 @@ export function useTtsPlayback(params: {
       }
     }
 
-    // Resolve the voice object once
-    let selectedVoice: SpeechSynthesisVoice | null = null
-    if (ttsVoiceName && availableVoices.length) {
-      selectedVoice = availableVoices.find(v => v.name === ttsVoiceName) || null
-    }
+    // Resolve which voice — or voices — read this sentence.
+    //
+    // A pool of one is indistinguishable from single-voice playback, so anything
+    // short of MIN_VOICE_POOL resolvable voices quietly falls back to the old
+    // behaviour: the browser may simply no longer offer the saved voices.
+    const singleVoice: SpeechSynthesisVoice | null =
+      ttsVoiceName && availableVoices.length
+        ? availableVoices.find((v) => v.name === ttsVoiceName) || null
+        : null
+
+    const rawPool = ttsMultiVoice ? resolveVoicePool(ttsVoiceNames, availableVoices) : []
+    const multiVoiceActive = rawPool.length >= MIN_VOICE_POOL
+    // Keyed by sentence id so 'random' deals one order for this sentence and
+    // keeps it across every repeat, then a different one for the next sentence.
+    const voicePool = multiVoiceActive
+      ? orderPoolForSentence(rawPool, ttsVoiceOrder, String(currentSentence.id))
+      : []
+
+    const splitVoices = multiVoiceActive && ttsMultiVoiceMode === 'split'
+
+    // Rotation needs nothing but this read: onSentenceFinished bumps the counter
+    // and re-triggers the effect, so this line runs again for every repeat.
+    const selectedVoice: SpeechSynthesisVoice | null = splitVoices
+      ? voicePool[0]
+      : multiVoiceActive
+        ? voiceForRepeat(voicePool, repeatCountRef.current)
+        : singleVoice
+
+    // Chunks for 'split' mode, shared by both playback paths so the handover
+    // points are the same whether or not word-by-word is on.
+    const voiceChunks = splitVoices
+      ? splitTextForVoices(currentSentence.sentence_text, voicePool.length)
+      : []
+    const voiceForChunkIndex = (index: number): SpeechSynthesisVoice | null =>
+      voicePool.length ? voicePool[Math.min(index, voicePool.length - 1)] : selectedVoice
 
     // Called when the entire sentence has finished (either whole-sentence or last word)
     const onSentenceFinished = () => {
@@ -404,9 +446,12 @@ export function useTtsPlayback(params: {
       // round-trip — the Word Gap setting stops meaning what it says. Subtracting
       // the measured round-trip from the gap we wait folds the latency into the
       // pause instead of adding to it. Local voices keep their existing timing.
-      const compensatedGap = (gapMs: number) => {
-        if (!isNetworkVoice(selectedVoice)) return gapMs
-        const latency = estimatedVoiceLatency(selectedVoice?.name)
+      // Takes the voice that actually spoke: with several voices in play their
+      // round-trips differ, and compensating every gap by one voice's latency
+      // would skew the pause after all the others.
+      const compensatedGap = (gapMs: number, voice: SpeechSynthesisVoice | null) => {
+        if (!isNetworkVoice(voice)) return gapMs
+        const latency = estimatedVoiceLatency(voice?.name)
         // Always keep a real pause, so words never run together even if the
         // round-trip is longer than the gap itself.
         return Math.max(gapMs * 0.25, gapMs - latency)
@@ -420,20 +465,28 @@ export function useTtsPlayback(params: {
         const segment = segments[segIdx]
         const utterance = new SpeechSynthesisUtterance(segment.text)
         utterance.rate = playbackSpeed
-        if (selectedVoice) utterance.voice = selectedVoice
+        // In 'split' mode the voice changes partway through the sentence, at the
+        // same word boundaries whole-sentence mode hands over on.
+        const segmentVoice = splitVoices
+          ? voiceForChunkIndex(chunkIndexForWord(voiceChunks, segment.tokenIdx))
+          : selectedVoice
+        if (segmentVoice) utterance.voice = segmentVoice
         currentSegIdx = segIdx
         currentUtterance = utterance
 
         // Time from speak() to first audio, fed back into the gap compensation above.
         let spokenAt = 0
         utterance.onstart = () => {
-          if (abandonedUtterances.has(utterance) || !selectedVoice || !spokenAt) return
-          recordVoiceLatency(selectedVoice.name, performance.now() - spokenAt)
+          if (abandonedUtterances.has(utterance) || !segmentVoice || !spokenAt) return
+          recordVoiceLatency(segmentVoice.name, performance.now() - spokenAt)
         }
 
         utterance.onend = () => {
           if (abandonedUtterances.has(utterance)) return
-          const gapMs = compensatedGap(ttsWordInterval * 1000 * segment.gapMultiplier)
+          const gapMs = compensatedGap(
+            ttsWordInterval * 1000 * segment.gapMultiplier,
+            segmentVoice
+          )
           const groupId = groupIdOf[segIdx]
           const isLastOfGroup =
             segIdx + 1 >= segments.length || groupIdOf[segIdx + 1] !== groupId
@@ -532,13 +585,25 @@ export function useTtsPlayback(params: {
       }
     } else {
       // --- Whole-sentence mode (original) ---
-      const speak = () => {
-        const utterance = new SpeechSynthesisUtterance(currentSentence.sentence_text)
+      // In 'split' mode the sentence is read as several chunks, one per voice;
+      // otherwise it stays a single utterance exactly as before.
+      const chunks = splitVoices && voiceChunks.length > 1
+        ? voiceChunks
+        : [currentSentence.sentence_text]
+
+      const speakChunk = (index: number) => {
+        const utterance = new SpeechSynthesisUtterance(chunks[index])
         utterance.rate = playbackSpeed
-        if (selectedVoice) utterance.voice = selectedVoice
+        const chunkVoice = splitVoices ? voiceForChunkIndex(index) : selectedVoice
+        if (chunkVoice) utterance.voice = chunkVoice
 
         utterance.onend = () => {
-          onSentenceFinished()
+          // Only the final chunk ends the sentence; the rest hand over.
+          if (index + 1 < chunks.length) {
+            speakChunk(index + 1)
+          } else {
+            onSentenceFinished()
+          }
         }
 
         utterance.onerror = (e) => {
@@ -550,6 +615,8 @@ export function useTtsPlayback(params: {
 
         speakUtterance(utterance)
       }
+
+      const speak = () => speakChunk(0)
 
       if (!isWaitingForPauseIntervalRef.current) {
         speak()
@@ -581,6 +648,10 @@ export function useTtsPlayback(params: {
     repeatCount,
     pauseInterval,
     ttsVoiceName,
+    ttsMultiVoice,
+    ttsVoiceNames,
+    ttsMultiVoiceMode,
+    ttsVoiceOrder,
     availableVoices,
     ttsWordByWord,
     ttsWordInterval,

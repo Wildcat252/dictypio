@@ -12,6 +12,13 @@ import {
 } from '../api'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { isNetworkVoice, usePremiumVoices } from '../voices'
+import {
+  MIN_VOICE_POOL,
+  orderPoolForSentence,
+  resolveVoicePool,
+  splitTextForVoices,
+  voiceForRepeat,
+} from '../voiceRotation'
 import { loadAudioSettings, playCelebrationChime, playMistakeBuzz } from '../audio'
 import { WordLists } from './practice/WordLists'
 import { AddWordsSidebar } from './practice/AddWordsSidebar'
@@ -73,7 +80,17 @@ function savePracticeState(state: PersistedPracticeState): void {
 }
 
 export default function Practice() {
-  const { ttsVoiceName, playbackSpeed, setPlaybackSpeed, ignoreCase, ignorePunctuation } = useWorkspace()
+  const {
+    ttsVoiceName,
+    ttsMultiVoice,
+    ttsVoiceNames,
+    ttsMultiVoiceMode,
+    ttsVoiceOrder,
+    playbackSpeed,
+    setPlaybackSpeed,
+    ignoreCase,
+    ignorePunctuation,
+  } = useWorkspace()
   const availableVoices = usePremiumVoices()
   const [audio] = useState(loadAudioSettings)
   // Read once on mount so leaving and returning restores where you left off
@@ -122,6 +139,9 @@ export default function Practice() {
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cancelledIntentionallyRef = useRef(false)
   const cancelPendingRef = useRef(false)
+  // Practice has no sentence-repeat loop for rotation to ride on, so 'repeat'
+  // mode advances one voice per playback instead of per repeat.
+  const voiceRotationRef = useRef(0)
   const chimedRef = useRef(false)
 
   useEffect(() => {
@@ -196,13 +216,39 @@ export default function Practice() {
    */
   const speakParts = useCallback(
     (parts: string[], rate?: number) => {
-      const texts = parts.filter(Boolean)
+      let texts = parts.filter(Boolean)
       if (texts.length === 0) return
       const synth = window.speechSynthesis
-      const selectedVoice = ttsVoiceName
+      const singleVoice = ttsVoiceName
         ? availableVoices.find((v) => v.name === ttsVoiceName) || null
         : null
       const speechRate = rate ?? playbackSpeed
+
+      // Same fallback rule as the workspace: fewer than MIN_VOICE_POOL voices
+      // actually resolvable means plain single-voice playback.
+      const rawPool = ttsMultiVoice ? resolveVoicePool(ttsVoiceNames, availableVoices) : []
+      const multiVoiceActive = rawPool.length >= MIN_VOICE_POOL
+      const rotation = voiceRotationRef.current++
+      const voicePool = multiVoiceActive
+        ? orderPoolForSentence(rawPool, ttsVoiceOrder, texts.join(' '))
+        : []
+
+      // Voice per spoken part.
+      let voices: (SpeechSynthesisVoice | null)[]
+      if (!multiVoiceActive) {
+        voices = texts.map(() => singleVoice)
+      } else if (texts.length > 1) {
+        // The caller already split this — spelling a word out letter by letter.
+        // Handing each letter to a different speaker makes it harder to follow,
+        // not easier, so one voice reads the whole run.
+        const voice = voiceForRepeat(voicePool, rotation)
+        voices = texts.map(() => voice)
+      } else if (ttsMultiVoiceMode === 'split') {
+        texts = splitTextForVoices(texts[0], voicePool.length)
+        voices = texts.map((_, i) => voicePool[Math.min(i, voicePool.length - 1)])
+      } else {
+        voices = [voiceForRepeat(voicePool, rotation)]
+      }
 
       if (speakTimeoutRef.current) {
         clearTimeout(speakTimeoutRef.current)
@@ -210,21 +256,25 @@ export default function Practice() {
       }
 
       const primeAndSpeak = () => {
+        // The primer warms up the voice that speaks first, which is not
+        // necessarily ttsVoiceName once a pool is in play.
+        const firstVoice = voices[0] ?? singleVoice
         // Cloud voices are delayed by a network round-trip rather than engine
         // warm-up, so the primer only buys a second round-trip. See voices.ts.
-        if (!isNetworkVoice(selectedVoice)) {
+        if (!isNetworkVoice(firstVoice)) {
           const primer = new SpeechSynthesisUtterance('.')
           primer.volume = 0
           primer.rate = speechRate
-          if (selectedVoice) primer.voice = selectedVoice
+          if (firstVoice) primer.voice = firstVoice
           synth.speak(primer)
         }
-        for (const text of texts) {
+        texts.forEach((text, i) => {
           const utterance = new SpeechSynthesisUtterance(text)
           utterance.rate = speechRate
-          if (selectedVoice) utterance.voice = selectedVoice
+          const voice = voices[i] ?? singleVoice
+          if (voice) utterance.voice = voice
           synth.speak(utterance)
-        }
+        })
       }
 
       if (synth.speaking || synth.pending || cancelPendingRef.current) {
@@ -242,7 +292,15 @@ export default function Practice() {
         primeAndSpeak()
       }
     },
-    [availableVoices, playbackSpeed, ttsVoiceName]
+    [
+      availableVoices,
+      playbackSpeed,
+      ttsVoiceName,
+      ttsMultiVoice,
+      ttsVoiceNames,
+      ttsMultiVoiceMode,
+      ttsVoiceOrder,
+    ]
   )
 
   const speak = useCallback((text: string) => speakParts([text]), [speakParts])

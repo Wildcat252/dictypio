@@ -45,6 +45,14 @@ export default function Settings() {
     setRepeatCount,
     ttsVoiceName,
     setTtsVoiceName,
+    ttsMultiVoice,
+    setTtsMultiVoice,
+    ttsVoiceNames,
+    setTtsVoiceNames,
+    ttsMultiVoiceMode,
+    setTtsMultiVoiceMode,
+    ttsVoiceOrder,
+    setTtsVoiceOrder,
   } = useWorkspace()
   const availableVoices = usePremiumVoices()
   const [activeSection, setActiveSection] = useState<SettingsSection>('ai-api-key')
@@ -435,6 +443,14 @@ export default function Settings() {
               ttsVoiceName={ttsVoiceName}
               setTtsVoiceName={setTtsVoiceName}
               availableVoices={availableVoices}
+              ttsMultiVoice={ttsMultiVoice}
+              setTtsMultiVoice={setTtsMultiVoice}
+              ttsVoiceNames={ttsVoiceNames}
+              setTtsVoiceNames={setTtsVoiceNames}
+              ttsMultiVoiceMode={ttsMultiVoiceMode}
+              setTtsMultiVoiceMode={setTtsMultiVoiceMode}
+              ttsVoiceOrder={ttsVoiceOrder}
+              setTtsVoiceOrder={setTtsVoiceOrder}
             />
           )}
 

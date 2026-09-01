@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { MAX_VOICE_POOL, type MultiVoiceMode, type VoiceOrder } from '../voiceRotation'
 
 export interface Playlist {
   id: number
@@ -50,6 +51,10 @@ interface WorkspaceState {
   ignoreCase: boolean
   repeatCount: number | '∞'
   ttsVoiceName: string
+  ttsMultiVoice: boolean
+  ttsVoiceNames: string[]
+  ttsMultiVoiceMode: MultiVoiceMode
+  ttsVoiceOrder: VoiceOrder
   ttsWordByWord: boolean
   ttsWordInterval: number
   ttsLettersPerGap: number
@@ -74,6 +79,16 @@ const STORAGE_KEY = 'ear2finger-workspace-progress'
 // The chosen dictation voice has its own key so it survives even if the
 // workspace snapshot below is cleared.
 const VOICE_STORAGE_KEY = 'ear2finger-tts-voice'
+// Multi-voice settings live beside VOICE_STORAGE_KEY rather than inside it, so
+// an existing install's single-voice choice keeps loading unchanged.
+const MULTI_VOICE_STORAGE_KEY = 'ear2finger-tts-voices'
+
+interface MultiVoiceSettings {
+  ttsMultiVoice: boolean
+  ttsVoiceNames: string[]
+  ttsMultiVoiceMode: MultiVoiceMode
+  ttsVoiceOrder: VoiceOrder
+}
 
 // Playback & grading preferences get their own key so they persist even if
 // the workspace snapshot is cleared.
@@ -129,6 +144,10 @@ const initialState: WorkspaceState = {
   ignoreCase: true,
   repeatCount: '∞',
   ttsVoiceName: '',
+  ttsMultiVoice: false,
+  ttsVoiceNames: [],
+  ttsMultiVoiceMode: 'repeat',
+  ttsVoiceOrder: 'fixed',
   ttsWordByWord: false,
   ttsWordInterval: 0.5,
   ttsLettersPerGap: 40,
@@ -156,6 +175,10 @@ type WorkspaceContextValue = WorkspaceState & {
   setIgnoreCase: (v: boolean) => void
   setRepeatCount: (v: number | '∞') => void
   setTtsVoiceName: (v: string) => void
+  setTtsMultiVoice: (v: boolean) => void
+  setTtsVoiceNames: (v: string[]) => void
+  setTtsMultiVoiceMode: (v: MultiVoiceMode) => void
+  setTtsVoiceOrder: (v: VoiceOrder) => void
   setTtsWordByWord: (v: boolean) => void
   setTtsWordInterval: (v: number) => void
   setTtsLettersPerGap: (v: number) => void
@@ -210,6 +233,68 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       // storage unavailable — the choice still applies for this session
     }
   }, [])
+
+  // The multi-voice settings persist as one object: they are only meaningful
+  // as a set, and a half-restored pool would silently change playback.
+  const [multiVoice, setMultiVoiceState] = useState<MultiVoiceSettings>(() => {
+    const fallback: MultiVoiceSettings = {
+      ttsMultiVoice: initialState.ttsMultiVoice,
+      ttsVoiceNames: initialState.ttsVoiceNames,
+      ttsMultiVoiceMode: initialState.ttsMultiVoiceMode,
+      ttsVoiceOrder: initialState.ttsVoiceOrder,
+    }
+    try {
+      const raw = localStorage.getItem(MULTI_VOICE_STORAGE_KEY)
+      if (!raw) return fallback
+      const saved = JSON.parse(raw) as Partial<typeof fallback>
+      return {
+        ttsMultiVoice: saved.ttsMultiVoice ?? fallback.ttsMultiVoice,
+        // Trust nothing from storage: it may predate the cap or be hand-edited.
+        ttsVoiceNames: Array.isArray(saved.ttsVoiceNames)
+          ? saved.ttsVoiceNames
+              .filter((n): n is string => typeof n === 'string')
+              .slice(0, MAX_VOICE_POOL)
+          : fallback.ttsVoiceNames,
+        ttsMultiVoiceMode: (saved.ttsMultiVoiceMode === 'split' ? 'split' : 'repeat') as MultiVoiceMode,
+        ttsVoiceOrder: (saved.ttsVoiceOrder === 'random' ? 'random' : 'fixed') as VoiceOrder,
+      }
+    } catch {
+      return fallback
+    }
+  })
+
+  const patchMultiVoice = useCallback(
+    (patch: Partial<MultiVoiceSettings>) => {
+      setMultiVoiceState((prev) => {
+        const next = { ...prev, ...patch }
+        try {
+          localStorage.setItem(MULTI_VOICE_STORAGE_KEY, JSON.stringify(next))
+        } catch {
+          // storage unavailable — the choice still applies for this session
+        }
+        return next
+      })
+    },
+    []
+  )
+
+  const setTtsMultiVoice = useCallback(
+    (v: boolean) => patchMultiVoice({ ttsMultiVoice: v }),
+    [patchMultiVoice]
+  )
+  const setTtsVoiceNames = useCallback(
+    (v: string[]) => patchMultiVoice({ ttsVoiceNames: v.slice(0, MAX_VOICE_POOL) }),
+    [patchMultiVoice]
+  )
+  const setTtsMultiVoiceMode = useCallback(
+    (v: MultiVoiceMode) => patchMultiVoice({ ttsMultiVoiceMode: v }),
+    [patchMultiVoice]
+  )
+  const setTtsVoiceOrder = useCallback(
+    (v: VoiceOrder) => patchMultiVoice({ ttsVoiceOrder: v }),
+    [patchMultiVoice]
+  )
+  const { ttsMultiVoice, ttsVoiceNames, ttsMultiVoiceMode, ttsVoiceOrder } = multiVoice
   const [ttsWordByWord, setTtsWordByWord] = useState<boolean>(durable.ttsWordByWord ?? p.ttsWordByWord ?? initialState.ttsWordByWord)
   const [ttsWordInterval, setTtsWordInterval] = useState<number>(durable.ttsWordInterval ?? p.ttsWordInterval ?? initialState.ttsWordInterval)
   const [ttsLettersPerGap, setTtsLettersPerGap] = useState<number>(durable.ttsLettersPerGap ?? p.ttsLettersPerGap ?? initialState.ttsLettersPerGap)
@@ -274,6 +359,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         ignoreCase,
         repeatCount,
         ttsVoiceName,
+        ttsMultiVoice,
+        ttsVoiceNames,
+        ttsMultiVoiceMode,
+        ttsVoiceOrder,
         ttsWordByWord,
         ttsWordInterval,
         ttsLettersPerGap,
@@ -304,6 +393,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     ignoreCase,
     repeatCount,
     ttsVoiceName,
+    ttsMultiVoice,
+    ttsVoiceNames,
+    ttsMultiVoiceMode,
+    ttsVoiceOrder,
     ttsWordByWord,
     ttsWordInterval,
     ttsLettersPerGap,
@@ -346,6 +439,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setRepeatCount,
     ttsVoiceName,
     setTtsVoiceName,
+    ttsMultiVoice,
+    setTtsMultiVoice,
+    ttsVoiceNames,
+    setTtsVoiceNames,
+    ttsMultiVoiceMode,
+    setTtsMultiVoiceMode,
+    ttsVoiceOrder,
+    setTtsVoiceOrder,
     ttsWordByWord,
     setTtsWordByWord,
     ttsWordInterval,
