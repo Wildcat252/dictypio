@@ -20,8 +20,9 @@ function wordGapMultiplier(word: string): number {
 // grouped word-by-word playback the same length as ungrouped.
 const MERGED_UTTERANCE_PADDING_MS = 180
 
-// Gap after a spoken punctuation name, and the gap kept before it when words
-// are grouped, so "Hello" and "comma" never run together.
+// Gap kept between a punctuation name and the word after it. Nothing is kept
+// *before* a punctuation name: "Hello," runs straight from "Hello" into
+// "comma", and the gap the word earned is paid out after "comma" instead.
 const PUNCT_GAP_MULTIPLIER = 0.1
 
 // Common punctuation spoken by name in word-by-word mode so the learner
@@ -282,10 +283,10 @@ export function useTtsPlayback(params: {
       // one-word-at-a-time path untouched.
       const hasMultiWordGroup = tokenGroupId.some((g, i) => i > 0 && tokenGroupId[i - 1] === g)
 
-      // Expand each token into speech segments so the Word Gap also separates a
-      // word from its spoken punctuation: "Hello," -> "Hello" (gap) "comma" (gap).
-      // Punctuation-name segments use half the base gap (typing them is one
-      // keystroke); word segments keep the length-scaled gap.
+      // Expand each token into speech segments: "Hello," -> "Hello" "comma" (gap).
+      // A word is never separated from its own punctuation; the length-scaled
+      // gap it earns is moved to after the punctuation name, so the pause
+      // between one token and the next stays the same as it was.
       type TtsSegment = {
         text: string
         gapMultiplier: number
@@ -297,21 +298,24 @@ export function useTtsPlayback(params: {
       words.forEach((token, tokenIdx) => {
         const wordPart = token.replace(/[,.?!]/g, '').trim()
         const punctNames = (token.match(/[,.?!]/g) ?? []).map((ch) => SPOKEN_PUNCTUATION[ch])
+        // Whatever the token earns is paid once, after its last segment.
+        const tokenGap = wordPart ? wordGapMultiplier(wordPart) : PUNCT_GAP_MULTIPLIER
         if (wordPart) {
           segments.push({
             text: wordPart,
-            gapMultiplier: wordGapMultiplier(wordPart),
+            gapMultiplier: punctNames.length > 0 ? 0 : tokenGap,
             tokenIdx,
             lastOfToken: punctNames.length === 0,
             isPunct: false,
           })
         }
         punctNames.forEach((name, i) => {
+          const isLastPunct = i === punctNames.length - 1
           segments.push({
             text: name,
-            gapMultiplier: PUNCT_GAP_MULTIPLIER,
+            gapMultiplier: isLastPunct ? tokenGap : 0,
             tokenIdx,
-            lastOfToken: i === punctNames.length - 1,
+            lastOfToken: isLastPunct,
             isPunct: true,
           })
         })
@@ -361,13 +365,16 @@ export function useTtsPlayback(params: {
             extra = lostMs / (ttsWordInterval * 1000)
           }
 
-          // Keep a small gap at each internal (punctuation) boundary; the rest
-          // of the group's accumulated time lands after the final piece.
-          const internal = Math.max(0, pieces.length - 1) * PUNCT_GAP_MULTIPLIER
+          // Internal boundaries keep a small gap, except one leading into a
+          // punctuation name: a word runs straight into its own punctuation.
+          // The rest of the group's accumulated time lands after the final piece.
+          const internalGapAt = (idx: number) =>
+            idx < pieces.length - 1 && !pieces[idx + 1].isPunct ? PUNCT_GAP_MULTIPLIER : 0
+          const internal = pieces.reduce((sum, _piece, idx) => sum + internalGapAt(idx), 0)
           pieces.forEach((piece, idx) => {
             piece.gapMultiplier =
               idx < pieces.length - 1
-                ? PUNCT_GAP_MULTIPLIER
+                ? internalGapAt(idx)
                 : Math.max(0, totalGap + extra - internal)
           })
           out.push(...pieces)
