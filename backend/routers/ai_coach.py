@@ -375,7 +375,7 @@ async def _translate_via_google(text: str, target_lang: str) -> str:
 
 @router.post("/ai/translate", response_model=TranslateResponse)
 async def translate_text(body: TranslateRequest) -> TranslateResponse:
-    """Translate text, preferring self-hosted LibreTranslate over Google."""
+    """Translate text, preferring Google with self-hosted LibreTranslate behind it."""
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Text to translate is empty.")
@@ -385,29 +385,30 @@ async def translate_text(body: TranslateRequest) -> TranslateResponse:
         raise HTTPException(status_code=400, detail="Invalid target language code.")
 
     try:
-        translation = await _translate_via_libretranslate(text, target_lang)
-    except Exception as libre_exc:
-        # Expected whenever the container is not running: log and keep going, so
-        # a missing LibreTranslate degrades to Google instead of breaking Translate.
+        translation = await _translate_via_google(text, target_lang)
+    except Exception as google_exc:
+        # Google has no SLA and answers 429 once it decides the traffic is
+        # automated, so losing it is routine: log and fall through rather than
+        # failing the request.
         logger.warning(
-            "ai_translate: LibreTranslate at %s failed (%s); falling back to Google",
+            "ai_translate: Google failed (%s); falling back to LibreTranslate at %s",
+            google_exc,
             LIBRETRANSLATE_URL,
-            libre_exc,
         )
         try:
-            translation = await _translate_via_google(text, target_lang)
-        except Exception as google_exc:
+            translation = await _translate_via_libretranslate(text, target_lang)
+        except Exception as libre_exc:
             logger.exception(
-                "ai_translate: Google fallback failed as well: %s", google_exc
+                "ai_translate: LibreTranslate fallback failed as well: %s", libre_exc
             )
             raise HTTPException(
                 status_code=502,
                 detail=(
-                    f"Both translation sources failed. LibreTranslate at "
-                    f"{LIBRETRANSLATE_URL} said: {libre_exc}. The Google fallback "
-                    f"said: {google_exc}."
+                    f"Both translation sources failed. Google said: {google_exc}. "
+                    f"The LibreTranslate fallback at {LIBRETRANSLATE_URL} said: "
+                    f"{libre_exc}."
                 ),
-            ) from google_exc
+            ) from libre_exc
 
     if not translation:
         raise HTTPException(

@@ -30,9 +30,13 @@ Copy `.env.example` to `.env` and configure as needed.
 
 ## Translation
 
-`POST /api/ai/translate` tries a self-hosted **LibreTranslate** first and falls back
-to Google's free web endpoint if it is unreachable, so Translate keeps working with
-nothing installed.
+`POST /api/ai/translate` tries **Google's free web endpoint** first, for translation
+quality, and falls back to a self-hosted **LibreTranslate** when Google is
+unreachable or rate-limits the request. Running LibreTranslate is therefore optional:
+without it Translate still works, it just has no safety net.
+
+Google's endpoint is unofficial and answers `429` once it decides traffic is
+automated, which is exactly what the fallback is for.
 
 ### Running LibreTranslate
 
@@ -71,14 +75,14 @@ every miss before the fallback runs). See `.env.example`.
 
 The default is 5001 rather than LibreTranslate's own 5000, which local dev servers
 tend to hold already. An unrelated service answering on the configured port looks
-exactly like a LibreTranslate outage: the request 404s and translation quietly falls
-back to Google.
+exactly like a LibreTranslate outage: the request 404s, and since LibreTranslate is
+the last resort the whole translation then fails.
 
 `npm run electron:dev` does not read `.env` — it hands the backend the shell's own
 environment, so export these before starting it.
 
-When the fallback runs, the backend logs a `WARNING` naming LibreTranslate; use that
-to tell a real LibreTranslate translation apart from a silent Google one.
+When the fallback runs, the backend logs a `WARNING` naming Google's failure; use
+that to tell a Google translation apart from a LibreTranslate one.
 
 ### Language codes
 
