@@ -1,11 +1,10 @@
-// Multi-voice playback: reading a sentence with 2-4 voices instead of one, so
-// the learner's ear does not settle into a single speaker.
+// Multi-voice playback: rotating through 2-4 voices instead of reading
+// everything in one, so the learner's ear does not settle into a single speaker.
 //
 // Shared by Workspace (useTtsPlayback) and Practice, which have separate
 // speech paths but must agree on which voice speaks what — otherwise the same
 // settings would produce different playback on the two screens.
 
-export type MultiVoiceMode = 'repeat' | 'split'
 export type VoiceOrder = 'fixed' | 'random'
 
 /** A pool below this is indistinguishable from single-voice playback. */
@@ -73,7 +72,11 @@ export function orderPoolForSentence(
   return shuffled
 }
 
-/** The voice for the nth reading of a sentence, wrapping around the pool. */
+/**
+ * The voice for the nth reading, wrapping around the pool. The reading may be a
+ * sentence repeat or a word repeat inside word-by-word mode; callers add those
+ * two steps together so both can advance the rotation at once.
+ */
 export function voiceForRepeat(
   pool: readonly SpeechSynthesisVoice[],
   repeatIndex: number
@@ -81,76 +84,4 @@ export function voiceForRepeat(
   if (!pool.length) return null
   const safeIndex = Number.isFinite(repeatIndex) && repeatIndex > 0 ? Math.floor(repeatIndex) : 0
   return pool[safeIndex % pool.length]
-}
-
-/**
- * Split a sentence into `parts` contiguous chunks on word boundaries, so each
- * chunk can be handed to a different voice.
- *
- * Chunks are cut at a comma/semicolon/colon where one falls near the ideal
- * boundary, because a handover mid-clause sounds like a glitch while one at a
- * comma sounds like two speakers taking turns.
- *
- * The concatenation of the result (joined with a single space) always contains
- * every word of the input exactly once — no word is dropped or repeated.
- */
-export function splitTextForVoices(text: string, parts: number): string[] {
-  const words = text.trim().split(/\s+/).filter(Boolean)
-  if (parts <= 1 || words.length <= 1) return words.length ? [words.join(' ')] : []
-
-  // More voices than words: give each word its own chunk and stop there.
-  const chunkCount = Math.min(parts, words.length)
-  const endsClause = (word: string) => /[,;:]$/.test(word)
-
-  const chunks: string[] = []
-  let start = 0
-  for (let chunk = 0; chunk < chunkCount; chunk++) {
-    const remainingChunks = chunkCount - chunk
-    if (remainingChunks === 1) {
-      chunks.push(words.slice(start).join(' '))
-      break
-    }
-
-    const chunkLength = (words.length - start) / remainingChunks
-    const ideal = start + Math.round(chunkLength)
-    // Keep at least one word here and one for every chunk still to come.
-    const min = start + 1
-    const max = words.length - (remainingChunks - 1)
-    let end = Math.min(Math.max(ideal, min), max)
-
-    // Prefer a clause boundary near the ideal cut, closest one first: a handover
-    // mid-clause sounds like a glitch, one at a comma sounds like taking turns.
-    // The window scales with chunk length but stays wide enough to reach an
-    // early comma in a short sentence ("Hello, | how are you today?").
-    const window = Math.max(2, Math.round(chunkLength * 0.5))
-    for (let distance = 0; distance <= window; distance++) {
-      const candidates = distance === 0 ? [end] : [end - distance, end + distance]
-      const hit = candidates.find(
-        (c) => c >= min && c <= max && endsClause(words[c - 1])
-      )
-      if (hit !== undefined) {
-        end = hit
-        break
-      }
-    }
-
-    chunks.push(words.slice(start, end).join(' '))
-    start = end
-  }
-
-  return chunks
-}
-
-/**
- * Which chunk a word index belongs to, given the chunk sizes produced by
- * `splitTextForVoices`. Word-by-word playback needs this to pick a voice per
- * spoken token while keeping the same handover points as whole-sentence mode.
- */
-export function chunkIndexForWord(chunks: readonly string[], wordIndex: number): number {
-  let seen = 0
-  for (let i = 0; i < chunks.length; i++) {
-    seen += chunks[i] ? chunks[i].split(/\s+/).filter(Boolean).length : 0
-    if (wordIndex < seen) return i
-  }
-  return Math.max(0, chunks.length - 1)
 }

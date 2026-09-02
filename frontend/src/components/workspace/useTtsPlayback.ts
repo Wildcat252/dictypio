@@ -3,10 +3,8 @@ import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { estimatedVoiceLatency, isNetworkVoice, recordVoiceLatency } from '../../voices'
 import {
   MIN_VOICE_POOL,
-  chunkIndexForWord,
   orderPoolForSentence,
   resolveVoicePool,
-  splitTextForVoices,
   voiceForRepeat,
 } from '../../voiceRotation'
 
@@ -75,7 +73,8 @@ export function useTtsPlayback(params: {
     ttsVoiceName,
     ttsMultiVoice,
     ttsVoiceNames,
-    ttsMultiVoiceMode,
+    ttsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
     ttsVoiceOrder,
     ttsWordByWord,
     ttsWordInterval,
@@ -169,30 +168,32 @@ export function useTtsPlayback(params: {
         : null
 
     const rawPool = ttsMultiVoice ? resolveVoicePool(ttsVoiceNames, availableVoices) : []
-    const multiVoiceActive = rawPool.length >= MIN_VOICE_POOL
+    // With neither switch on there is nothing to rotate against, so a pool would
+    // just pin every sentence to one voice — fall back to the dictation voice
+    // instead, the same way too small a pool does.
+    const rotatesSomewhere = ttsVoicePerSentenceRepeat || ttsVoicePerWordRepeat
+    const multiVoiceActive = rawPool.length >= MIN_VOICE_POOL && rotatesSomewhere
     // Keyed by sentence id so 'random' deals one order for this sentence and
     // keeps it across every repeat, then a different one for the next sentence.
     const voicePool = multiVoiceActive
       ? orderPoolForSentence(rawPool, ttsVoiceOrder, String(currentSentence.id))
       : []
 
-    const splitVoices = multiVoiceActive && ttsMultiVoiceMode === 'split'
+    // The two switches add up: the sentence repeat decides where in the pool a
+    // reading starts, and the word repeat walks on from there. Reading
+    // repeatCountRef here is all the sentence rotation needs — onSentenceFinished
+    // bumps the counter and re-triggers the effect, so this runs again per repeat.
+    const voiceFor = (wordStep: number): SpeechSynthesisVoice | null => {
+      if (!multiVoiceActive) return singleVoice
+      const sentenceStep = ttsVoicePerSentenceRepeat ? repeatCountRef.current : 0
+      return voiceForRepeat(
+        voicePool,
+        sentenceStep + (ttsVoicePerWordRepeat ? wordStep : 0)
+      )
+    }
 
-    // Rotation needs nothing but this read: onSentenceFinished bumps the counter
-    // and re-triggers the effect, so this line runs again for every repeat.
-    const selectedVoice: SpeechSynthesisVoice | null = splitVoices
-      ? voicePool[0]
-      : multiVoiceActive
-        ? voiceForRepeat(voicePool, repeatCountRef.current)
-        : singleVoice
-
-    // Chunks for 'split' mode, shared by both playback paths so the handover
-    // points are the same whether or not word-by-word is on.
-    const voiceChunks = splitVoices
-      ? splitTextForVoices(currentSentence.sentence_text, voicePool.length)
-      : []
-    const voiceForChunkIndex = (index: number): SpeechSynthesisVoice | null =>
-      voicePool.length ? voicePool[Math.min(index, voicePool.length - 1)] : selectedVoice
+    // Whole-sentence playback has no word repeats to advance through.
+    const selectedVoice = voiceFor(0)
 
     // Called when the entire sentence has finished (either whole-sentence or last word)
     const onSentenceFinished = () => {
@@ -465,11 +466,12 @@ export function useTtsPlayback(params: {
         const segment = segments[segIdx]
         const utterance = new SpeechSynthesisUtterance(segment.text)
         utterance.rate = playbackSpeed
-        // In 'split' mode the voice changes partway through the sentence, at the
-        // same word boundaries whole-sentence mode hands over on.
-        const segmentVoice = splitVoices
-          ? voiceForChunkIndex(chunkIndexForWord(voiceChunks, segment.tokenIdx))
-          : selectedVoice
+        // `pass` restarts at 1 for every group, so it cannot drive the rotation on
+        // its own. Group ids run 0,1,2… across the sentence, so this counts the
+        // readings since the sentence began: the rotation carries on into the next
+        // word instead of resetting, and because it is derived rather than
+        // accumulated, Skip/Prev cannot knock it out of step.
+        const segmentVoice = voiceFor(groupIdOf[segIdx] * wordRepeats + (pass - 1))
         if (segmentVoice) utterance.voice = segmentVoice
         currentSegIdx = segIdx
         currentUtterance = utterance
@@ -585,25 +587,13 @@ export function useTtsPlayback(params: {
       }
     } else {
       // --- Whole-sentence mode (original) ---
-      // In 'split' mode the sentence is read as several chunks, one per voice;
-      // otherwise it stays a single utterance exactly as before.
-      const chunks = splitVoices && voiceChunks.length > 1
-        ? voiceChunks
-        : [currentSentence.sentence_text]
-
-      const speakChunk = (index: number) => {
-        const utterance = new SpeechSynthesisUtterance(chunks[index])
+      const speak = () => {
+        const utterance = new SpeechSynthesisUtterance(currentSentence.sentence_text)
         utterance.rate = playbackSpeed
-        const chunkVoice = splitVoices ? voiceForChunkIndex(index) : selectedVoice
-        if (chunkVoice) utterance.voice = chunkVoice
+        if (selectedVoice) utterance.voice = selectedVoice
 
         utterance.onend = () => {
-          // Only the final chunk ends the sentence; the rest hand over.
-          if (index + 1 < chunks.length) {
-            speakChunk(index + 1)
-          } else {
-            onSentenceFinished()
-          }
+          onSentenceFinished()
         }
 
         utterance.onerror = (e) => {
@@ -615,8 +605,6 @@ export function useTtsPlayback(params: {
 
         speakUtterance(utterance)
       }
-
-      const speak = () => speakChunk(0)
 
       if (!isWaitingForPauseIntervalRef.current) {
         speak()
@@ -650,7 +638,8 @@ export function useTtsPlayback(params: {
     ttsVoiceName,
     ttsMultiVoice,
     ttsVoiceNames,
-    ttsMultiVoiceMode,
+    ttsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
     ttsVoiceOrder,
     availableVoices,
     ttsWordByWord,

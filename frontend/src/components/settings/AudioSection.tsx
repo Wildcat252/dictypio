@@ -20,7 +20,6 @@ import {
   MAX_VOICE_POOL,
   MIN_VOICE_POOL,
   resolveVoicePool,
-  type MultiVoiceMode,
   type VoiceOrder,
 } from '../../voiceRotation'
 
@@ -35,8 +34,10 @@ interface AudioSectionProps {
   setTtsMultiVoice: (v: boolean) => void
   ttsVoiceNames: string[]
   setTtsVoiceNames: (v: string[]) => void
-  ttsMultiVoiceMode: MultiVoiceMode
-  setTtsMultiVoiceMode: (v: MultiVoiceMode) => void
+  ttsVoicePerSentenceRepeat: boolean
+  setTtsVoicePerSentenceRepeat: (v: boolean) => void
+  ttsVoicePerWordRepeat: boolean
+  setTtsVoicePerWordRepeat: (v: boolean) => void
   ttsVoiceOrder: VoiceOrder
   setTtsVoiceOrder: (v: VoiceOrder) => void
 }
@@ -53,8 +54,10 @@ export function AudioSection({
   setTtsMultiVoice,
   ttsVoiceNames,
   setTtsVoiceNames,
-  ttsMultiVoiceMode,
-  setTtsMultiVoiceMode,
+  ttsVoicePerSentenceRepeat,
+  setTtsVoicePerSentenceRepeat,
+  ttsVoicePerWordRepeat,
+  setTtsVoicePerWordRepeat,
   ttsVoiceOrder,
   setTtsVoiceOrder,
 }: AudioSectionProps) {
@@ -69,6 +72,9 @@ export function AudioSection({
   )
   const poolIsFull = ttsVoiceNames.length >= MAX_VOICE_POOL
   const poolHasCloudVoice = resolvedPool.some(isNetworkVoice)
+  // A pool with nothing to rotate against would pin every sentence to one voice.
+  const noRotationPicked =
+    ttsMultiVoice && !ttsVoicePerSentenceRepeat && !ttsVoicePerWordRepeat
 
   const toggleVoiceInPool = (name: string) => {
     if (ttsVoiceNames.includes(name)) {
@@ -182,14 +188,13 @@ export function AudioSection({
                       </div>
 
                       <div>
-                        <p className="text-xs text-slate-400 mb-2">How the voices take turns</p>
+                        <p className="text-xs text-slate-400 mb-2">When the voice changes</p>
                         <div className="space-y-2">
                           <label className="flex items-start gap-3 text-sm cursor-pointer">
                             <input
-                              type="radio"
-                              name="multi-voice-mode"
-                              checked={ttsMultiVoiceMode === 'repeat'}
-                              onChange={() => setTtsMultiVoiceMode('repeat')}
+                              type="checkbox"
+                              checked={ttsVoicePerSentenceRepeat}
+                              onChange={(e) => setTtsVoicePerSentenceRepeat(e.target.checked)}
                               className="mt-1 accent-cyan-400"
                             />
                             <span className="text-slate-200">
@@ -202,21 +207,28 @@ export function AudioSection({
                           </label>
                           <label className="flex items-start gap-3 text-sm cursor-pointer">
                             <input
-                              type="radio"
-                              name="multi-voice-mode"
-                              checked={ttsMultiVoiceMode === 'split'}
-                              onChange={() => setTtsMultiVoiceMode('split')}
+                              type="checkbox"
+                              checked={ttsVoicePerWordRepeat}
+                              onChange={(e) => setTtsVoicePerWordRepeat(e.target.checked)}
                               className="mt-1 accent-cyan-400"
                             />
                             <span className="text-slate-200">
-                              Split the sentence across voices
+                              A different voice each word repeat
                               <span className="block text-xs text-slate-400">
-                                One reading, handed over at a comma where there is one, like
-                                speakers taking turns. Expect a short seam at each handover.
+                                Word-by-word mode only, following its Repeat control: each time a
+                                word is spoken again it changes voice, and the rotation carries on
+                                into the next word rather than starting over. Can be combined with
+                                the setting above.
                               </span>
                             </span>
                           </label>
                         </div>
+                        {noRotationPicked && (
+                          <p className="text-xs text-amber-300 mt-2">
+                            Tick at least one, or there is nothing for the voices to change on and
+                            playback stays on the single dictation voice above.
+                          </p>
+                        )}
                       </div>
 
                       <div>

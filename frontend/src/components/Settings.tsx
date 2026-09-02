@@ -49,8 +49,10 @@ export default function Settings() {
     setTtsMultiVoice,
     ttsVoiceNames,
     setTtsVoiceNames,
-    ttsMultiVoiceMode,
-    setTtsMultiVoiceMode,
+    ttsVoicePerSentenceRepeat,
+    setTtsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
+    setTtsVoicePerWordRepeat,
     ttsVoiceOrder,
     setTtsVoiceOrder,
   } = useWorkspace()
@@ -447,8 +449,10 @@ export default function Settings() {
               setTtsMultiVoice={setTtsMultiVoice}
               ttsVoiceNames={ttsVoiceNames}
               setTtsVoiceNames={setTtsVoiceNames}
-              ttsMultiVoiceMode={ttsMultiVoiceMode}
-              setTtsMultiVoiceMode={setTtsMultiVoiceMode}
+              ttsVoicePerSentenceRepeat={ttsVoicePerSentenceRepeat}
+              setTtsVoicePerSentenceRepeat={setTtsVoicePerSentenceRepeat}
+              ttsVoicePerWordRepeat={ttsVoicePerWordRepeat}
+              setTtsVoicePerWordRepeat={setTtsVoicePerWordRepeat}
               ttsVoiceOrder={ttsVoiceOrder}
               setTtsVoiceOrder={setTtsVoiceOrder}
             />

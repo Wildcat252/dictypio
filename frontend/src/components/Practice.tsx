@@ -16,7 +16,6 @@ import {
   MIN_VOICE_POOL,
   orderPoolForSentence,
   resolveVoicePool,
-  splitTextForVoices,
   voiceForRepeat,
 } from '../voiceRotation'
 import { loadAudioSettings, playCelebrationChime, playMistakeBuzz } from '../audio'
@@ -84,7 +83,7 @@ export default function Practice() {
     ttsVoiceName,
     ttsMultiVoice,
     ttsVoiceNames,
-    ttsMultiVoiceMode,
+    ttsVoicePerSentenceRepeat,
     ttsVoiceOrder,
     playbackSpeed,
     setPlaybackSpeed,
@@ -216,7 +215,7 @@ export default function Practice() {
    */
   const speakParts = useCallback(
     (parts: string[], rate?: number) => {
-      let texts = parts.filter(Boolean)
+      const texts = parts.filter(Boolean)
       if (texts.length === 0) return
       const synth = window.speechSynthesis
       const singleVoice = ttsVoiceName
@@ -225,9 +224,10 @@ export default function Practice() {
       const speechRate = rate ?? playbackSpeed
 
       // Same fallback rule as the workspace: fewer than MIN_VOICE_POOL voices
-      // actually resolvable means plain single-voice playback.
+      // actually resolvable means plain single-voice playback. Practice has no
+      // word-by-word mode, so only the sentence-repeat switch applies here.
       const rawPool = ttsMultiVoice ? resolveVoicePool(ttsVoiceNames, availableVoices) : []
-      const multiVoiceActive = rawPool.length >= MIN_VOICE_POOL
+      const multiVoiceActive = rawPool.length >= MIN_VOICE_POOL && ttsVoicePerSentenceRepeat
       const rotation = voiceRotationRef.current++
       const voicePool = multiVoiceActive
         ? orderPoolForSentence(rawPool, ttsVoiceOrder, texts.join(' '))
@@ -243,9 +243,6 @@ export default function Practice() {
         // not easier, so one voice reads the whole run.
         const voice = voiceForRepeat(voicePool, rotation)
         voices = texts.map(() => voice)
-      } else if (ttsMultiVoiceMode === 'split') {
-        texts = splitTextForVoices(texts[0], voicePool.length)
-        voices = texts.map((_, i) => voicePool[Math.min(i, voicePool.length - 1)])
       } else {
         voices = [voiceForRepeat(voicePool, rotation)]
       }
@@ -298,7 +295,7 @@ export default function Practice() {
       ttsVoiceName,
       ttsMultiVoice,
       ttsVoiceNames,
-      ttsMultiVoiceMode,
+      ttsVoicePerSentenceRepeat,
       ttsVoiceOrder,
     ]
   )
