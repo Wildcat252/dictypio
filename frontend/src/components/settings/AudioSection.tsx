@@ -19,6 +19,7 @@ import { isNetworkVoice } from '../../voices'
 import {
   MAX_VOICE_POOL,
   MIN_VOICE_POOL,
+  pickRandomVoices,
   resolveVoicePool,
   type VoiceOrder,
 } from '../../voiceRotation'
@@ -75,6 +76,15 @@ export function AudioSection({
   // A pool with nothing to rotate against would pin every sentence to one voice.
   const noRotationPicked =
     ttsMultiVoice && !ttsVoicePerSentenceRepeat && !ttsVoicePerWordRepeat
+
+  // Keep the size the pool already has, so pressing Randomize is a re-draw
+  // rather than a resize; an unset or under-sized pool fills up to the cap.
+  const canRandomize = availableVoices.length >= MIN_VOICE_POOL
+  const randomizePool = () => {
+    const count =
+      ttsVoiceNames.length >= MIN_VOICE_POOL ? ttsVoiceNames.length : MAX_VOICE_POOL
+    setTtsVoiceNames(pickRandomVoices(availableVoices, count))
+  }
 
   const toggleVoiceInPool = (name: string) => {
     if (ttsVoiceNames.includes(name)) {
@@ -142,9 +152,24 @@ export function AudioSection({
                   {ttsMultiVoice && (
                     <div className="mt-4 space-y-4">
                       <div>
-                        <p className="text-xs text-slate-400 mb-2">
-                          Voices ({ttsVoiceNames.length}/{MAX_VOICE_POOL} picked)
-                        </p>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-slate-400">
+                            Voices ({ttsVoiceNames.length}/{MAX_VOICE_POOL} picked)
+                          </p>
+                          <button
+                            type="button"
+                            onClick={randomizePool}
+                            disabled={!canRandomize}
+                            title={
+                              canRandomize
+                                ? 'Draw a fresh set of voices at random'
+                                : `Needs at least ${MIN_VOICE_POOL} voices installed`
+                            }
+                            className="rounded-lg border border-cyan-500/40 bg-abyss-800/80 px-2.5 py-1 text-xs font-medium text-cyan-200 hover:bg-abyss-750 hover:border-cyan-400/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                          >
+                            Randomize
+                          </button>
+                        </div>
                         <div className="max-h-48 overflow-y-auto rounded-lg border border-cyan-500/20 divide-y divide-cyan-500/10">
                           {availableVoices.map((v) => {
                             const picked = ttsVoiceNames.includes(v.name)

@@ -73,6 +73,28 @@ export function orderPoolForSentence(
 }
 
 /**
+ * Draw `count` voices at random from what the browser offers, for the
+ * "Randomize" button in Settings.
+ *
+ * Deliberately unseeded, unlike orderPoolForSentence: pressing the button is a
+ * request for a fresh draw, not for something reproducible. The returned order
+ * is part of the draw — with only as many voices installed as the pool holds,
+ * re-drawing still changes the order playback rotates through.
+ */
+export function pickRandomVoices(
+  available: readonly SpeechSynthesisVoice[],
+  count: number
+): string[] {
+  const wanted = Math.max(MIN_VOICE_POOL, Math.min(MAX_VOICE_POOL, Math.floor(count) || 0))
+  const shuffled = [...available]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled.slice(0, Math.min(wanted, shuffled.length)).map((v) => v.name)
+}
+
+/**
  * The voice for the nth reading, wrapping around the pool. The reading may be a
  * sentence repeat or a word repeat inside word-by-word mode; callers add those
  * two steps together so both can advance the rotation at once.
