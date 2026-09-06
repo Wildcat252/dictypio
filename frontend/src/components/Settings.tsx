@@ -28,8 +28,15 @@ import {
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { usePremiumVoices } from '../voices'
 import { AudioSection } from './settings/AudioSection'
+import { ThemeSection } from './settings/ThemeSection'
+import {
+  applyTheme,
+  loadThemeSettings,
+  saveThemeSettings,
+  type ThemeSettings,
+} from '../theme'
 
-type SettingsSection = 'ai-api-key' | 'keybindings' | 'audio' | 'playback' | 'about'
+type SettingsSection = 'ai-api-key' | 'keybindings' | 'audio' | 'playback' | 'appearance' | 'about'
 
 const APP_VERSION = `${__APP_SEMVER__} (${__APP_COMMIT__})`
 
@@ -73,6 +80,16 @@ export default function Settings() {
   const [capturingAction, setCapturingAction] = useState<KeybindAction | null>(null)
   const [keybindError, setKeybindError] = useState<string | null>(null)
   const [audio, setAudio] = useState<AudioSettings>(loadAudioSettings)
+  const [theme, setTheme] = useState<ThemeSettings>(loadThemeSettings)
+
+  const updateTheme = useCallback((patch: Partial<ThemeSettings>) => {
+    setTheme((prev) => {
+      const next = { ...prev, ...patch }
+      saveThemeSettings(next)
+      applyTheme(next)
+      return next
+    })
+  }, [])
 
   const updateAudio = useCallback((patch: Partial<AudioSettings>) => {
     setAudio((prev) => {
@@ -163,6 +180,7 @@ export default function Settings() {
     { id: 'keybindings' as SettingsSection, label: 'KEYBOARD SHORTCUTS' },
     { id: 'audio' as SettingsSection, label: 'AUDIO' },
     { id: 'playback' as SettingsSection, label: 'PLAYBACK & GRADING' },
+    { id: 'appearance' as SettingsSection, label: 'APPEARANCE' },
     { id: 'about' as SettingsSection, label: 'ABOUT' },
   ]
 
@@ -265,7 +283,7 @@ export default function Settings() {
                   setMobileNavOpen(false)
                 }}
                 className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeSection === section.id
-                    ? 'bg-abyss-950 text-white'
+                    ? 'bg-abyss-950 text-ink'
                     : 'bg-abyss-800/80 hover:bg-abyss-750 text-slate-100'
                   }`}
               >
@@ -309,7 +327,7 @@ export default function Settings() {
                     <button
                       type="button"
                       onClick={handleApply}
-                      className="px-4 py-2 bg-abyss-950 text-white font-medium rounded-lg hover:bg-abyss-850 transition-colors"
+                      className="px-4 py-2 bg-abyss-950 text-ink font-medium rounded-lg hover:bg-abyss-850 transition-colors"
                     >
                       ADD
                     </button>
@@ -342,7 +360,7 @@ export default function Settings() {
                               </span>
                               …{k.last4 || '????'}
                               {k.is_active && (
-                                <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                                <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300">
                                   Active
                                 </span>
                               )}
@@ -547,6 +565,10 @@ export default function Settings() {
                 </div>
               </div>
             </div>
+          )}
+
+          {activeSection === 'appearance' && (
+            <ThemeSection theme={theme} updateTheme={updateTheme} />
           )}
 
           {activeSection === 'about' && (

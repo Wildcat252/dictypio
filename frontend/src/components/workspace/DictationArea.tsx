@@ -227,7 +227,7 @@ export function DictationArea({
                   Hint
                 </button>
               </div>
-              <div className="text-lg md:text-xl leading-relaxed text-slate-100 flex flex-wrap items-baseline gap-x-2 gap-y-3 md:gap-x-2.5 md:gap-y-4 flex-1 content-start">
+              <div className="font-typing text-lg md:text-xl leading-relaxed text-slate-100 flex flex-wrap items-baseline gap-x-2 gap-y-3 md:gap-x-2.5 md:gap-y-4 flex-1 content-start">
                 {words.map((word, idx) => {
                   if (isPunctuationOnlyToken(word)) {
                     return (
@@ -383,7 +383,7 @@ export function DictationArea({
                             })
                           }
                         }}
-                        className={`bg-transparent border-0 outline-none px-1 py-0 min-w-0 rounded-sm focus:shadow-[0_0_0_2px_rgba(6,182,212,0.6)] ${underlineClass} ${isHintShown ? 'text-amber-300 font-mono italic drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : ''} ${lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'correct'
+                        className={`font-typing bg-transparent border-0 outline-none px-1 py-0 min-w-0 rounded-sm focus:shadow-[0_0_0_2px_rgb(var(--ocean-cyan)/0.6)] ${underlineClass} ${isHintShown ? 'text-amber-300 font-mono italic drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : ''} ${lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'correct'
                           ? 'input-feedback-correct'
                           : lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'wrong'
                             ? 'input-feedback-wrong'

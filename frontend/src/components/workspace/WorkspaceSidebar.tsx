@@ -331,7 +331,7 @@ export function WorkspaceSidebar({
             <div
               key={lesson.id}
               className={`relative p-3.5 rounded-xl cursor-pointer transition-all duration-150 group border ${selectedLesson?.id === lesson.id
-                ? 'bg-gradient-to-r from-cyan-950/90 via-abyss-800/95 to-sky-950/90 border-cyan-400/60 shadow-glow-cyan text-white'
+                ? 'bg-gradient-to-r from-cyan-950/90 via-abyss-800/95 to-sky-950/90 border-cyan-400/60 shadow-glow-cyan text-cyan-100'
                 : 'bg-abyss-850/60 border-cyan-950/60 hover:border-cyan-500/40 hover:bg-abyss-800/80 text-slate-200'
                 }`}
               onClick={() => onLessonSelect(lesson)}
@@ -403,7 +403,7 @@ export function WorkspaceSidebar({
               <div className="space-y-1.5 pr-6">
                 <div className="flex items-start justify-between gap-2">
                   <h3
-                    className={`text-sm font-semibold leading-snug line-clamp-2 text-left ${selectedLesson?.id === lesson.id ? 'text-white' : 'text-slate-100'
+                    className={`text-sm font-semibold leading-snug line-clamp-2 text-left ${selectedLesson?.id === lesson.id ? 'text-cyan-100' : 'text-slate-100'
                       }`}
                   >
                     {lesson.title}

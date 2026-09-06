@@ -109,7 +109,7 @@ export function WordLists({
                 key={w.word}
                 onClick={() => goTo(globalIndex)}
                 className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 cursor-pointer transition-all ${isActive
-                  ? 'border-cyan-400/70 bg-cyan-950/70 shadow-glow-cyan text-white'
+                  ? 'border-cyan-400/70 bg-cyan-950/70 shadow-glow-cyan text-cyan-100'
                   : 'border-cyan-500/20 bg-abyss-800/60 hover:border-cyan-500/40 hover:bg-abyss-800/90 text-slate-200'
                   }`}
               >

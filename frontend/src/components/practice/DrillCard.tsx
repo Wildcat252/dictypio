@@ -146,7 +146,7 @@ export function DrillCard({
           aria-label="Practice word"
           autoComplete="off"
           spellCheck={false}
-          className={`w-full bg-transparent border-0 outline-none px-1.5 py-1.5 text-slate-100 placeholder:text-slate-600 ${underlineClass}`}
+          className={`font-typing w-full bg-transparent border-0 outline-none px-1.5 py-1.5 text-slate-100 placeholder:text-slate-600 ${underlineClass}`}
           style={{ fontSize: 'clamp(1.4rem, 5vw, 2.5rem)' }}
         />
 

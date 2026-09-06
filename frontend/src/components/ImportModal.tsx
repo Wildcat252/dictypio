@@ -111,7 +111,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-abyss-900/95 backdrop-blur-xl rounded-2xl border border-cyan-500/30 shadow-[0_0_60px_rgba(0,0,0,0.8),0_0_25px_rgba(6,182,212,0.15)] max-w-md w-full max-h-[90vh] overflow-y-auto text-slate-100">
+      <div className="bg-abyss-900/95 backdrop-blur-xl rounded-2xl border border-cyan-500/30 shadow-[0_0_60px_rgb(var(--abyss-950)/0.55),0_0_25px_rgb(var(--ocean-cyan)/0.2)] max-w-md w-full max-h-[90vh] overflow-y-auto text-slate-100">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -165,7 +165,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-white placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
+                  className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-slate-100 placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
                 />
               </div>
             ) : (
@@ -180,7 +180,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                     value={textTitle}
                     onChange={(e) => setTextTitle(e.target.value)}
                     placeholder="Enter a title for this lesson..."
-                    className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-white placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
+                    className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-slate-100 placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
                   />
                 </div>
                 <div className="mb-6">
@@ -193,7 +193,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                     value={textContent}
                     onChange={(e) => setTextContent(e.target.value)}
                     placeholder="Paste the paragraph text to practice..."
-                    className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-white placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 resize-none transition-all"
+                    className="w-full px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-slate-100 placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 resize-none transition-all"
                   />
                 </div>
               </>
@@ -243,7 +243,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                     value={newPlaylistName}
                     onChange={(e) => setNewPlaylistName(e.target.value)}
                     placeholder="Enter playlist name..."
-                    className="flex-1 px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-white placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
+                    className="flex-1 px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-slate-100 placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         handleCreatePlaylist()
