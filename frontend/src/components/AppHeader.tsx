@@ -89,7 +89,7 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
     <header className="bg-abyss-900/90 backdrop-blur-md border-b border-cyan-500/20 px-3 py-2 md:px-4 md:py-2.5 flex flex-wrap items-center justify-between gap-y-2 gap-x-2 md:flex-nowrap md:gap-0 shadow-[0_4px_24px_rgba(0,0,0,0.5)] z-30">
       <div className="flex items-center gap-2.5 order-1 shrink-0">
         <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-teal-400 rounded-lg blur-xs opacity-60 group-hover:opacity-100 transition duration-300"></div>
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-teal-400 rounded-lg blur-xs opacity-[calc(0.6*var(--glow-alpha))] group-hover:opacity-[calc(1*var(--glow-alpha))] transition duration-300"></div>
           <img src="/logo.svg" alt="Dictypio" className="relative w-8 h-8 rounded-lg" />
         </div>
         <span className="text-lg font-bold bg-gradient-to-r from-cyan-300 via-teal-200 to-sky-300 bg-clip-text text-transparent tracking-wide">

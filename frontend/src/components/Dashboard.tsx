@@ -229,7 +229,7 @@ export default function Dashboard() {
                             >
                               <div className="relative w-full h-24">
                                 <div
-                                  className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-cyan-600 to-teal-300 rounded-t-md min-h-[2px] shadow-[0_0_12px_rgb(var(--ocean-cyan)/0.55)]"
+                                  className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-cyan-600 to-teal-300 rounded-t-md min-h-[2px] shadow-[0_0_12px_rgb(var(--ocean-cyan)/calc(0.55*var(--glow-alpha)))]"
                                   style={{ height: `${h}%` }}
                                 />
                                 <span
@@ -286,7 +286,7 @@ export default function Dashboard() {
                                 <div className="w-full h-24 flex gap-[2px]">
                                   <div className="relative flex-1 h-full">
                                     <div
-                                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-sm min-h-[1px] shadow-[0_0_10px_rgb(var(--rose-500)/0.5)]"
+                                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-sm min-h-[1px] shadow-[0_0_10px_rgb(var(--rose-500)/calc(0.5*var(--glow-alpha)))]"
                                       style={{ height: `${ih}%` }}
                                       title={`Retries: ${incorrectPct.toFixed(1)}%`}
                                     />
@@ -299,7 +299,7 @@ export default function Dashboard() {
                                   </div>
                                   <div className="relative flex-1 h-full">
                                     <div
-                                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-600 to-amber-400 rounded-t-sm min-h-[1px] shadow-[0_0_10px_rgb(var(--amber-500)/0.5)]"
+                                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-600 to-amber-400 rounded-t-sm min-h-[1px] shadow-[0_0_10px_rgb(var(--amber-500)/calc(0.5*var(--glow-alpha)))]"
                                       style={{ height: `${hh}%` }}
                                       title={`Hints: ${hintPct.toFixed(1)}%`}
                                     />
@@ -602,7 +602,7 @@ function StatCard({ label, value, sublabel }: StatCardProps) {
       <span className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">
         {label}
       </span>
-      <span className="text-2xl font-semibold bg-gradient-to-r from-cyan-200 via-teal-200 to-sky-300 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgb(var(--ocean-cyan)/0.35)]">
+      <span className="text-2xl font-semibold bg-gradient-to-r from-cyan-200 via-teal-200 to-sky-300 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgb(var(--ocean-cyan)/calc(0.35*var(--glow-alpha)))]">
         {value.toLocaleString()}
       </span>
       {sublabel && <span className="mt-1 text-xs text-slate-400">{sublabel}</span>}

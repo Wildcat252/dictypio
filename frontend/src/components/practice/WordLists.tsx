@@ -100,7 +100,7 @@ export function WordLists({
             const intensity =
               retry >= 9 ? 'bg-rose-600 shadow-glow-rose' :
                 retry >= 7 ? 'bg-rose-500 shadow-glow-rose' :
-                  retry >= 5 ? 'bg-orange-500 shadow-[0_0_8px_rgb(var(--amber-500)/0.6)]' :
+                  retry >= 5 ? 'bg-orange-500 shadow-[0_0_8px_rgb(var(--amber-500)/calc(0.6*var(--glow-alpha)))]' :
                     retry >= 3 ? 'bg-amber-500 shadow-glow-amber' :
                       retry >= 2 ? 'bg-amber-400/80' :
                         'bg-teal-600/60'

@@ -183,10 +183,10 @@ export function DictationArea({
     const target = normalizeWord(targetWord)
     const input = normalizeWord(inputValue)
     for (let i = 0; i < input.length; i++) {
-      if (i >= target.length || input[i] !== target[i]) return 'border-b-4 border-rose-500 text-rose-300 shadow-[0_3px_12px_rgb(var(--rose-500)/0.55)]'
+      if (i >= target.length || input[i] !== target[i]) return 'border-b-4 border-rose-500 text-rose-300 shadow-[0_3px_12px_rgb(var(--rose-500)/calc(0.55*var(--glow-alpha)))]'
     }
-    if (input.length < target.length) return 'border-b-4 border-typing text-typing shadow-[0_3px_10px_rgb(var(--typing)/0.45)]'
-    return 'border-b-4 border-done text-done shadow-[0_3px_14px_rgb(var(--done)/0.5)]'
+    if (input.length < target.length) return 'border-b-4 border-typing text-typing shadow-[0_3px_10px_rgb(var(--typing)/calc(0.45*var(--glow-alpha)))]'
+    return 'border-b-4 border-done text-done shadow-[0_3px_14px_rgb(var(--done)/calc(0.5*var(--glow-alpha)))]'
   }
 
   return (
@@ -200,7 +200,7 @@ export function DictationArea({
               <div className="h-6 md:h-8 flex items-center mt-0 mb-1 md:mt-1 md:mb-2">
                 <p
                   className={`inline-flex items-center gap-1.5 text-lg md:text-xl font-bold transition-opacity ${isCurrentSentenceFullyCorrect
-                    ? 'text-done drop-shadow-[0_0_10px_rgb(var(--done)/0.45)] opacity-100'
+                    ? 'text-done drop-shadow-[0_0_10px_rgb(var(--done)/calc(0.45*var(--glow-alpha)))] opacity-100'
                     : 'text-transparent opacity-0'
                     }`}
                 >
@@ -383,7 +383,7 @@ export function DictationArea({
                             })
                           }
                         }}
-                        className={`font-typing bg-transparent border-0 outline-none px-1 py-0 min-w-0 rounded-sm focus:shadow-[0_0_0_2px_rgb(var(--ocean-cyan)/0.6)] ${underlineClass} ${isHintShown ? 'text-hint font-mono italic drop-shadow-[0_0_8px_rgb(var(--hint)/0.6)]' : ''} ${lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'correct'
+                        className={`font-typing bg-transparent border-0 outline-none px-1 py-0 min-w-0 rounded-sm focus:shadow-[0_0_0_2px_rgb(var(--ocean-cyan)/0.6)] ${underlineClass} ${isHintShown ? 'text-hint font-mono italic drop-shadow-[0_0_8px_rgb(var(--hint)/calc(0.6*var(--glow-alpha)))]' : ''} ${lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'correct'
                           ? 'input-feedback-correct'
                           : lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'wrong'
                             ? 'input-feedback-wrong'

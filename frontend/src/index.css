@@ -15,14 +15,16 @@
 }
 
 /* Correct input: success-colored glow + subtle scale. Both feedback animations
-   run off the status tokens so each theme states its own success/error hue. */
+   run off the status tokens so each theme states its own success/error hue,
+   and the glow itself scales by --glow-alpha so Skeuomorph can drop it while
+   keeping the scale/shake motion. */
 @keyframes correctGlow {
   0% {
-    box-shadow: 0 0 0 0 rgb(var(--emerald-500) / 0.7);
+    box-shadow: 0 0 0 0 rgb(var(--emerald-500) / calc(0.7 * var(--glow-alpha)));
     transform: scale(1);
   }
   40% {
-    box-shadow: 0 0 25px 8px rgb(var(--emerald-500) / 0.45);
+    box-shadow: 0 0 25px 8px rgb(var(--emerald-500) / calc(0.45 * var(--glow-alpha)));
     transform: scale(1.04);
   }
   100% {
@@ -44,7 +46,7 @@
 
 @keyframes wrongFlash {
   0%, 100% { background-color: transparent; }
-  20% { background-color: rgb(var(--rose-500) / 0.25); box-shadow: 0 0 15px rgb(var(--rose-500) / 0.5); }
+  20% { background-color: rgb(var(--rose-500) / 0.25); box-shadow: 0 0 15px rgb(var(--rose-500) / calc(0.5 * var(--glow-alpha))); }
   50% { background-color: rgb(var(--rose-500) / 0.1); }
 }
 
@@ -154,12 +156,18 @@
 
   /* Dictation feedback: hint / typed-so-far-correct / word complete. */
   --hint: 103 232 249;
-  --typing: 249 115 22;
+  --typing: 232 121 249;
   --done: 253 186 116;
+
+  /* Deep Sea is the bioluminescent theme: every glow stays lit. */
+  --glow-alpha: 1;
 
   --shadow-glow: 0 0 20px -3px rgba(6, 182, 212, 0.45), 0 0 8px -1px rgba(6, 182, 212, 0.3);
   --shadow-glow-lg: 0 0 35px -5px rgba(6, 182, 212, 0.55), 0 0 15px -2px rgba(6, 182, 212, 0.4);
   --shadow-glow-teal: 0 0 20px -3px rgba(20, 184, 166, 0.45), 0 0 8px -1px rgba(20, 184, 166, 0.3);
+  --shadow-glow-emerald: 0 0 20px -3px rgba(16, 185, 129, 0.5), 0 0 8px -1px rgba(16, 185, 129, 0.35);
+  --shadow-glow-amber: 0 0 20px -3px rgba(245, 158, 11, 0.5), 0 0 8px -1px rgba(245, 158, 11, 0.35);
+  --shadow-glow-rose: 0 0 20px -3px rgba(244, 63, 94, 0.5), 0 0 8px -1px rgba(244, 63, 94, 0.35);
   --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
   --shadow-card-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 20px -4px rgba(6, 182, 212, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 
@@ -273,32 +281,25 @@
   /* The hint is the one deliberate cool note, deepened so it stays legible on
      paper; typing runs orange and settles to a near-black burnt orange. */
   --hint: 14 116 144;
-  --typing: 108 38 15;
+  --typing: 134 25 143;
   --done: 234 88 12;
 
-  --shadow-glow:
-    0 0 16px -4px rgba(234, 88, 12, 0.55),
-    0 0 5px -1px rgba(234, 88, 12, 0.45),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
-  --shadow-glow-lg:
-    0 0 30px -6px rgba(234, 88, 12, 0.6),
-    0 0 12px -2px rgba(234, 88, 12, 0.45),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
-  --shadow-glow-teal:
-    0 0 16px -4px rgba(217, 119, 6, 0.5),
-    0 0 5px -1px rgba(217, 119, 6, 0.4),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+  /* Skeuomorphism reads through relief, not light — no glow here. Every
+     "glow" shadow just becomes the plain embossed card shadow. */
+  --glow-alpha: 0;
+
   --shadow-card:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
     inset 0 -1px 0 0 rgba(146, 124, 96, 0.18),
     0 1px 2px 0 rgba(120, 100, 80, 0.2),
     0 10px 24px -8px rgba(120, 100, 80, 0.3);
-  --shadow-card-glow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 0 rgba(146, 124, 96, 0.18),
-    0 1px 2px 0 rgba(120, 100, 80, 0.2),
-    0 10px 24px -8px rgba(120, 100, 80, 0.3),
-    0 0 18px -6px rgba(234, 88, 12, 0.45);
+  --shadow-glow: var(--shadow-card);
+  --shadow-glow-lg: var(--shadow-card);
+  --shadow-glow-teal: var(--shadow-card);
+  --shadow-glow-emerald: var(--shadow-card);
+  --shadow-glow-amber: var(--shadow-card);
+  --shadow-glow-rose: var(--shadow-card);
+  --shadow-card-glow: var(--shadow-card);
 
   --selection-bg: rgba(234, 88, 12, 0.28);
   --selection-fg: #1c1917;
@@ -384,6 +385,13 @@ body {
   filter: hue-rotate(198deg) saturate(1.2);
 }
 
+/* The keybind-capture pulse animates its own box-shadow directly (not through
+   a shadow-* class), so --glow-alpha can't reach it — swap the animation off. */
+[data-theme='skeuo'] .animate-glow-pulse {
+  animation: none;
+  box-shadow: var(--shadow-card);
+}
+
 /* Embossed edges on the controls the light theme leans on. */
 [data-theme='skeuo'] input:not([type='range']):not([type='checkbox']):not([class*='bg-transparent']),
 [data-theme='skeuo'] textarea,
@@ -395,6 +403,25 @@ body {
 
 [data-theme='skeuo'] button:not(:disabled):active {
   box-shadow: inset 0 2px 4px -1px rgba(120, 100, 80, 0.35);
+}
+
+/* Primary buttons animate a two-color sheen (from-cyan-500 → sky-600); flatten
+   them to one solid accent so this theme reads as painted controls, not a
+   color transition. from-cyan-500 only ever appears on these CTAs — text
+   gradients use the 300/100 stops and progress fills use 400/600. */
+[data-theme='skeuo'] [class*='from-cyan-500'] {
+  background-image: none;
+  background-color: rgb(var(--ocean-cyan));
+}
+[data-theme='skeuo'] [class*='from-cyan-500']:hover {
+  background-color: rgb(var(--ocean-sky));
+}
+
+/* The quieter glass-chip buttons (from-cyan-950/80 to-teal-950/80) lose their
+   two-stop tint the same way, settling on the first stop's flat color. */
+[data-theme='skeuo'] [class*='from-cyan-950'] {
+  background-image: none;
+  background-color: rgb(var(--cyan-950) / 0.8);
 }
 
 /* Custom Sleek Oceanic Scrollbars */

@@ -111,7 +111,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-abyss-900/95 backdrop-blur-xl rounded-2xl border border-cyan-500/30 shadow-[0_0_60px_rgb(var(--abyss-950)/0.55),0_0_25px_rgb(var(--ocean-cyan)/0.2)] max-w-md w-full max-h-[90vh] overflow-y-auto text-slate-100">
+      <div className="bg-abyss-900/95 backdrop-blur-xl rounded-2xl border border-cyan-500/30 shadow-[0_0_60px_rgb(var(--abyss-950)/0.55),0_0_25px_rgb(var(--ocean-cyan)/calc(0.2*var(--glow-alpha)))] max-w-md w-full max-h-[90vh] overflow-y-auto text-slate-100">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -133,7 +133,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                 type="button"
                 className={`flex-1 pb-2.5 text-center font-semibold text-sm transition-all ${
                   importType === 'youtube'
-                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgb(var(--cyan-400)/0.5)]'
+                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgb(var(--cyan-400)/calc(0.5*var(--glow-alpha)))]'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
                 onClick={() => setImportType('youtube')}
@@ -144,7 +144,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                 type="button"
                 className={`flex-1 pb-2.5 text-center font-semibold text-sm transition-all ${
                   importType === 'text'
-                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgb(var(--cyan-400)/0.5)]'
+                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgb(var(--cyan-400)/calc(0.5*var(--glow-alpha)))]'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
                 onClick={() => setImportType('text')}
