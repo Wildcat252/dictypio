@@ -183,10 +183,10 @@ export function DictationArea({
     const target = normalizeWord(targetWord)
     const input = normalizeWord(inputValue)
     for (let i = 0; i < input.length; i++) {
-      if (i >= target.length || input[i] !== target[i]) return 'border-b-4 border-rose-500 text-rose-300 shadow-[0_3px_12px_rgba(244,63,94,0.55)]'
+      if (i >= target.length || input[i] !== target[i]) return 'border-b-4 border-rose-500 text-rose-300 shadow-[0_3px_12px_rgb(var(--rose-500)/0.55)]'
     }
-    if (input.length < target.length) return 'border-b-4 border-amber-400 text-slate-100 shadow-[0_3px_10px_rgba(251,191,36,0.45)]'
-    return 'border-b-4 border-emerald-400 text-emerald-300 shadow-[0_3px_14px_rgba(52,211,153,0.6)]'
+    if (input.length < target.length) return 'border-b-4 border-amber-400 text-slate-100 shadow-[0_3px_10px_rgb(var(--amber-400)/0.45)]'
+    return 'border-b-4 border-emerald-400 text-emerald-300 shadow-[0_3px_14px_rgb(var(--emerald-400)/0.6)]'
   }
 
   return (
@@ -200,7 +200,7 @@ export function DictationArea({
               <div className="h-6 md:h-8 flex items-center mt-0 mb-1 md:mt-1 md:mb-2">
                 <p
                   className={`inline-flex items-center gap-1.5 text-lg md:text-xl font-bold transition-opacity ${isCurrentSentenceFullyCorrect
-                    ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.7)] opacity-100'
+                    ? 'text-emerald-400 drop-shadow-[0_0_10px_rgb(var(--emerald-400)/0.7)] opacity-100'
                     : 'text-transparent opacity-0'
                     }`}
                 >
@@ -383,7 +383,7 @@ export function DictationArea({
                             })
                           }
                         }}
-                        className={`font-typing bg-transparent border-0 outline-none px-1 py-0 min-w-0 rounded-sm focus:shadow-[0_0_0_2px_rgb(var(--ocean-cyan)/0.6)] ${underlineClass} ${isHintShown ? 'text-amber-300 font-mono italic drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : ''} ${lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'correct'
+                        className={`font-typing bg-transparent border-0 outline-none px-1 py-0 min-w-0 rounded-sm focus:shadow-[0_0_0_2px_rgb(var(--ocean-cyan)/0.6)] ${underlineClass} ${isHintShown ? 'text-amber-300 font-mono italic drop-shadow-[0_0_8px_rgb(var(--amber-400)/0.6)]' : ''} ${lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'correct'
                           ? 'input-feedback-correct'
                           : lastInputFeedback?.wordIndex === idx && lastInputFeedback?.type === 'wrong'
                             ? 'input-feedback-wrong'

@@ -133,7 +133,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                 type="button"
                 className={`flex-1 pb-2.5 text-center font-semibold text-sm transition-all ${
                   importType === 'youtube'
-                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]'
+                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgb(var(--cyan-400)/0.5)]'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
                 onClick={() => setImportType('youtube')}
@@ -144,7 +144,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                 type="button"
                 className={`flex-1 pb-2.5 text-center font-semibold text-sm transition-all ${
                   importType === 'text'
-                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]'
+                    ? 'border-b-2 border-cyan-400 text-cyan-300 drop-shadow-[0_0_8px_rgb(var(--cyan-400)/0.5)]'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
                 onClick={() => setImportType('text')}

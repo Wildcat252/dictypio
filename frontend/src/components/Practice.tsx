@@ -659,10 +659,10 @@ export default function Practice() {
   const underlineClass = !value
     ? 'border-b-2 border-cyan-500/30'
     : isCorrect
-      ? 'border-b-4 border-green-500'
+      ? 'border-b-4 border-emerald-500'
       : normalizeWord(target).startsWith(normalizeWord(value))
-        ? 'border-b-4 border-yellow-500'
-        : 'border-b-4 border-red-500'
+        ? 'border-b-4 border-amber-500'
+        : 'border-b-4 border-rose-500'
 
   const pageCount = Math.max(1, Math.ceil((words.length || 1) / PAGE_SIZE))
   const pageWords = useMemo(

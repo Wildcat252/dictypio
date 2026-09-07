@@ -53,10 +53,11 @@ export default {
         'glow-teal': 'var(--shadow-glow-teal)',
         'glass-card': 'var(--shadow-card)',
         'glass-glow': 'var(--shadow-card-glow)',
-        // Semantic status glows read correctly on either ground.
-        'glow-emerald': '0 0 20px -3px rgba(16, 185, 129, 0.5), 0 0 8px -1px rgba(16, 185, 129, 0.35)',
-        'glow-amber': '0 0 20px -3px rgba(245, 158, 11, 0.5), 0 0 8px -1px rgba(245, 158, 11, 0.35)',
-        'glow-rose': '0 0 20px -3px rgba(244, 63, 94, 0.5), 0 0 8px -1px rgba(244, 63, 94, 0.35)',
+        // Status glows follow their own token, so a theme can restate what
+        // "success" or "error" looks like without losing the meaning.
+        'glow-emerald': '0 0 20px -3px rgb(var(--emerald-500) / 0.5), 0 0 8px -1px rgb(var(--emerald-500) / 0.35)',
+        'glow-amber': '0 0 20px -3px rgb(var(--amber-500) / 0.5), 0 0 8px -1px rgb(var(--amber-500) / 0.35)',
+        'glow-rose': '0 0 20px -3px rgb(var(--rose-500) / 0.5), 0 0 8px -1px rgb(var(--rose-500) / 0.35)',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',

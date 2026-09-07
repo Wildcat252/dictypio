@@ -14,18 +14,19 @@
   100% { transform: translateX(400%); }
 }
 
-/* Correct input: bioluminescent emerald glow + subtle scale */
+/* Correct input: success-colored glow + subtle scale. Both feedback animations
+   run off the status tokens so each theme states its own success/error hue. */
 @keyframes correctGlow {
   0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    box-shadow: 0 0 0 0 rgb(var(--emerald-500) / 0.7);
     transform: scale(1);
   }
   40% {
-    box-shadow: 0 0 25px 8px rgba(16, 185, 129, 0.45);
+    box-shadow: 0 0 25px 8px rgb(var(--emerald-500) / 0.45);
     transform: scale(1.04);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 0 rgb(var(--emerald-500) / 0);
     transform: scale(1);
   }
 }
@@ -43,8 +44,8 @@
 
 @keyframes wrongFlash {
   0%, 100% { background-color: transparent; }
-  20% { background-color: rgba(244, 63, 94, 0.25); box-shadow: 0 0 15px rgba(244, 63, 94, 0.5); }
-  50% { background-color: rgba(244, 63, 94, 0.1); }
+  20% { background-color: rgb(var(--rose-500) / 0.25); box-shadow: 0 0 15px rgb(var(--rose-500) / 0.5); }
+  50% { background-color: rgb(var(--rose-500) / 0.1); }
 }
 
 .input-feedback-correct {
@@ -186,7 +187,7 @@
   --ocean-cyan: 234 88 12;
   --ocean-sky: 249 115 22;
   --ocean-teal: 217 119 6;
-  --ocean-emerald: 5 150 105;
+  --ocean-emerald: 202 138 4;
 
   /* Inverted so text-slate-100 reads near-black on paper. */
   --slate-50: 12 10 9;
@@ -233,24 +234,25 @@
   --sky-900: 255 237 213;
   --sky-950: 255 247 237;
 
-  /* Status colors keep their hue; only the lightness order flips. */
+  /* No cool hues anywhere in this theme: errors are a true red rather than
+     the pink-leaning rose, and success trades green for gold. */
   --rose-100: 69 10 10;
   --rose-200: 127 29 29;
-  --rose-300: 159 18 57;
-  --rose-400: 190 18 60;
-  --rose-500: 225 29 72;
-  --rose-600: 190 18 60;
-  --rose-900: 255 228 230;
-  --rose-950: 255 241 242;
+  --rose-300: 153 27 27;
+  --rose-400: 185 28 28;
+  --rose-500: 220 38 38;
+  --rose-600: 185 28 28;
+  --rose-900: 254 226 226;
+  --rose-950: 254 242 242;
 
-  --emerald-100: 2 44 34;
-  --emerald-200: 6 78 59;
-  --emerald-300: 4 120 87;
-  --emerald-400: 5 150 105;
-  --emerald-500: 16 185 129;
-  --emerald-600: 4 120 87;
-  --emerald-900: 209 250 229;
-  --emerald-950: 236 253 245;
+  --emerald-100: 66 32 6;
+  --emerald-200: 113 63 18;
+  --emerald-300: 161 98 7;
+  --emerald-400: 202 138 4;
+  --emerald-500: 234 179 8;
+  --emerald-600: 161 98 7;
+  --emerald-900: 254 249 195;
+  --emerald-950: 254 252 232;
 
   --amber-100: 69 26 3;
   --amber-200: 120 53 15;
@@ -363,6 +365,12 @@ body {
   box-shadow:
     inset 0 2px 4px -1px rgba(120, 100, 80, 0.3),
     inset 0 -1px 0 0 rgba(255, 255, 255, 0.75);
+}
+
+/* The logo is a static asset with cyan baked into its gradient; rotate it onto
+   the warm side so nothing in this theme reads cool. */
+[data-theme='skeuo'] img[src$='logo.svg'] {
+  filter: hue-rotate(198deg) saturate(1.2);
 }
 
 /* Embossed edges on the controls the light theme leans on. */

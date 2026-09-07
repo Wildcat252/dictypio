@@ -286,7 +286,7 @@ export default function Dashboard() {
                                 <div className="w-full h-24 flex gap-[2px]">
                                   <div className="relative flex-1 h-full">
                                     <div
-                                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-sm min-h-[1px] shadow-[0_0_10px_rgba(244,63,94,0.5)]"
+                                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-sm min-h-[1px] shadow-[0_0_10px_rgb(var(--rose-500)/0.5)]"
                                       style={{ height: `${ih}%` }}
                                       title={`Retries: ${incorrectPct.toFixed(1)}%`}
                                     />
@@ -299,7 +299,7 @@ export default function Dashboard() {
                                   </div>
                                   <div className="relative flex-1 h-full">
                                     <div
-                                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-600 to-amber-400 rounded-t-sm min-h-[1px] shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-600 to-amber-400 rounded-t-sm min-h-[1px] shadow-[0_0_10px_rgb(var(--amber-500)/0.5)]"
                                       style={{ height: `${hh}%` }}
                                       title={`Hints: ${hintPct.toFixed(1)}%`}
                                     />
@@ -512,7 +512,7 @@ export default function Dashboard() {
                           href={ch.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-300 hover:bg-red-100"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-300 hover:bg-red-100"
                         >
                           <svg
                             className="w-3.5 h-3.5"

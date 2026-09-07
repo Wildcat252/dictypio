@@ -152,12 +152,12 @@ export function DrillCard({
 
         <div className="mt-3 min-h-[1.75rem] flex items-center gap-3">
           {isCorrect && (
-            <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-sm drop-shadow-[0_0_10px_rgba(52,211,153,0.7)]">
+            <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-sm drop-shadow-[0_0_10px_rgb(var(--emerald-400)/0.7)]">
               ✔ Correct
             </span>
           )}
           {hintShown && !isCorrect && (
-            <span className="font-mono text-amber-300 text-lg drop-shadow-[0_0_8px_rgba(251,191,36,0.55)]">{target}</span>
+            <span className="font-mono text-amber-300 text-lg drop-shadow-[0_0_8px_rgb(var(--amber-400)/0.55)]">{target}</span>
           )}
         </div>
 

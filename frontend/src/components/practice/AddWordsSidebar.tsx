@@ -59,7 +59,7 @@ export function AddWordsSidebar({
           {adding ? 'Adding…' : 'Add to practice'}
         </button>
         {addMessage && (
-          <p className="mt-2 text-xs text-emerald-300 bg-emerald-950/70 border border-emerald-500/30 rounded-xl px-3 py-1.5 drop-shadow-[0_0_6px_rgba(52,211,153,0.3)]">{addMessage}</p>
+          <p className="mt-2 text-xs text-emerald-300 bg-emerald-950/70 border border-emerald-500/30 rounded-xl px-3 py-1.5 drop-shadow-[0_0_6px_rgb(var(--emerald-400)/0.3)]">{addMessage}</p>
         )}
 
         <div className="mt-5 pt-4 border-t border-cyan-500/20">
