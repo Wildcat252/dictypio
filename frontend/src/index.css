@@ -156,7 +156,7 @@
 
   /* Dictation feedback: hint / typed-so-far-correct / word complete. */
   --hint: 103 232 249;
-  --typing: 232 121 249;
+  --typing: 249 115 22;
   --done: 253 186 116;
 
   /* Deep Sea is the bioluminescent theme: every glow stays lit. */
