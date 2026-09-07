@@ -152,6 +152,11 @@
 
   --ink: 255 255 255;
 
+  /* Dictation feedback: hint / typed-so-far-correct / word complete. */
+  --hint: 103 232 249;
+  --typing: 253 186 116;
+  --done: 249 115 22;
+
   --shadow-glow: 0 0 20px -3px rgba(6, 182, 212, 0.45), 0 0 8px -1px rgba(6, 182, 212, 0.3);
   --shadow-glow-lg: 0 0 35px -5px rgba(6, 182, 212, 0.55), 0 0 15px -2px rgba(6, 182, 212, 0.4);
   --shadow-glow-teal: 0 0 20px -3px rgba(20, 184, 166, 0.45), 0 0 8px -1px rgba(20, 184, 166, 0.3);
@@ -264,6 +269,12 @@
   --amber-950: 255 251 235;
 
   --ink: 28 25 23;
+
+  /* The hint is the one deliberate cool note, deepened so it stays legible on
+     paper; typing runs orange and settles to a near-black burnt orange. */
+  --hint: 14 116 144;
+  --typing: 234 88 12;
+  --done: 108 38 15;
 
   --shadow-glow:
     0 0 16px -4px rgba(234, 88, 12, 0.55),

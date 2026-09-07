@@ -40,6 +40,11 @@ export default {
         ),
         // Neutral overlay ink: white on dark grounds, near-black on light ones.
         ink: v('ink'),
+        // Dictation feedback, kept apart from the status scales so the three
+        // typing states can be tuned without touching success/warning/error.
+        hint: v('hint'),
+        typing: v('typing'),
+        done: v('done'),
       },
       fontFamily: {
         sans: ['var(--font-ui)'],
