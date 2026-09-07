@@ -154,10 +154,12 @@
 
   --ink: 255 255 255;
 
-  /* Dictation feedback: hint / typed-so-far-correct / word complete. */
-  --hint: 103 232 249;
-  --typing: 249 115 22;
-  --done: 253 186 116;
+  /* Dictation feedback: hint / typed-so-far-correct / word complete. The
+     original amber/emerald scheme, unchanged since before theming existed —
+     only Skeuomorph's palette below is customized. */
+  --hint: 252 211 77;
+  --typing: 251 191 36;
+  --done: 52 211 153;
 
   /* Deep Sea is the bioluminescent theme: every glow stays lit. */
   --glow-alpha: 1;
