@@ -80,6 +80,8 @@ export function useTtsPlayback(params: {
     ttsWordInterval,
     ttsLettersPerGap,
     ttsWordRepeat,
+    speakComma,
+    commaPause,
   } = useWorkspace()
 
   // Word-by-word queue position, so pause/resume continues mid-sentence
@@ -336,11 +338,17 @@ export function useTtsPlayback(params: {
         tokenIdx: number
         lastOfToken: boolean
         isPunct: boolean
+        // Fixed wait added after the segment (ms): the silent comma pause
+        extraMs: number
       }
       const segments: TtsSegment[] = []
       words.forEach((token, tokenIdx) => {
         const wordPart = token.replace(/[,.?!]/g, '').trim()
-        const punctNames = (token.match(/[,.?!]/g) ?? []).map((ch) => SPOKEN_PUNCTUATION[ch])
+        const punctNames = (token.match(/[,.?!]/g) ?? [])
+          .filter((ch) => speakComma || ch !== ',')
+          .map((ch) => SPOKEN_PUNCTUATION[ch])
+        // With "comma" not spoken, a comma becomes a silent pause instead.
+        const commaPauseMs = !speakComma && token.includes(',') ? commaPause * 1000 : 0
         // Whatever the token earns is paid once, after its last segment.
         const tokenGap = wordPart ? wordGapMultiplier(wordPart) : PUNCT_GAP_MULTIPLIER
         if (wordPart) {
@@ -350,6 +358,7 @@ export function useTtsPlayback(params: {
             tokenIdx,
             lastOfToken: punctNames.length === 0,
             isPunct: false,
+            extraMs: punctNames.length > 0 ? 0 : commaPauseMs,
           })
         }
         punctNames.forEach((name, i) => {
@@ -360,6 +369,7 @@ export function useTtsPlayback(params: {
             tokenIdx,
             lastOfToken: isLastPunct,
             isPunct: true,
+            extraMs: isLastPunct ? commaPauseMs : 0,
           })
         })
       })
@@ -382,6 +392,7 @@ export function useTtsPlayback(params: {
             i++
           }
           const totalGap = groupSegs.reduce((sum, s) => sum + s.gapMultiplier, 0)
+          const totalExtraMs = groupSegs.reduce((sum, s) => sum + s.extraMs, 0)
 
           // Merge consecutive words into one phrase, but leave each punctuation
           // name standalone so it stays audibly separated from the words.
@@ -419,6 +430,7 @@ export function useTtsPlayback(params: {
               idx < pieces.length - 1
                 ? internalGapAt(idx)
                 : Math.max(0, totalGap + extra - internal)
+            piece.extraMs = idx < pieces.length - 1 ? 0 : totalExtraMs
           })
           out.push(...pieces)
         }
@@ -488,7 +500,7 @@ export function useTtsPlayback(params: {
           const gapMs = compensatedGap(
             ttsWordInterval * 1000 * segment.gapMultiplier,
             segmentVoice
-          )
+          ) + segment.extraMs
           const groupId = groupIdOf[segIdx]
           const isLastOfGroup =
             segIdx + 1 >= segments.length || groupIdOf[segIdx + 1] !== groupId
@@ -643,6 +655,8 @@ export function useTtsPlayback(params: {
     ttsVoiceOrder,
     availableVoices,
     ttsWordByWord,
+    speakComma,
+    commaPause,
     ttsWordInterval,
     ttsLettersPerGap,
     ttsWordRepeat,

@@ -46,6 +46,10 @@ export default function Settings() {
     setPauseInterval,
     ignorePunctuation,
     setIgnorePunctuation,
+    speakComma,
+    setSpeakComma,
+    commaPause,
+    setCommaPause,
     ignoreCase,
     setIgnoreCase,
     repeatCount,
@@ -529,6 +533,66 @@ export default function Settings() {
                     <span className="text-sm text-slate-400">sec</span>
                   </div>
                 </div>
+
+                {/* Speak comma */}
+                <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">Speak &ldquo;comma&rdquo;</p>
+                    <p className="text-xs text-slate-400">In word-by-word mode, read commas aloud as &ldquo;comma&rdquo;.</p>
+                  </div>
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={speakComma}
+                      onChange={(e) => setSpeakComma(e.target.checked)}
+                    />
+                    <div className="relative w-11 h-6 bg-abyss-750 rounded-full peer peer-checked:bg-cyan-600 shadow-glow-cyan after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-abyss-800/80 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                  </label>
+                </div>
+
+                {/* Comma pause (replaces the spoken "comma") */}
+                {!speakComma && (
+                  <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4 ml-6">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-100">Comma pause</p>
+                      <p className="text-xs text-slate-400">Silent gap at each comma instead of saying &ldquo;comma&rdquo;, in seconds.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCommaPause(Math.max(0, Math.round((commaPause - 0.1) * 10) / 10))}
+                        disabled={commaPause <= 0}
+                        className="w-8 h-8 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Decrease comma pause"
+                      >
+                        &minus;
+                      </button>
+                      <input
+                        type="number"
+                        min={0}
+                        max={5}
+                        step={0.1}
+                        value={commaPause}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value)
+                          if (Number.isFinite(v)) setCommaPause(Math.min(5, Math.max(0, v)))
+                        }}
+                        className="w-20 border border-cyan-500/30 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCommaPause(Math.min(5, Math.round((commaPause + 0.1) * 10) / 10))}
+                        disabled={commaPause >= 5}
+                        className="w-8 h-8 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Increase comma pause"
+                      >
+                        +
+                      </button>
+                      <span className="text-sm text-slate-400">sec</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Ignore punctuation */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">

@@ -48,6 +48,8 @@ interface WorkspaceState {
   playbackSpeed: number
   pauseInterval: number
   ignorePunctuation: boolean
+  speakComma: boolean
+  commaPause: number
   ignoreCase: boolean
   repeatCount: number | '∞'
   ttsVoiceName: string
@@ -100,6 +102,8 @@ type DurableSettings = {
   pauseInterval: number
   repeatCount: number | '∞'
   ignorePunctuation: boolean
+  speakComma: boolean
+  commaPause: number
   ignoreCase: boolean
   playbackSpeed: number
   ttsWordByWord: boolean
@@ -143,6 +147,8 @@ const initialState: WorkspaceState = {
   playbackSpeed: 1,
   pauseInterval: 3,
   ignorePunctuation: true,
+  speakComma: true,
+  commaPause: 0.3,
   ignoreCase: true,
   repeatCount: '∞',
   ttsVoiceName: '',
@@ -175,6 +181,8 @@ type WorkspaceContextValue = WorkspaceState & {
   setPlaybackSpeed: (v: number) => void
   setPauseInterval: (v: number) => void
   setIgnorePunctuation: (v: boolean) => void
+  setSpeakComma: (v: boolean) => void
+  setCommaPause: (v: number) => void
   setIgnoreCase: (v: boolean) => void
   setRepeatCount: (v: number | '∞') => void
   setTtsVoiceName: (v: string) => void
@@ -217,6 +225,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [playbackSpeed, setPlaybackSpeed] = useState(durable.playbackSpeed ?? p.playbackSpeed ?? initialState.playbackSpeed)
   const [pauseInterval, setPauseInterval] = useState(durable.pauseInterval ?? p.pauseInterval ?? initialState.pauseInterval)
   const [ignorePunctuation, setIgnorePunctuation] = useState(durable.ignorePunctuation ?? p.ignorePunctuation ?? initialState.ignorePunctuation)
+  const [speakComma, setSpeakComma] = useState(durable.speakComma ?? p.speakComma ?? initialState.speakComma)
+  const [commaPause, setCommaPause] = useState(durable.commaPause ?? p.commaPause ?? initialState.commaPause)
   const [ignoreCase, setIgnoreCase] = useState(durable.ignoreCase ?? p.ignoreCase ?? initialState.ignoreCase)
   const [repeatCount, setRepeatCount] = useState<number | '∞'>(durable.repeatCount ?? p.repeatCount ?? initialState.repeatCount)
 
@@ -335,6 +345,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           pauseInterval,
           repeatCount,
           ignorePunctuation,
+          speakComma,
+          commaPause,
           ignoreCase,
           playbackSpeed,
           ttsWordByWord,
@@ -350,6 +362,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     pauseInterval,
     repeatCount,
     ignorePunctuation,
+    speakComma,
+    commaPause,
     ignoreCase,
     playbackSpeed,
     ttsWordByWord,
@@ -382,6 +396,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         playbackSpeed,
         pauseInterval,
         ignorePunctuation,
+        speakComma,
+        commaPause,
         ignoreCase,
         repeatCount,
         ttsVoiceName,
@@ -417,6 +433,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     playbackSpeed,
     pauseInterval,
     ignorePunctuation,
+    speakComma,
+    commaPause,
     ignoreCase,
     repeatCount,
     ttsVoiceName,
@@ -460,7 +478,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     pauseInterval,
     setPauseInterval,
     ignorePunctuation,
+    speakComma,
+    commaPause,
     setIgnorePunctuation,
+    setSpeakComma,
+    setCommaPause,
     ignoreCase,
     setIgnoreCase,
     repeatCount,
