@@ -17,6 +17,7 @@ import { useWorkspaceShortcuts } from './workspace/useWorkspaceShortcuts'
 import { useAudioPlayback } from './workspace/useAudioPlayback'
 import { useLessonData } from './workspace/useLessonData'
 import { CoachDrawer, type CoachDrawerHandle } from './workspace/CoachDrawer'
+import { AI_COACH_ENABLED } from '../features'
 import { WorkspaceSidebar } from './workspace/WorkspaceSidebar'
 import { DictationArea } from './workspace/DictationArea'
 import { PlayerPanel } from './workspace/PlayerPanel'
@@ -825,7 +826,7 @@ export default function Workspace() {
       </div>
 
       {/* AI Coach side panel */}
-      <CoachDrawer ref={coachRef} isLessonFinished={isLessonFinished} />
+      {AI_COACH_ENABLED && <CoachDrawer ref={coachRef} isLessonFinished={isLessonFinished} />}
     </div>
   )
 }

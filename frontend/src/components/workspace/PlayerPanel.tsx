@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import { displayKey, type Keybindings } from '../../keybindings'
+import { AI_COACH_ENABLED } from '../../features'
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 // How many times each word is spoken in word-by-word mode
@@ -479,7 +480,7 @@ export function PlayerPanel({
             <div className="w-2.5 h-2.5 bg-rose-400 rounded-full shadow-glow-rose" />
             <span className="text-xs font-mono font-semibold text-rose-300">{videoSessionScores.incorrectChars}</span>
           </div>
-          {selectedLesson && (
+          {AI_COACH_ENABLED && selectedLesson && (
             <button
               type="button"
               onClick={() => onAskCoach(selectedLesson.video_id)}
