@@ -392,15 +392,16 @@ export function useTtsPlayback(params: {
             i++
           }
           const totalGap = groupSegs.reduce((sum, s) => sum + s.gapMultiplier, 0)
-          const totalExtraMs = groupSegs.reduce((sum, s) => sum + s.extraMs, 0)
 
           // Merge consecutive words into one phrase, but leave each punctuation
           // name standalone so it stays audibly separated from the words.
           const pieces: TtsSegment[] = []
           for (const seg of groupSegs) {
             const last = pieces[pieces.length - 1]
-            if (!seg.isPunct && last && !last.isPunct) {
+            // A comma pause breaks the phrase so the silence lands at the comma
+            if (!seg.isPunct && last && !last.isPunct && last.extraMs === 0) {
               last.text += ` ${seg.text}`
+              last.extraMs = seg.extraMs
               // Track the furthest token so resume/skip continue after the run
               last.tokenIdx = seg.tokenIdx
             } else {
@@ -430,7 +431,6 @@ export function useTtsPlayback(params: {
               idx < pieces.length - 1
                 ? internalGapAt(idx)
                 : Math.max(0, totalGap + extra - internal)
-            piece.extraMs = idx < pieces.length - 1 ? 0 : totalExtraMs
           })
           out.push(...pieces)
         }

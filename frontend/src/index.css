@@ -9,6 +9,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tailwind sizes are rem-based, so shrinking the root scales the whole UI —
+   the default 16px felt oversized at 100% browser zoom; 80% (12.8px) matches
+   how the app looks best. Percent keeps the user's browser font setting. */
+html {
+  font-size: 80%;
+}
+
 @keyframes importProgress {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
