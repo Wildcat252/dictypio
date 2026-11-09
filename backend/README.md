@@ -30,62 +30,23 @@ Copy `.env.example` to `.env` and configure as needed.
 
 ## Translation
 
-`POST /api/ai/translate` tries **Google's free web endpoint** first, for translation
-quality, and falls back to a self-hosted **LibreTranslate** when Google is
-unreachable or rate-limits the request. Running LibreTranslate is therefore optional:
-without it Translate still works, it just has no safety net.
+`POST /api/ai/translate` (requires login) picks its source by configuration:
 
-Google's endpoint is unofficial and answers `429` once it decides traffic is
-automated, which is exactly what the fallback is for.
+- **`GOOGLE_TRANSLATE_API_KEY` set** — calls the Google Cloud Translation API v2
+  (`https://translation.googleapis.com/language/translate/v2`). Create the key in
+  Google Cloud Console, in a project with the Cloud Translation API enabled.
+  `GOOGLE_TRANSLATE_TIMEOUT` (seconds, default 15) is optional.
+- **Not set** — translates with Gemini (`GEMINI_MODEL`) using the user's active API
+  key from Settings → AI API-KEY. With no Gemini key either, it answers `400`
+  asking the user to add one.
 
-### Running LibreTranslate
+A failure from either source comes back as `502` carrying the provider's message.
 
-It is a plain Python package — no Docker, no admin rights. Install it in its own
-virtualenv, kept away from this backend's so their Flask/pydantic pins cannot clash:
-
-```bash
-python -m venv libretranslate-venv
-libretranslate-venv/Scripts/python -m pip install libretranslate
-```
-
-Start it on port 5001, loading only the languages the app offers (the first run
-downloads ~2.4GB of Argos models into `~/.local/share/argos-translate`):
-
-```bash
-libretranslate-venv/Scripts/python -c "import sys; from libretranslate.main import main; sys.argv=['libretranslate','--host','127.0.0.1','--port','5001','--load-only','en,vi,ja,ko,es,fr,de,ru,th,id,zh-Hans']; main()"
-```
-
-Two Windows gotchas, both of which look like unrelated failures:
-
-- **Set `PYTHONIOENCODING=utf-8` first.** LibreTranslate prints `en -> vi` while
-  updating models; on a cp1252 console that raises `UnicodeEncodeError`, model
-  download aborts, and startup then dies with `IndexError: list index out of range`
-  because no language ever loaded.
-- If `Scripts/libretranslate.exe` is blocked (`Access is denied`), call the entry
-  point through `python -c` as above instead of the console-script shim.
-
-Docker is the upstream-recommended route if you would rather have it:
-`docker run -ti --rm -p 5001:5000 libretranslate/libretranslate`.
-
-### Configuration
-
-`LIBRETRANSLATE_URL` (default `http://localhost:5001`), `LIBRETRANSLATE_API_KEY`
-(unset for a local instance) and `LIBRETRANSLATE_TIMEOUT` (default 15s, paid on
-every miss before the fallback runs). See `.env.example`.
-
-The default is 5001 rather than LibreTranslate's own 5000, which local dev servers
-tend to hold already. An unrelated service answering on the configured port looks
-exactly like a LibreTranslate outage: the request 404s, and since LibreTranslate is
-the last resort the whole translation then fails.
-
-`npm run electron:dev` does not read `.env` — it hands the backend the shell's own
-environment, so export these before starting it.
-
-When the fallback runs, the backend logs a `WARNING` naming Google's failure; use
-that to tell a Google translation apart from a LibreTranslate one.
+The backend does not read `.env` by itself: export variables in the shell, or start
+uvicorn with `--env-file .env`. Restart the backend after changing them.
 
 ### Language codes
 
-LibreTranslate has no `zh` or `zh-CN`; it splits Chinese by script. The app keeps
-sending `zh-CN`, and `_LIBRETRANSLATE_LANG_OVERRIDES` in `routers/ai_coach.py` maps
-it to `zh-Hans` for LibreTranslate only — Google still receives `zh-CN`.
+The app sends the target code it stores (`vi`, `zh-CN`, `ja`, ...), which Google
+accepts as-is. A bare `zh` is mapped to `zh-CN` by `_GOOGLE_LANG_OVERRIDES` in
+`routers/ai_coach.py`.

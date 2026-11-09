@@ -16,11 +16,7 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import User, Video, get_db
 from routers.learning_progress import UserStats as StatsModel, get_user_stats
-from config import (
-    LIBRETRANSLATE_API_KEY,
-    LIBRETRANSLATE_TIMEOUT,
-    LIBRETRANSLATE_URL,
-)
+from config import GOOGLE_TRANSLATE_API_KEY, GOOGLE_TRANSLATE_TIMEOUT
 from services.ai_client_factory import make_llm_for_user
 from services.qdrant_client import search_sentences_by_queries
 
@@ -333,49 +329,75 @@ async def generate_coach_feedback(
     return CoachFeedbackResponse(summary=summary, suggestions=suggestions)
 
 
-# LibreTranslate has no "zh" or "zh-CN"; it splits Chinese by script instead.
-# Codes the app already sends that LibreTranslate spells differently go here.
-_LIBRETRANSLATE_LANG_OVERRIDES = {"zh-CN": "zh-Hans", "zh-TW": "zh-Hant"}
+_GOOGLE_TRANSLATE_URL = "https://translation.googleapis.com/language/translate/v2"
+
+# Codes the app may send that Google spells differently. Google takes "zh-CN"
+# and "zh-TW" as-is; a bare "zh" is mapped to Simplified explicitly.
+_GOOGLE_LANG_OVERRIDES = {"zh": "zh-CN"}
 
 
-async def _translate_via_libretranslate(text: str, target_lang: str) -> str:
-    """Translate through a self-hosted LibreTranslate instance."""
+async def _translate_via_google_cloud(text: str, target_lang: str) -> str:
+    """Translate through Google Cloud Translation API v2 (API key auth)."""
     payload = {
         "q": text,
-        "source": "auto",
-        "target": _LIBRETRANSLATE_LANG_OVERRIDES.get(target_lang, target_lang),
+        "target": _GOOGLE_LANG_OVERRIDES.get(target_lang, target_lang),
         "format": "text",
     }
-    if LIBRETRANSLATE_API_KEY:
-        payload["api_key"] = LIBRETRANSLATE_API_KEY
+    # Key goes in a header rather than ?key=, so it never lands in URL logs.
+    headers = {"X-goog-api-key": GOOGLE_TRANSLATE_API_KEY or ""}
 
-    async with httpx.AsyncClient(timeout=LIBRETRANSLATE_TIMEOUT) as client:
-        resp = await client.post(f"{LIBRETRANSLATE_URL}/translate", json=payload)
-        resp.raise_for_status()
-    return (resp.json().get("translatedText") or "").strip()
+    async with httpx.AsyncClient(timeout=GOOGLE_TRANSLATE_TIMEOUT) as client:
+        resp = await client.post(_GOOGLE_TRANSLATE_URL, json=payload, headers=headers)
+
+    if resp.status_code != 200:
+        message = resp.text
+        try:
+            message = resp.json()["error"]["message"]
+        except Exception:
+            pass
+        raise RuntimeError(f"HTTP {resp.status_code}: {message}")
+
+    translations = (resp.json().get("data") or {}).get("translations") or []
+    if not translations:
+        return ""
+    return (translations[0].get("translatedText") or "").strip()
 
 
-async def _translate_via_google(text: str, target_lang: str) -> str:
-    """Translate through Google Translate's free web endpoint (no API key)."""
-    params = {
-        "client": "gtx",
-        "sl": "auto",
-        "tl": target_lang,
-        "dt": "t",
-        "q": text,
-    }
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.get(
-            "https://translate.googleapis.com/translate_a/single", params=params
-        )
-        resp.raise_for_status()
-    data = resp.json()
-    return "".join(seg[0] for seg in (data[0] or []) if seg and seg[0]).strip()
+_LANG_NAMES = {
+    "vi": "Vietnamese", "zh": "Simplified Chinese", "zh-CN": "Simplified Chinese",
+    "zh-TW": "Traditional Chinese", "ja": "Japanese", "ko": "Korean",
+    "es": "Spanish", "fr": "French", "de": "German", "ru": "Russian",
+    "th": "Thai", "id": "Indonesian", "en": "English", "pt": "Portuguese",
+    "it": "Italian", "hi": "Hindi", "ar": "Arabic",
+}
+
+
+async def _translate_via_gemini(
+    text: str, target_lang: str, user_id: int, db: Session
+) -> str:
+    """Translate with the user's active Gemini key (used when no Translate key is set)."""
+    llm = make_llm_for_user(user_id, db)  # raises 400 if the user has no Gemini key
+    language = _LANG_NAMES.get(target_lang, target_lang)
+    prompt = (
+        f"Translate the following text into {language}. "
+        "Reply with the translation only: no quotes, notes, or explanations.\n\n"
+        f"{text}"
+    )
+    result = await llm.ainvoke(prompt)
+    raw = getattr(result, "content", None)
+    if raw is None:
+        raw = str(result)
+    return _stringify_llm_content(raw).strip()
 
 
 @router.post("/ai/translate", response_model=TranslateResponse)
-async def translate_text(body: TranslateRequest) -> TranslateResponse:
-    """Translate text, preferring Google with self-hosted LibreTranslate behind it."""
+async def translate_text(
+    body: TranslateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TranslateResponse:
+    """Translate text: Google Cloud Translation if GOOGLE_TRANSLATE_API_KEY is set,
+    otherwise Gemini with the user's active API key from Settings."""
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Text to translate is empty.")
@@ -384,31 +406,22 @@ async def translate_text(body: TranslateRequest) -> TranslateResponse:
     if not re.fullmatch(r"[a-zA-Z-]{2,8}", target_lang):
         raise HTTPException(status_code=400, detail="Invalid target language code.")
 
+    if GOOGLE_TRANSLATE_API_KEY:
+        source = "Google Cloud Translation"
+        call = _translate_via_google_cloud(text, target_lang)
+    else:
+        source = "Gemini"
+        call = _translate_via_gemini(text, target_lang, current_user.id, db)
+
     try:
-        translation = await _translate_via_google(text, target_lang)
-    except Exception as google_exc:
-        # Google has no SLA and answers 429 once it decides the traffic is
-        # automated, so losing it is routine: log and fall through rather than
-        # failing the request.
-        logger.warning(
-            "ai_translate: Google failed (%s); falling back to LibreTranslate at %s",
-            google_exc,
-            LIBRETRANSLATE_URL,
-        )
-        try:
-            translation = await _translate_via_libretranslate(text, target_lang)
-        except Exception as libre_exc:
-            logger.exception(
-                "ai_translate: LibreTranslate fallback failed as well: %s", libre_exc
-            )
-            raise HTTPException(
-                status_code=502,
-                detail=(
-                    f"Both translation sources failed. Google said: {google_exc}. "
-                    f"The LibreTranslate fallback at {LIBRETRANSLATE_URL} said: "
-                    f"{libre_exc}."
-                ),
-            ) from libre_exc
+        translation = await call
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("ai_translate: %s failed: %s", source, exc)
+        raise HTTPException(
+            status_code=502, detail=f"{source} translation failed: {exc}"
+        ) from exc
 
     if not translation:
         raise HTTPException(

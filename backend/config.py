@@ -31,15 +31,9 @@ GEMINI_EMBEDDING_MODEL = (os.getenv("GEMINI_EMBEDDING_MODEL") or "gemini-embeddi
 # then set GEMINI_MODEL to a model name (e.g. gemini-3-flash-preview, gemini-1.5-flash-8b).
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 
-# LibreTranslate, self-hosted. Sentence translation goes to Google's free web
-# endpoint first and falls back to this when Google is unreachable or rate-limits
-# us, so the feature keeps working with nothing installed here. Port 5001, not
-# LibreTranslate's own default of 5000, which is a crowded port that other local
-# dev servers tend to hold. See the backend README for how to run it.
-LIBRETRANSLATE_URL = (
-    os.getenv("LIBRETRANSLATE_URL") or "http://localhost:5001"
-).strip().rstrip("/")
-# Only needed by a hosted instance that requires one; a local container does not.
-LIBRETRANSLATE_API_KEY = (os.getenv("LIBRETRANSLATE_API_KEY") or "").strip() or None
-# Kept short by default: every miss is paid before the Google fallback runs.
-LIBRETRANSLATE_TIMEOUT = float(os.getenv("LIBRETRANSLATE_TIMEOUT", "15"))
+# Google Cloud Translation API (v2, Basic) for sentence translation.
+# Create an API key in Google Cloud Console with the Cloud Translation API enabled.
+# Optional: without it, translation uses Gemini with the user's active API key
+# from Settings.
+GOOGLE_TRANSLATE_API_KEY = (os.getenv("GOOGLE_TRANSLATE_API_KEY") or "").strip() or None
+GOOGLE_TRANSLATE_TIMEOUT = float(os.getenv("GOOGLE_TRANSLATE_TIMEOUT", "15"))
