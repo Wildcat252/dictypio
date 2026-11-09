@@ -1,10 +1,111 @@
 import type { MutableRefObject } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import { displayKey, type Keybindings } from '../../keybindings'
+import { AI_COACH_ENABLED } from '../../features'
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 // How many times each word is spoken in word-by-word mode
 const WORD_REPEAT_OPTIONS = [1, 2, 3, 4, 5]
+
+/**
+ * A small select-style dropdown.
+ *
+ * The menu is portalled into document.body: the workspace panels use
+ * `backdrop-blur`, which creates a stacking context on each panel, so an
+ * in-tree menu can never paint over the panel that follows it.
+ */
+function OptionMenu({
+  label,
+  value,
+  options,
+  onSelect,
+  suffix = 'x',
+}: {
+  label: string
+  value: number
+  options: readonly number[]
+  onSelect: (value: number) => void
+  suffix?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLDivElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const place = () => {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect) setPos({ top: rect.bottom + 6, left: rect.left })
+    }
+    place()
+    const onPointerDown = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (!triggerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
+        setOpen(false)
+      }
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('resize', place)
+    // capture phase: the menu is anchored to a trigger inside a scrollable panel
+    window.addEventListener('scroll', place, true)
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div className="relative">
+      <div
+        ref={triggerRef}
+        onClick={() => setOpen((v) => !v)}
+        className="bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
+      >
+        <span>{label}: {value}{suffix}</span>
+        <svg
+          className={`w-3.5 h-3.5 text-cyan-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+      {open && pos && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: pos.top, left: pos.left }}
+          className="z-[100] bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-slate-200 min-w-[120px] py-1"
+        >
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => {
+                onSelect(option)
+                setOpen(false)
+              }}
+              className={`w-full text-left px-3.5 py-1.5 text-xs transition-colors ${option === value ? 'bg-cyan-950/60 text-cyan-300 font-semibold' : 'hover:bg-abyss-800 text-slate-200'
+                }`}
+            >
+              {option}{suffix}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
+}
 
 function formatTime(seconds: number) {
   const mins = Math.floor(seconds / 60)
@@ -262,26 +363,12 @@ export function PlayerPanel({
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-2 md:gap-2.5">
-        <div className="relative group">
-          <div className="bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60">
-            <span>Speed: {playbackSpeed}x</span>
-            <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-          <div className="absolute top-full left-0 mt-1.5 bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 min-w-[120px] py-1">
-            {SPEED_OPTIONS.map((speed) => (
-              <button
-                key={speed}
-                onClick={() => setPlaybackSpeed(speed)}
-                className={`w-full text-left px-3.5 py-1.5 text-xs transition-colors ${playbackSpeed === speed ? 'bg-cyan-950/60 text-cyan-300 font-semibold' : 'hover:bg-abyss-800 text-slate-200'
-                  }`}
-              >
-                {speed}x
-              </button>
-            ))}
-          </div>
-        </div>
+        <OptionMenu
+          label="Speed"
+          value={playbackSpeed}
+          options={SPEED_OPTIONS}
+          onSelect={setPlaybackSpeed}
+        />
         {isTextLesson && (
           <div
             className={`px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
@@ -353,26 +440,12 @@ export function PlayerPanel({
           </div>
         )}
         {isTextLesson && ttsWordByWord && (
-          <div className="relative group">
-            <div className="bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60">
-              <span>Repeat: {ttsWordRepeat}x</span>
-              <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-            <div className="absolute top-full left-0 mt-1.5 bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 min-w-[120px] py-1">
-              {WORD_REPEAT_OPTIONS.map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setTtsWordRepeat(n)}
-                  className={`w-full text-left px-3.5 py-1.5 text-xs transition-colors ${ttsWordRepeat === n ? 'bg-cyan-950/60 text-cyan-300 font-semibold' : 'hover:bg-abyss-800 text-slate-200'
-                    }`}
-                >
-                  {n}x
-                </button>
-              ))}
-            </div>
-          </div>
+          <OptionMenu
+            label="Repeat"
+            value={ttsWordRepeat}
+            options={WORD_REPEAT_OPTIONS}
+            onSelect={setTtsWordRepeat}
+          />
         )}
         {isTextLesson && ttsWordByWord && (
           <button
@@ -407,7 +480,7 @@ export function PlayerPanel({
             <div className="w-2.5 h-2.5 bg-rose-400 rounded-full shadow-glow-rose" />
             <span className="text-xs font-mono font-semibold text-rose-300">{videoSessionScores.incorrectChars}</span>
           </div>
-          {selectedLesson && (
+          {AI_COACH_ENABLED && selectedLesson && (
             <button
               type="button"
               onClick={() => onAskCoach(selectedLesson.video_id)}

@@ -128,7 +128,7 @@ export const CoachDrawer = forwardRef<CoachDrawerHandle, { isLessonFinished: boo
               <button
                 type="button"
                 onClick={() => navigate('/settings')}
-                className="underline font-semibold text-rose-200 hover:text-white"
+                className="underline font-semibold text-rose-200 hover:text-rose-100"
               >
                 Open AI settings
               </button>

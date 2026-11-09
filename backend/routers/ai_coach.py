@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from auth import get_current_user
 from database import User, Video, get_db
 from routers.learning_progress import UserStats as StatsModel, get_user_stats
+from config import GOOGLE_TRANSLATE_API_KEY, GOOGLE_TRANSLATE_TIMEOUT
 from services.ai_client_factory import make_llm_for_user
 from services.qdrant_client import search_sentences_by_queries
 
@@ -328,9 +329,75 @@ async def generate_coach_feedback(
     return CoachFeedbackResponse(summary=summary, suggestions=suggestions)
 
 
+_GOOGLE_TRANSLATE_URL = "https://translation.googleapis.com/language/translate/v2"
+
+# Codes the app may send that Google spells differently. Google takes "zh-CN"
+# and "zh-TW" as-is; a bare "zh" is mapped to Simplified explicitly.
+_GOOGLE_LANG_OVERRIDES = {"zh": "zh-CN"}
+
+
+async def _translate_via_google_cloud(text: str, target_lang: str) -> str:
+    """Translate through Google Cloud Translation API v2 (API key auth)."""
+    payload = {
+        "q": text,
+        "target": _GOOGLE_LANG_OVERRIDES.get(target_lang, target_lang),
+        "format": "text",
+    }
+    # Key goes in a header rather than ?key=, so it never lands in URL logs.
+    headers = {"X-goog-api-key": GOOGLE_TRANSLATE_API_KEY or ""}
+
+    async with httpx.AsyncClient(timeout=GOOGLE_TRANSLATE_TIMEOUT) as client:
+        resp = await client.post(_GOOGLE_TRANSLATE_URL, json=payload, headers=headers)
+
+    if resp.status_code != 200:
+        message = resp.text
+        try:
+            message = resp.json()["error"]["message"]
+        except Exception:
+            pass
+        raise RuntimeError(f"HTTP {resp.status_code}: {message}")
+
+    translations = (resp.json().get("data") or {}).get("translations") or []
+    if not translations:
+        return ""
+    return (translations[0].get("translatedText") or "").strip()
+
+
+_LANG_NAMES = {
+    "vi": "Vietnamese", "zh": "Simplified Chinese", "zh-CN": "Simplified Chinese",
+    "zh-TW": "Traditional Chinese", "ja": "Japanese", "ko": "Korean",
+    "es": "Spanish", "fr": "French", "de": "German", "ru": "Russian",
+    "th": "Thai", "id": "Indonesian", "en": "English", "pt": "Portuguese",
+    "it": "Italian", "hi": "Hindi", "ar": "Arabic",
+}
+
+
+async def _translate_via_gemini(
+    text: str, target_lang: str, user_id: int, db: Session
+) -> str:
+    """Translate with the user's active Gemini key (used when no Translate key is set)."""
+    llm = make_llm_for_user(user_id, db)  # raises 400 if the user has no Gemini key
+    language = _LANG_NAMES.get(target_lang, target_lang)
+    prompt = (
+        f"Translate the following text into {language}. "
+        "Reply with the translation only: no quotes, notes, or explanations.\n\n"
+        f"{text}"
+    )
+    result = await llm.ainvoke(prompt)
+    raw = getattr(result, "content", None)
+    if raw is None:
+        raw = str(result)
+    return _stringify_llm_content(raw).strip()
+
+
 @router.post("/ai/translate", response_model=TranslateResponse)
-async def translate_text(body: TranslateRequest) -> TranslateResponse:
-    """Translate text via Google Translate's free web endpoint (no API key)."""
+async def translate_text(
+    body: TranslateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TranslateResponse:
+    """Translate text: Google Cloud Translation if GOOGLE_TRANSLATE_API_KEY is set,
+    otherwise Gemini with the user's active API key from Settings."""
     text = body.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Text to translate is empty.")
@@ -339,28 +406,21 @@ async def translate_text(body: TranslateRequest) -> TranslateResponse:
     if not re.fullmatch(r"[a-zA-Z-]{2,8}", target_lang):
         raise HTTPException(status_code=400, detail="Invalid target language code.")
 
-    params = {
-        "client": "gtx",
-        "sl": "auto",
-        "tl": target_lang,
-        "dt": "t",
-        "q": text,
-    }
+    if GOOGLE_TRANSLATE_API_KEY:
+        source = "Google Cloud Translation"
+        call = _translate_via_google_cloud(text, target_lang)
+    else:
+        source = "Gemini"
+        call = _translate_via_gemini(text, target_lang, current_user.id, db)
+
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.get(
-                "https://translate.googleapis.com/translate_a/single", params=params
-            )
-            resp.raise_for_status()
-        data = resp.json()
-        translation = "".join(
-            seg[0] for seg in (data[0] or []) if seg and seg[0]
-        ).strip()
+        translation = await call
+    except HTTPException:
+        raise
     except Exception as exc:
-        logger.exception("ai_translate: translation request failed: %s", exc)
+        logger.warning("ai_translate: %s failed: %s", source, exc)
         raise HTTPException(
-            status_code=502,
-            detail="Translation service is unavailable. Check your internet connection.",
+            status_code=502, detail=f"{source} translation failed: {exc}"
         ) from exc
 
     if not translation:

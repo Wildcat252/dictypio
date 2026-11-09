@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { estimatedVoiceLatency, isNetworkVoice, recordVoiceLatency } from '../../voices'
+import {
+  MIN_VOICE_POOL,
+  orderPoolForSentence,
+  resolveVoicePool,
+  voiceForRepeat,
+} from '../../voiceRotation'
 
 // Scales the word-by-word TTS gap exponentially by word length so longer words
 // give more time to type: 0.5x under 3 letters (quick words need less time),
@@ -20,8 +26,9 @@ function wordGapMultiplier(word: string): number {
 // grouped word-by-word playback the same length as ungrouped.
 const MERGED_UTTERANCE_PADDING_MS = 180
 
-// Gap after a spoken punctuation name, and the gap kept before it when words
-// are grouped, so "Hello" and "comma" never run together.
+// Gap kept between a punctuation name and the word after it. Nothing is kept
+// *before* a punctuation name: "Hello," runs straight from "Hello" into
+// "comma", and the gap the word earned is paid out after "comma" instead.
 const PUNCT_GAP_MULTIPLIER = 0.1
 
 // Common punctuation spoken by name in word-by-word mode so the learner
@@ -64,10 +71,17 @@ export function useTtsPlayback(params: {
     repeatCount,
     pauseInterval,
     ttsVoiceName,
+    ttsMultiVoice,
+    ttsVoiceNames,
+    ttsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
+    ttsVoiceOrder,
     ttsWordByWord,
     ttsWordInterval,
     ttsLettersPerGap,
     ttsWordRepeat,
+    speakComma,
+    commaPause,
   } = useWorkspace()
 
   // Word-by-word queue position, so pause/resume continues mid-sentence
@@ -145,11 +159,43 @@ export function useTtsPlayback(params: {
       }
     }
 
-    // Resolve the voice object once
-    let selectedVoice: SpeechSynthesisVoice | null = null
-    if (ttsVoiceName && availableVoices.length) {
-      selectedVoice = availableVoices.find(v => v.name === ttsVoiceName) || null
+    // Resolve which voice — or voices — read this sentence.
+    //
+    // A pool of one is indistinguishable from single-voice playback, so anything
+    // short of MIN_VOICE_POOL resolvable voices quietly falls back to the old
+    // behaviour: the browser may simply no longer offer the saved voices.
+    const singleVoice: SpeechSynthesisVoice | null =
+      ttsVoiceName && availableVoices.length
+        ? availableVoices.find((v) => v.name === ttsVoiceName) || null
+        : null
+
+    const rawPool = ttsMultiVoice ? resolveVoicePool(ttsVoiceNames, availableVoices) : []
+    // With neither switch on there is nothing to rotate against, so a pool would
+    // just pin every sentence to one voice — fall back to the dictation voice
+    // instead, the same way too small a pool does.
+    const rotatesSomewhere = ttsVoicePerSentenceRepeat || ttsVoicePerWordRepeat
+    const multiVoiceActive = rawPool.length >= MIN_VOICE_POOL && rotatesSomewhere
+    // Keyed by sentence id so 'random' deals one order for this sentence and
+    // keeps it across every repeat, then a different one for the next sentence.
+    const voicePool = multiVoiceActive
+      ? orderPoolForSentence(rawPool, ttsVoiceOrder, String(currentSentence.id))
+      : []
+
+    // The two switches add up: the sentence repeat decides where in the pool a
+    // reading starts, and the word repeat walks on from there. Reading
+    // repeatCountRef here is all the sentence rotation needs — onSentenceFinished
+    // bumps the counter and re-triggers the effect, so this runs again per repeat.
+    const voiceFor = (wordStep: number): SpeechSynthesisVoice | null => {
+      if (!multiVoiceActive) return singleVoice
+      const sentenceStep = ttsVoicePerSentenceRepeat ? repeatCountRef.current : 0
+      return voiceForRepeat(
+        voicePool,
+        sentenceStep + (ttsVoicePerWordRepeat ? wordStep : 0)
+      )
     }
+
+    // Whole-sentence playback has no word repeats to advance through.
+    const selectedVoice = voiceFor(0)
 
     // Called when the entire sentence has finished (either whole-sentence or last word)
     const onSentenceFinished = () => {
@@ -282,37 +328,48 @@ export function useTtsPlayback(params: {
       // one-word-at-a-time path untouched.
       const hasMultiWordGroup = tokenGroupId.some((g, i) => i > 0 && tokenGroupId[i - 1] === g)
 
-      // Expand each token into speech segments so the Word Gap also separates a
-      // word from its spoken punctuation: "Hello," -> "Hello" (gap) "comma" (gap).
-      // Punctuation-name segments use half the base gap (typing them is one
-      // keystroke); word segments keep the length-scaled gap.
+      // Expand each token into speech segments: "Hello," -> "Hello" "comma" (gap).
+      // A word is never separated from its own punctuation; the length-scaled
+      // gap it earns is moved to after the punctuation name, so the pause
+      // between one token and the next stays the same as it was.
       type TtsSegment = {
         text: string
         gapMultiplier: number
         tokenIdx: number
         lastOfToken: boolean
         isPunct: boolean
+        // Fixed wait added after the segment (ms): the silent comma pause
+        extraMs: number
       }
       const segments: TtsSegment[] = []
       words.forEach((token, tokenIdx) => {
         const wordPart = token.replace(/[,.?!]/g, '').trim()
-        const punctNames = (token.match(/[,.?!]/g) ?? []).map((ch) => SPOKEN_PUNCTUATION[ch])
+        const punctNames = (token.match(/[,.?!]/g) ?? [])
+          .filter((ch) => speakComma || ch !== ',')
+          .map((ch) => SPOKEN_PUNCTUATION[ch])
+        // With "comma" not spoken, a comma becomes a silent pause instead.
+        const commaPauseMs = !speakComma && token.includes(',') ? commaPause * 1000 : 0
+        // Whatever the token earns is paid once, after its last segment.
+        const tokenGap = wordPart ? wordGapMultiplier(wordPart) : PUNCT_GAP_MULTIPLIER
         if (wordPart) {
           segments.push({
             text: wordPart,
-            gapMultiplier: wordGapMultiplier(wordPart),
+            gapMultiplier: punctNames.length > 0 ? 0 : tokenGap,
             tokenIdx,
             lastOfToken: punctNames.length === 0,
             isPunct: false,
+            extraMs: punctNames.length > 0 ? 0 : commaPauseMs,
           })
         }
         punctNames.forEach((name, i) => {
+          const isLastPunct = i === punctNames.length - 1
           segments.push({
             text: name,
-            gapMultiplier: PUNCT_GAP_MULTIPLIER,
+            gapMultiplier: isLastPunct ? tokenGap : 0,
             tokenIdx,
-            lastOfToken: i === punctNames.length - 1,
+            lastOfToken: isLastPunct,
             isPunct: true,
+            extraMs: isLastPunct ? commaPauseMs : 0,
           })
         })
       })
@@ -341,8 +398,10 @@ export function useTtsPlayback(params: {
           const pieces: TtsSegment[] = []
           for (const seg of groupSegs) {
             const last = pieces[pieces.length - 1]
-            if (!seg.isPunct && last && !last.isPunct) {
+            // A comma pause breaks the phrase so the silence lands at the comma
+            if (!seg.isPunct && last && !last.isPunct && last.extraMs === 0) {
               last.text += ` ${seg.text}`
+              last.extraMs = seg.extraMs
               // Track the furthest token so resume/skip continue after the run
               last.tokenIdx = seg.tokenIdx
             } else {
@@ -361,13 +420,16 @@ export function useTtsPlayback(params: {
             extra = lostMs / (ttsWordInterval * 1000)
           }
 
-          // Keep a small gap at each internal (punctuation) boundary; the rest
-          // of the group's accumulated time lands after the final piece.
-          const internal = Math.max(0, pieces.length - 1) * PUNCT_GAP_MULTIPLIER
+          // Internal boundaries keep a small gap, except one leading into a
+          // punctuation name: a word runs straight into its own punctuation.
+          // The rest of the group's accumulated time lands after the final piece.
+          const internalGapAt = (idx: number) =>
+            idx < pieces.length - 1 && !pieces[idx + 1].isPunct ? PUNCT_GAP_MULTIPLIER : 0
+          const internal = pieces.reduce((sum, _piece, idx) => sum + internalGapAt(idx), 0)
           pieces.forEach((piece, idx) => {
             piece.gapMultiplier =
               idx < pieces.length - 1
-                ? PUNCT_GAP_MULTIPLIER
+                ? internalGapAt(idx)
                 : Math.max(0, totalGap + extra - internal)
           })
           out.push(...pieces)
@@ -397,9 +459,12 @@ export function useTtsPlayback(params: {
       // round-trip — the Word Gap setting stops meaning what it says. Subtracting
       // the measured round-trip from the gap we wait folds the latency into the
       // pause instead of adding to it. Local voices keep their existing timing.
-      const compensatedGap = (gapMs: number) => {
-        if (!isNetworkVoice(selectedVoice)) return gapMs
-        const latency = estimatedVoiceLatency(selectedVoice?.name)
+      // Takes the voice that actually spoke: with several voices in play their
+      // round-trips differ, and compensating every gap by one voice's latency
+      // would skew the pause after all the others.
+      const compensatedGap = (gapMs: number, voice: SpeechSynthesisVoice | null) => {
+        if (!isNetworkVoice(voice)) return gapMs
+        const latency = estimatedVoiceLatency(voice?.name)
         // Always keep a real pause, so words never run together even if the
         // round-trip is longer than the gap itself.
         return Math.max(gapMs * 0.25, gapMs - latency)
@@ -413,20 +478,29 @@ export function useTtsPlayback(params: {
         const segment = segments[segIdx]
         const utterance = new SpeechSynthesisUtterance(segment.text)
         utterance.rate = playbackSpeed
-        if (selectedVoice) utterance.voice = selectedVoice
+        // `pass` restarts at 1 for every group, so it cannot drive the rotation on
+        // its own. Group ids run 0,1,2… across the sentence, so this counts the
+        // readings since the sentence began: the rotation carries on into the next
+        // word instead of resetting, and because it is derived rather than
+        // accumulated, Skip/Prev cannot knock it out of step.
+        const segmentVoice = voiceFor(groupIdOf[segIdx] * wordRepeats + (pass - 1))
+        if (segmentVoice) utterance.voice = segmentVoice
         currentSegIdx = segIdx
         currentUtterance = utterance
 
         // Time from speak() to first audio, fed back into the gap compensation above.
         let spokenAt = 0
         utterance.onstart = () => {
-          if (abandonedUtterances.has(utterance) || !selectedVoice || !spokenAt) return
-          recordVoiceLatency(selectedVoice.name, performance.now() - spokenAt)
+          if (abandonedUtterances.has(utterance) || !segmentVoice || !spokenAt) return
+          recordVoiceLatency(segmentVoice.name, performance.now() - spokenAt)
         }
 
         utterance.onend = () => {
           if (abandonedUtterances.has(utterance)) return
-          const gapMs = compensatedGap(ttsWordInterval * 1000 * segment.gapMultiplier)
+          const gapMs = compensatedGap(
+            ttsWordInterval * 1000 * segment.gapMultiplier,
+            segmentVoice
+          ) + segment.extraMs
           const groupId = groupIdOf[segIdx]
           const isLastOfGroup =
             segIdx + 1 >= segments.length || groupIdOf[segIdx + 1] !== groupId
@@ -574,8 +648,15 @@ export function useTtsPlayback(params: {
     repeatCount,
     pauseInterval,
     ttsVoiceName,
+    ttsMultiVoice,
+    ttsVoiceNames,
+    ttsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
+    ttsVoiceOrder,
     availableVoices,
     ttsWordByWord,
+    speakComma,
+    commaPause,
     ttsWordInterval,
     ttsLettersPerGap,
     ttsWordRepeat,

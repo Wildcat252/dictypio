@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AI_COACH_ENABLED } from '../features'
 import {
   getLessonSessions,
   getCoachFeedback,
@@ -168,7 +169,7 @@ export default function LessonHistory({ videoId, onResume, isLessonFinished }: L
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-xl bg-abyss-800/90 border border-cyan-500/30 text-cyan-300 hover:text-white hover:bg-abyss-750 hover:border-cyan-400/60 px-3.5 py-2 text-xs font-semibold shadow-glow-cyan backdrop-blur-md transition-all self-end md:self-auto"
+        className="rounded-xl bg-abyss-800/90 border border-cyan-500/30 text-cyan-300 hover:text-cyan-200 hover:bg-abyss-750 hover:border-cyan-400/60 px-3.5 py-2 text-xs font-semibold shadow-glow-cyan backdrop-blur-md transition-all self-end md:self-auto"
       >
         {open ? 'Hide History' : 'Lesson History'}
       </button>
@@ -212,7 +213,7 @@ export default function LessonHistory({ videoId, onResume, isLessonFinished }: L
                                   Resume
                                 </button>
                               )}
-                              {isLessonFinished && (
+                              {AI_COACH_ENABLED && isLessonFinished && (
                                 <button
                                   type="button"
                                   onClick={() => handleAskCoach(s)}

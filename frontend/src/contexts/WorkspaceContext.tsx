@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { MAX_VOICE_POOL, type VoiceOrder } from '../voiceRotation'
 
 export interface Playlist {
   id: number
@@ -47,9 +48,16 @@ interface WorkspaceState {
   playbackSpeed: number
   pauseInterval: number
   ignorePunctuation: boolean
+  speakComma: boolean
+  commaPause: number
   ignoreCase: boolean
   repeatCount: number | '∞'
   ttsVoiceName: string
+  ttsMultiVoice: boolean
+  ttsVoiceNames: string[]
+  ttsVoicePerSentenceRepeat: boolean
+  ttsVoicePerWordRepeat: boolean
+  ttsVoiceOrder: VoiceOrder
   ttsWordByWord: boolean
   ttsWordInterval: number
   ttsLettersPerGap: number
@@ -74,6 +82,17 @@ const STORAGE_KEY = 'ear2finger-workspace-progress'
 // The chosen dictation voice has its own key so it survives even if the
 // workspace snapshot below is cleared.
 const VOICE_STORAGE_KEY = 'ear2finger-tts-voice'
+// Multi-voice settings live beside VOICE_STORAGE_KEY rather than inside it, so
+// an existing install's single-voice choice keeps loading unchanged.
+const MULTI_VOICE_STORAGE_KEY = 'ear2finger-tts-voices'
+
+interface MultiVoiceSettings {
+  ttsMultiVoice: boolean
+  ttsVoiceNames: string[]
+  ttsVoicePerSentenceRepeat: boolean
+  ttsVoicePerWordRepeat: boolean
+  ttsVoiceOrder: VoiceOrder
+}
 
 // Playback & grading preferences get their own key so they persist even if
 // the workspace snapshot is cleared.
@@ -83,6 +102,8 @@ type DurableSettings = {
   pauseInterval: number
   repeatCount: number | '∞'
   ignorePunctuation: boolean
+  speakComma: boolean
+  commaPause: number
   ignoreCase: boolean
   playbackSpeed: number
   ttsWordByWord: boolean
@@ -126,9 +147,16 @@ const initialState: WorkspaceState = {
   playbackSpeed: 1,
   pauseInterval: 3,
   ignorePunctuation: true,
+  speakComma: true,
+  commaPause: 0.3,
   ignoreCase: true,
   repeatCount: '∞',
   ttsVoiceName: '',
+  ttsMultiVoice: false,
+  ttsVoiceNames: [],
+  ttsVoicePerSentenceRepeat: true,
+  ttsVoicePerWordRepeat: false,
+  ttsVoiceOrder: 'fixed',
   ttsWordByWord: false,
   ttsWordInterval: 0.5,
   ttsLettersPerGap: 40,
@@ -153,9 +181,16 @@ type WorkspaceContextValue = WorkspaceState & {
   setPlaybackSpeed: (v: number) => void
   setPauseInterval: (v: number) => void
   setIgnorePunctuation: (v: boolean) => void
+  setSpeakComma: (v: boolean) => void
+  setCommaPause: (v: number) => void
   setIgnoreCase: (v: boolean) => void
   setRepeatCount: (v: number | '∞') => void
   setTtsVoiceName: (v: string) => void
+  setTtsMultiVoice: (v: boolean) => void
+  setTtsVoiceNames: (v: string[]) => void
+  setTtsVoicePerSentenceRepeat: (v: boolean) => void
+  setTtsVoicePerWordRepeat: (v: boolean) => void
+  setTtsVoiceOrder: (v: VoiceOrder) => void
   setTtsWordByWord: (v: boolean) => void
   setTtsWordInterval: (v: number) => void
   setTtsLettersPerGap: (v: number) => void
@@ -190,6 +225,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [playbackSpeed, setPlaybackSpeed] = useState(durable.playbackSpeed ?? p.playbackSpeed ?? initialState.playbackSpeed)
   const [pauseInterval, setPauseInterval] = useState(durable.pauseInterval ?? p.pauseInterval ?? initialState.pauseInterval)
   const [ignorePunctuation, setIgnorePunctuation] = useState(durable.ignorePunctuation ?? p.ignorePunctuation ?? initialState.ignorePunctuation)
+  const [speakComma, setSpeakComma] = useState(durable.speakComma ?? p.speakComma ?? initialState.speakComma)
+  const [commaPause, setCommaPause] = useState(durable.commaPause ?? p.commaPause ?? initialState.commaPause)
   const [ignoreCase, setIgnoreCase] = useState(durable.ignoreCase ?? p.ignoreCase ?? initialState.ignoreCase)
   const [repeatCount, setRepeatCount] = useState<number | '∞'>(durable.repeatCount ?? p.repeatCount ?? initialState.repeatCount)
 
@@ -210,6 +247,90 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       // storage unavailable — the choice still applies for this session
     }
   }, [])
+
+  // The multi-voice settings persist as one object: they are only meaningful
+  // as a set, and a half-restored pool would silently change playback.
+  const [multiVoice, setMultiVoiceState] = useState<MultiVoiceSettings>(() => {
+    const fallback: MultiVoiceSettings = {
+      ttsMultiVoice: initialState.ttsMultiVoice,
+      ttsVoiceNames: initialState.ttsVoiceNames,
+      ttsVoicePerSentenceRepeat: initialState.ttsVoicePerSentenceRepeat,
+      ttsVoicePerWordRepeat: initialState.ttsVoicePerWordRepeat,
+      ttsVoiceOrder: initialState.ttsVoiceOrder,
+    }
+    try {
+      const raw = localStorage.getItem(MULTI_VOICE_STORAGE_KEY)
+      if (!raw) return fallback
+      const saved = JSON.parse(raw) as Partial<MultiVoiceSettings> & {
+        // Written by the first multi-voice release, before the mutually
+        // exclusive modes became two independent switches.
+        ttsMultiVoiceMode?: string
+      }
+      return {
+        ttsMultiVoice: saved.ttsMultiVoice ?? fallback.ttsMultiVoice,
+        // Trust nothing from storage: it may predate the cap or be hand-edited.
+        ttsVoiceNames: Array.isArray(saved.ttsVoiceNames)
+          ? saved.ttsVoiceNames
+              .filter((n): n is string => typeof n === 'string')
+              .slice(0, MAX_VOICE_POOL)
+          : fallback.ttsVoiceNames,
+        // Migration: the retired 'split' mode has no successor, so both old
+        // modes land on sentence rotation — otherwise an existing install would
+        // reopen with neither switch on and silently drop to one voice.
+        ttsVoicePerSentenceRepeat:
+          saved.ttsVoicePerSentenceRepeat ??
+          (saved.ttsMultiVoiceMode ? true : fallback.ttsVoicePerSentenceRepeat),
+        ttsVoicePerWordRepeat:
+          saved.ttsVoicePerWordRepeat ?? fallback.ttsVoicePerWordRepeat,
+        ttsVoiceOrder: (saved.ttsVoiceOrder === 'random' ? 'random' : 'fixed') as VoiceOrder,
+      }
+    } catch {
+      return fallback
+    }
+  })
+
+  const patchMultiVoice = useCallback(
+    (patch: Partial<MultiVoiceSettings>) => {
+      setMultiVoiceState((prev) => {
+        const next = { ...prev, ...patch }
+        try {
+          localStorage.setItem(MULTI_VOICE_STORAGE_KEY, JSON.stringify(next))
+        } catch {
+          // storage unavailable — the choice still applies for this session
+        }
+        return next
+      })
+    },
+    []
+  )
+
+  const setTtsMultiVoice = useCallback(
+    (v: boolean) => patchMultiVoice({ ttsMultiVoice: v }),
+    [patchMultiVoice]
+  )
+  const setTtsVoiceNames = useCallback(
+    (v: string[]) => patchMultiVoice({ ttsVoiceNames: v.slice(0, MAX_VOICE_POOL) }),
+    [patchMultiVoice]
+  )
+  const setTtsVoicePerSentenceRepeat = useCallback(
+    (v: boolean) => patchMultiVoice({ ttsVoicePerSentenceRepeat: v }),
+    [patchMultiVoice]
+  )
+  const setTtsVoicePerWordRepeat = useCallback(
+    (v: boolean) => patchMultiVoice({ ttsVoicePerWordRepeat: v }),
+    [patchMultiVoice]
+  )
+  const setTtsVoiceOrder = useCallback(
+    (v: VoiceOrder) => patchMultiVoice({ ttsVoiceOrder: v }),
+    [patchMultiVoice]
+  )
+  const {
+    ttsMultiVoice,
+    ttsVoiceNames,
+    ttsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
+    ttsVoiceOrder,
+  } = multiVoice
   const [ttsWordByWord, setTtsWordByWord] = useState<boolean>(durable.ttsWordByWord ?? p.ttsWordByWord ?? initialState.ttsWordByWord)
   const [ttsWordInterval, setTtsWordInterval] = useState<number>(durable.ttsWordInterval ?? p.ttsWordInterval ?? initialState.ttsWordInterval)
   const [ttsLettersPerGap, setTtsLettersPerGap] = useState<number>(durable.ttsLettersPerGap ?? p.ttsLettersPerGap ?? initialState.ttsLettersPerGap)
@@ -224,6 +345,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           pauseInterval,
           repeatCount,
           ignorePunctuation,
+          speakComma,
+          commaPause,
           ignoreCase,
           playbackSpeed,
           ttsWordByWord,
@@ -239,6 +362,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     pauseInterval,
     repeatCount,
     ignorePunctuation,
+    speakComma,
+    commaPause,
     ignoreCase,
     playbackSpeed,
     ttsWordByWord,
@@ -271,9 +396,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         playbackSpeed,
         pauseInterval,
         ignorePunctuation,
+        speakComma,
+        commaPause,
         ignoreCase,
         repeatCount,
         ttsVoiceName,
+        ttsMultiVoice,
+        ttsVoiceNames,
+        ttsVoicePerSentenceRepeat,
+        ttsVoicePerWordRepeat,
+        ttsVoiceOrder,
         ttsWordByWord,
         ttsWordInterval,
         ttsLettersPerGap,
@@ -301,9 +433,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     playbackSpeed,
     pauseInterval,
     ignorePunctuation,
+    speakComma,
+    commaPause,
     ignoreCase,
     repeatCount,
     ttsVoiceName,
+    ttsMultiVoice,
+    ttsVoiceNames,
+    ttsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
+    ttsVoiceOrder,
     ttsWordByWord,
     ttsWordInterval,
     ttsLettersPerGap,
@@ -339,13 +478,27 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     pauseInterval,
     setPauseInterval,
     ignorePunctuation,
+    speakComma,
+    commaPause,
     setIgnorePunctuation,
+    setSpeakComma,
+    setCommaPause,
     ignoreCase,
     setIgnoreCase,
     repeatCount,
     setRepeatCount,
     ttsVoiceName,
     setTtsVoiceName,
+    ttsMultiVoice,
+    setTtsMultiVoice,
+    ttsVoiceNames,
+    setTtsVoiceNames,
+    ttsVoicePerSentenceRepeat,
+    setTtsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
+    setTtsVoicePerWordRepeat,
+    ttsVoiceOrder,
+    setTtsVoiceOrder,
     ttsWordByWord,
     setTtsWordByWord,
     ttsWordInterval,

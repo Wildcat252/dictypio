@@ -10,7 +10,6 @@ import {
   type SetConfigPayload,
   type AIKeyHint,
 } from '../api'
-import { checkGitHubForUpdate, GITHUB_RELEASES_URL } from '../utils/githubUpdate'
 import {
   KEYBIND_ACTIONS,
   KEYBIND_DEFAULTS,
@@ -28,10 +27,15 @@ import {
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { usePremiumVoices } from '../voices'
 import { AudioSection } from './settings/AudioSection'
+import { ThemeSection } from './settings/ThemeSection'
+import {
+  applyTheme,
+  loadThemeSettings,
+  saveThemeSettings,
+  type ThemeSettings,
+} from '../theme'
 
-type SettingsSection = 'ai-api-key' | 'keybindings' | 'audio' | 'playback' | 'about'
-
-const APP_VERSION = `${__APP_SEMVER__} (${__APP_COMMIT__})`
+type SettingsSection = 'ai-api-key' | 'keybindings' | 'audio' | 'playback' | 'appearance'
 
 export default function Settings() {
   const {
@@ -39,12 +43,26 @@ export default function Settings() {
     setPauseInterval,
     ignorePunctuation,
     setIgnorePunctuation,
+    speakComma,
+    setSpeakComma,
+    commaPause,
+    setCommaPause,
     ignoreCase,
     setIgnoreCase,
     repeatCount,
     setRepeatCount,
     ttsVoiceName,
     setTtsVoiceName,
+    ttsMultiVoice,
+    setTtsMultiVoice,
+    ttsVoiceNames,
+    setTtsVoiceNames,
+    ttsVoicePerSentenceRepeat,
+    setTtsVoicePerSentenceRepeat,
+    ttsVoicePerWordRepeat,
+    setTtsVoicePerWordRepeat,
+    ttsVoiceOrder,
+    setTtsVoiceOrder,
   } = useWorkspace()
   const availableVoices = usePremiumVoices()
   const [activeSection, setActiveSection] = useState<SettingsSection>('ai-api-key')
@@ -56,13 +74,20 @@ export default function Settings() {
   const [aiKeysLoading, setAiKeysLoading] = useState(false)
   const [aiKeysError, setAiKeysError] = useState<string | null>(null)
 
-  const [updateCheckLoading, setUpdateCheckLoading] = useState(false)
-  const [updateCheckMessage, setUpdateCheckMessage] = useState<string | null>(null)
-
   const [keybinds, setKeybinds] = useState(loadKeybindings)
   const [capturingAction, setCapturingAction] = useState<KeybindAction | null>(null)
   const [keybindError, setKeybindError] = useState<string | null>(null)
   const [audio, setAudio] = useState<AudioSettings>(loadAudioSettings)
+  const [theme, setTheme] = useState<ThemeSettings>(loadThemeSettings)
+
+  const updateTheme = useCallback((patch: Partial<ThemeSettings>) => {
+    setTheme((prev) => {
+      const next = { ...prev, ...patch }
+      saveThemeSettings(next)
+      applyTheme(next)
+      return next
+    })
+  }, [])
 
   const updateAudio = useCallback((patch: Partial<AudioSettings>) => {
     setAudio((prev) => {
@@ -90,10 +115,6 @@ export default function Settings() {
       })
       .catch(() => { })
   }, [])
-
-  useEffect(() => {
-    if (activeSection !== 'about') setUpdateCheckMessage(null)
-  }, [activeSection])
 
   // Press-to-set capture for keybindings: while a row is armed, the next
   // keydown is taken as the new binding (Escape cancels).
@@ -153,7 +174,7 @@ export default function Settings() {
     { id: 'keybindings' as SettingsSection, label: 'KEYBOARD SHORTCUTS' },
     { id: 'audio' as SettingsSection, label: 'AUDIO' },
     { id: 'playback' as SettingsSection, label: 'PLAYBACK & GRADING' },
-    { id: 'about' as SettingsSection, label: 'ABOUT' },
+    { id: 'appearance' as SettingsSection, label: 'APPEARANCE' },
   ]
 
   const handleApply = async () => {
@@ -255,7 +276,7 @@ export default function Settings() {
                   setMobileNavOpen(false)
                 }}
                 className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeSection === section.id
-                    ? 'bg-abyss-950 text-white'
+                    ? 'bg-abyss-950 text-ink'
                     : 'bg-abyss-800/80 hover:bg-abyss-750 text-slate-100'
                   }`}
               >
@@ -299,7 +320,7 @@ export default function Settings() {
                     <button
                       type="button"
                       onClick={handleApply}
-                      className="px-4 py-2 bg-abyss-950 text-white font-medium rounded-lg hover:bg-abyss-850 transition-colors"
+                      className="px-4 py-2 bg-abyss-950 text-ink font-medium rounded-lg hover:bg-abyss-850 transition-colors"
                     >
                       ADD
                     </button>
@@ -332,7 +353,7 @@ export default function Settings() {
                               </span>
                               …{k.last4 || '????'}
                               {k.is_active && (
-                                <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                                <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300">
                                   Active
                                 </span>
                               )}
@@ -435,6 +456,16 @@ export default function Settings() {
               ttsVoiceName={ttsVoiceName}
               setTtsVoiceName={setTtsVoiceName}
               availableVoices={availableVoices}
+              ttsMultiVoice={ttsMultiVoice}
+              setTtsMultiVoice={setTtsMultiVoice}
+              ttsVoiceNames={ttsVoiceNames}
+              setTtsVoiceNames={setTtsVoiceNames}
+              ttsVoicePerSentenceRepeat={ttsVoicePerSentenceRepeat}
+              setTtsVoicePerSentenceRepeat={setTtsVoicePerSentenceRepeat}
+              ttsVoicePerWordRepeat={ttsVoicePerWordRepeat}
+              setTtsVoicePerWordRepeat={setTtsVoicePerWordRepeat}
+              ttsVoiceOrder={ttsVoiceOrder}
+              setTtsVoiceOrder={setTtsVoiceOrder}
             />
           )}
 
@@ -492,6 +523,66 @@ export default function Settings() {
                   </div>
                 </div>
 
+                {/* Speak comma */}
+                <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">Speak &ldquo;comma&rdquo;</p>
+                    <p className="text-xs text-slate-400">In word-by-word mode, read commas aloud as &ldquo;comma&rdquo;.</p>
+                  </div>
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={speakComma}
+                      onChange={(e) => setSpeakComma(e.target.checked)}
+                    />
+                    <div className="relative w-11 h-6 bg-abyss-750 rounded-full peer peer-checked:bg-cyan-600 shadow-glow-cyan after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-abyss-800/80 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                  </label>
+                </div>
+
+                {/* Comma pause (replaces the spoken "comma") */}
+                {!speakComma && (
+                  <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4 ml-6">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-100">Comma pause</p>
+                      <p className="text-xs text-slate-400">Silent gap at each comma instead of saying &ldquo;comma&rdquo;, in seconds.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCommaPause(Math.max(0, Math.round((commaPause - 0.1) * 10) / 10))}
+                        disabled={commaPause <= 0}
+                        className="w-8 h-8 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Decrease comma pause"
+                      >
+                        &minus;
+                      </button>
+                      <input
+                        type="number"
+                        min={0}
+                        max={5}
+                        step={0.1}
+                        value={commaPause}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value)
+                          if (Number.isFinite(v)) setCommaPause(Math.min(5, Math.max(0, v)))
+                        }}
+                        className="w-20 border border-cyan-500/30 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCommaPause(Math.min(5, Math.round((commaPause + 0.1) * 10) / 10))}
+                        disabled={commaPause >= 5}
+                        className="w-8 h-8 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Increase comma pause"
+                      >
+                        +
+                      </button>
+                      <span className="text-sm text-slate-400">sec</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Ignore punctuation */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
                   <div>
@@ -529,138 +620,8 @@ export default function Settings() {
             </div>
           )}
 
-          {activeSection === 'about' && (
-            <div className="w-full max-w-3xl">
-              <h1 className="text-2xl font-bold text-slate-100 mb-6">ABOUT</h1>
-
-              <section className="bg-abyss-800/80 rounded-2xl border border-cyan-500/20 p-5 flex flex-col md:flex-row gap-6">
-                <div className="flex-1 space-y-3 text-left">
-                  <div className="flex items-center gap-3">
-                    <div className="w-20 h-20 rounded-2xl border border-cyan-500/20 bg-abyss-900/60 flex items-center justify-center shadow-sm">
-                      <img src="/logo.svg" alt="Dictypio" className="w-14 h-14 rounded-xl" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-lg font-semibold text-slate-100">Dictypio</p>
-                      <p className="text-[12px] text-slate-400">Dictation workspace powered by YouTube & AI.</p>
-                    </div>
-                  </div>
-                  <h2 className="text-base font-semibold text-slate-100">
-                    Turn YouTube listening into active dictation practice
-                  </h2>
-
-                  <p className="text-sm text-slate-400 leading-relaxed">
-                    Dictypio converts YouTube videos with subtitles into sentence-by-sentence
-                    dictation lessons. Practice with per-word inputs, get real-time feedback, and
-                    use your AI coach to recommend what to study next.
-                  </p>
-                </div>
-
-                <div className="w-full md:w-56 flex items-center justify-center">
-                  <div className="flex flex-col items-center gap-3 text-left">
-
-                    <dl className="mt-1 w-full text-sm space-y-3">
-                      <div className="flex flex-col gap-1.5">
-                        <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                          Version
-                        </dt>
-                        <dd className="mt-0.5 font-mono text-slate-100 break-all">{APP_VERSION}</dd>
-                        <div className="flex flex-col gap-1">
-                          <button
-                            type="button"
-                            disabled={updateCheckLoading}
-                            onClick={async () => {
-                              setUpdateCheckMessage(null)
-                              setUpdateCheckLoading(true)
-                              try {
-                                const r = await checkGitHubForUpdate(__APP_SEMVER__)
-                                if (!r.ok) {
-                                  setUpdateCheckMessage(r.message)
-                                  return
-                                }
-                                if (r.upToDate) {
-                                  setUpdateCheckMessage(
-                                    `You are up to date (${__APP_SEMVER__}). Latest release: ${r.latest}.`,
-                                  )
-                                } else {
-                                  setUpdateCheckMessage(
-                                    `Update available: ${r.latest} (you have ${__APP_SEMVER__}). See GitHub Releases for downloads.`,
-                                  )
-                                }
-                              } finally {
-                                setUpdateCheckLoading(false)
-                              }
-                            }}
-                            className="self-start px-2 py-1 text-xs font-medium text-slate-300 border border-cyan-500/30 rounded-md hover:bg-abyss-750 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {updateCheckLoading ? 'Checking…' : 'Check for updates'}
-                          </button>
-                          {updateCheckMessage && (
-                            <p className="text-xs text-slate-400 leading-snug">{updateCheckMessage}</p>
-                          )}
-                          <a
-                            href={GITHUB_RELEASES_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-cyan-400 hover:text-cyan-200 hover:underline"
-                          >
-                            Releases &amp; downloads on GitHub →
-                          </a>
-                        </div>
-                      </div>
-                      <div className="flex flex-col">
-                        <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                          Repository
-                        </dt>
-                        <dd className="mt-0.5">
-                          <a
-                            href="https://github.com/Wildcat252/Dictypio"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm text-slate-200 hover:text-cyan-200 hover:underline"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              viewBox="0 0 24 24"
-                              aria-hidden="true"
-                              fill="currentColor"
-                            >
-                              <path d="M12 0.5C5.373 0.5 0 5.872 0 12.5c0 5.297 3.438 9.787 8.205 11.387.6.111.82-.261.82-.58 0-.287-.011-1.243-.017-2.255-3.338.726-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.809 1.304 3.495.997.108-.775.42-1.305.763-1.605-2.665-.304-5.467-1.332-5.467-5.93 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.42 11.42 0 0 1 3.003-.404c1.018.005 2.045.138 3.003.404 2.291-1.552 3.297-1.23 3.297-1.23.655 1.652.243 2.873.119 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.624-5.48 5.921.431.372.815 1.102.815 2.222 0 1.604-.015 2.896-.015 3.289 0 .321.216.697.825.579C20.565 22.283 24 17.793 24 12.5 24 5.872 18.627 0.5 12 0.5z" />
-                            </svg>
-                            <span className="truncate max-w-[16rem]">Wildcat252/Dictypio</span>
-                          </a>
-                        </dd>
-                      </div>
-                      <div className="flex flex-col">
-                        <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                          LinkedIn
-                        </dt>
-                        <dd className="mt-0.5">
-                          <a
-                            href="https://www.linkedin.com/in/hang-yin-stephen/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm text-slate-200 hover:text-cyan-200 hover:underline"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              viewBox="0 0 24 24"
-                              aria-hidden="true"
-                              fill="currentColor"
-                            >
-                              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.852 0-2.136 1.445-2.136 2.938v5.668H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.602 0 4.266 2.37 4.266 5.455v6.286zM5.337 7.433c-1.084 0-1.959-.875-1.959-1.957 0-1.083.875-1.958 1.959-1.958 1.082 0 1.957.875 1.957 1.958 0 1.082-.875 1.957-1.957 1.957zM7.119 20.452H3.555V9h3.564v11.452z" />
-                            </svg>
-                            <span className="truncate max-w-[16rem]">hang-yin-stephen</span>
-                          </a>
-                        </dd>
-                      </div>
-                      <p className="text-[11px] text-slate-400 pt-1 border-t border-cyan-500/10">
-                        Build date: {new Date().toLocaleDateString()}
-                      </p>
-                    </dl>
-                  </div>
-                </div>
-              </section>
-            </div>
+          {activeSection === 'appearance' && (
+            <ThemeSection theme={theme} updateTheme={updateTheme} />
           )}
         </main>
       </div>

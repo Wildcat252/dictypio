@@ -30,3 +30,10 @@ GEMINI_EMBEDDING_MODEL = (os.getenv("GEMINI_EMBEDDING_MODEL") or "gemini-embeddi
 #   curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_API_KEY"
 # then set GEMINI_MODEL to a model name (e.g. gemini-3-flash-preview, gemini-1.5-flash-8b).
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+
+# Google Cloud Translation API (v2, Basic) for sentence translation.
+# Create an API key in Google Cloud Console with the Cloud Translation API enabled.
+# Optional: without it, translation uses Gemini with the user's active API key
+# from Settings.
+GOOGLE_TRANSLATE_API_KEY = (os.getenv("GOOGLE_TRANSLATE_API_KEY") or "").strip() or None
+GOOGLE_TRANSLATE_TIMEOUT = float(os.getenv("GOOGLE_TRANSLATE_TIMEOUT", "15"))

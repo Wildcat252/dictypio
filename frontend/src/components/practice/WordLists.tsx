@@ -100,7 +100,7 @@ export function WordLists({
             const intensity =
               retry >= 9 ? 'bg-rose-600 shadow-glow-rose' :
                 retry >= 7 ? 'bg-rose-500 shadow-glow-rose' :
-                  retry >= 5 ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' :
+                  retry >= 5 ? 'bg-orange-500 shadow-[0_0_8px_rgb(var(--amber-500)/calc(0.6*var(--glow-alpha)))]' :
                     retry >= 3 ? 'bg-amber-500 shadow-glow-amber' :
                       retry >= 2 ? 'bg-amber-400/80' :
                         'bg-teal-600/60'
@@ -109,7 +109,7 @@ export function WordLists({
                 key={w.word}
                 onClick={() => goTo(globalIndex)}
                 className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 cursor-pointer transition-all ${isActive
-                  ? 'border-cyan-400/70 bg-cyan-950/70 shadow-glow-cyan text-white'
+                  ? 'border-cyan-400/70 bg-cyan-950/70 shadow-glow-cyan text-cyan-100'
                   : 'border-cyan-500/20 bg-abyss-800/60 hover:border-cyan-500/40 hover:bg-abyss-800/90 text-slate-200'
                   }`}
               >

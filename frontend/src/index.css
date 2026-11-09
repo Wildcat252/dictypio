@@ -1,24 +1,41 @@
+/* Self-hosted so the packaged Electron app keeps its typography offline. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/lora';
+@import '@fontsource/courier-prime/400.css';
+@import '@fontsource/courier-prime/700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Tailwind sizes are rem-based, so shrinking the root scales the whole UI —
+   the default 16px felt oversized at 100% browser zoom; 80% (12.8px) matches
+   how the app looks best. Percent keeps the user's browser font setting. */
+html {
+  font-size: 80%;
+}
 
 @keyframes importProgress {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
 }
 
-/* Correct input: bioluminescent emerald glow + subtle scale */
+/* Correct input: success-colored glow + subtle scale. Both feedback animations
+   run off the status tokens so each theme states its own success/error hue,
+   and the glow itself scales by --glow-alpha so Skeuomorph can drop it while
+   keeping the scale/shake motion. */
 @keyframes correctGlow {
   0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    box-shadow: 0 0 0 0 rgb(var(--emerald-500) / calc(0.7 * var(--glow-alpha)));
     transform: scale(1);
   }
   40% {
-    box-shadow: 0 0 25px 8px rgba(16, 185, 129, 0.45);
+    box-shadow: 0 0 25px 8px rgb(var(--emerald-500) / calc(0.45 * var(--glow-alpha)));
     transform: scale(1.04);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 0 rgb(var(--emerald-500) / 0);
     transform: scale(1);
   }
 }
@@ -36,8 +53,8 @@
 
 @keyframes wrongFlash {
   0%, 100% { background-color: transparent; }
-  20% { background-color: rgba(244, 63, 94, 0.25); box-shadow: 0 0 15px rgba(244, 63, 94, 0.5); }
-  50% { background-color: rgba(244, 63, 94, 0.1); }
+  20% { background-color: rgb(var(--rose-500) / 0.25); box-shadow: 0 0 15px rgb(var(--rose-500) / calc(0.5 * var(--glow-alpha))); }
+  50% { background-color: rgb(var(--rose-500) / 0.1); }
 }
 
 .input-feedback-correct {
@@ -48,15 +65,273 @@
   animation: wrongShake 0.45s ease-out, wrongFlash 0.5s ease-out;
 }
 
-/* Deep Sea Theme Base */
+/* ---------------------------------------------------------------------------
+   Theme tokens.
+
+   Every palette color is a space-separated RGB triplet consumed by
+   tailwind.config.js as rgb(var(--token) / <alpha-value>), so switching
+   [data-theme] on <html> reskins every existing utility class at once.
+   src/theme.ts owns which value that attribute holds.
+   --------------------------------------------------------------------------- */
+
+:root,
+[data-theme='deep-sea'] {
+  /* Deep Sea — the original dark abyss */
+  --abyss-950: 3 7 18;
+  --abyss-900: 6 13 26;
+  --abyss-850: 10 20 38;
+  --abyss-800: 14 28 54;
+  --abyss-750: 19 37 71;
+  --abyss-700: 26 50 94;
+  --abyss-600: 36 69 125;
+
+  --ocean-glow: 0 242 254;
+  --ocean-cyan: 6 182 212;
+  --ocean-sky: 56 189 248;
+  --ocean-teal: 20 184 166;
+  --ocean-emerald: 16 185 129;
+
+  --slate-50: 248 250 252;
+  --slate-100: 241 245 249;
+  --slate-200: 226 232 240;
+  --slate-300: 203 213 225;
+  --slate-400: 148 163 184;
+  --slate-500: 100 116 139;
+  --slate-600: 71 85 105;
+  --slate-700: 51 65 85;
+  --slate-800: 30 41 59;
+  --slate-900: 15 23 42;
+  --slate-950: 2 6 23;
+
+  --cyan-100: 207 250 254;
+  --cyan-200: 165 243 252;
+  --cyan-300: 103 232 249;
+  --cyan-400: 34 211 238;
+  --cyan-500: 6 182 212;
+  --cyan-600: 8 145 178;
+  --cyan-700: 14 116 144;
+  --cyan-800: 21 94 117;
+  --cyan-900: 22 78 99;
+  --cyan-950: 8 51 68;
+
+  --teal-100: 204 251 241;
+  --teal-200: 153 246 228;
+  --teal-300: 94 234 212;
+  --teal-400: 45 212 191;
+  --teal-500: 20 184 166;
+  --teal-600: 13 148 136;
+  --teal-900: 19 78 74;
+  --teal-950: 4 47 46;
+
+  --sky-100: 224 242 254;
+  --sky-200: 186 230 253;
+  --sky-300: 125 211 252;
+  --sky-400: 56 189 248;
+  --sky-500: 14 165 233;
+  --sky-600: 2 132 199;
+  --sky-900: 12 74 110;
+  --sky-950: 8 47 73;
+
+  --rose-100: 255 228 230;
+  --rose-200: 254 205 211;
+  --rose-300: 253 164 175;
+  --rose-400: 251 113 133;
+  --rose-500: 244 63 94;
+  --rose-600: 225 29 72;
+  --rose-900: 136 19 55;
+  --rose-950: 76 5 25;
+
+  --emerald-100: 209 250 229;
+  --emerald-200: 167 243 208;
+  --emerald-300: 110 231 183;
+  --emerald-400: 52 211 153;
+  --emerald-500: 16 185 129;
+  --emerald-600: 5 150 105;
+  --emerald-900: 6 78 59;
+  --emerald-950: 2 44 34;
+
+  --amber-100: 254 243 199;
+  --amber-200: 253 230 138;
+  --amber-300: 252 211 77;
+  --amber-400: 251 191 36;
+  --amber-500: 245 158 11;
+  --amber-600: 217 119 6;
+  --amber-900: 120 53 15;
+  --amber-950: 69 26 3;
+
+  --ink: 255 255 255;
+
+  /* Dictation feedback: hint / typed-so-far-correct / word complete. */
+  --hint: 96 165 250;
+  --typing: 254 240 138;
+  --done: 52 211 153;
+
+  /* Deep Sea is the bioluminescent theme: every glow stays lit. */
+  --glow-alpha: 1;
+
+  --shadow-glow: 0 0 20px -3px rgba(6, 182, 212, 0.45), 0 0 8px -1px rgba(6, 182, 212, 0.3);
+  --shadow-glow-lg: 0 0 35px -5px rgba(6, 182, 212, 0.55), 0 0 15px -2px rgba(6, 182, 212, 0.4);
+  --shadow-glow-teal: 0 0 20px -3px rgba(20, 184, 166, 0.45), 0 0 8px -1px rgba(20, 184, 166, 0.3);
+  --shadow-glow-emerald: 0 0 20px -3px rgba(16, 185, 129, 0.5), 0 0 8px -1px rgba(16, 185, 129, 0.35);
+  --shadow-glow-amber: 0 0 20px -3px rgba(245, 158, 11, 0.5), 0 0 8px -1px rgba(245, 158, 11, 0.35);
+  --shadow-glow-rose: 0 0 20px -3px rgba(244, 63, 94, 0.5), 0 0 8px -1px rgba(244, 63, 94, 0.35);
+  --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --shadow-card-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 20px -4px rgba(6, 182, 212, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+
+  --selection-bg: rgba(6, 182, 212, 0.35);
+  --selection-fg: #ffffff;
+  --scrollbar-thumb: rgb(var(--abyss-750));
+  --scrollbar-thumb-hover: rgb(var(--ocean-sky));
+
+  --body-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6, 182, 212, 0.12), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 90%, rgba(20, 184, 166, 0.08), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 10% 80%, rgba(56, 189, 248, 0.07), transparent 70%);
+
+  color-scheme: dark;
+}
+
+[data-theme='skeuo'] {
+  /* Skeuomorph — warm paper, embossed panels, glowing orange accents.
+     The abyss ramp keeps its role (900 = page ground, 800/850 = raised
+     panels, 750+ = hover/edges, 950 = recessed inset) but light-side. */
+  --abyss-950: 236 231 221;
+  --abyss-900: 250 248 244;
+  --abyss-850: 255 255 255;
+  --abyss-800: 255 255 255;
+  --abyss-750: 241 236 227;
+  --abyss-700: 228 221 209;
+  --abyss-600: 214 205 189;
+
+  --ocean-glow: 255 138 42;
+  --ocean-cyan: 234 88 12;
+  --ocean-sky: 249 115 22;
+  --ocean-teal: 217 119 6;
+  --ocean-emerald: 202 138 4;
+
+  /* Inverted so text-slate-100 reads near-black on paper. */
+  --slate-50: 12 10 9;
+  --slate-100: 28 25 23;
+  --slate-200: 41 37 36;
+  --slate-300: 68 64 60;
+  --slate-400: 107 98 89;
+  --slate-500: 133 122 110;
+  --slate-600: 163 150 133;
+  --slate-700: 196 184 166;
+  --slate-800: 221 212 198;
+  --slate-900: 239 233 223;
+  --slate-950: 250 248 244;
+
+  /* Accent ramp: the light steps become deep burnt orange (they carry text),
+     500 is the hairline border tone, 900/950 stay tints for fills. */
+  --cyan-100: 67 20 7;
+  --cyan-200: 124 45 18;
+  --cyan-300: 154 52 18;
+  --cyan-400: 194 65 12;
+  --cyan-500: 180 83 9;
+  --cyan-600: 194 65 12;
+  --cyan-700: 234 88 12;
+  --cyan-800: 249 115 22;
+  --cyan-900: 255 237 213;
+  --cyan-950: 255 247 237;
+
+  /* Secondary gradient accents go warm: amber and burnt orange. */
+  --teal-100: 67 20 7;
+  --teal-200: 120 53 15;
+  --teal-300: 146 64 14;
+  --teal-400: 180 83 9;
+  --teal-500: 217 119 6;
+  --teal-600: 180 83 9;
+  --teal-900: 254 243 199;
+  --teal-950: 255 251 235;
+
+  --sky-100: 67 20 7;
+  --sky-200: 124 45 18;
+  --sky-300: 154 52 18;
+  --sky-400: 194 65 12;
+  --sky-500: 234 88 12;
+  --sky-600: 194 65 12;
+  --sky-900: 255 237 213;
+  --sky-950: 255 247 237;
+
+  /* No cool hues anywhere in this theme: errors are a true red rather than
+     the pink-leaning rose, and success trades green for gold. */
+  --rose-100: 69 10 10;
+  --rose-200: 127 29 29;
+  --rose-300: 153 27 27;
+  --rose-400: 185 28 28;
+  --rose-500: 220 38 38;
+  --rose-600: 185 28 28;
+  --rose-900: 254 226 226;
+  --rose-950: 254 242 242;
+
+  --emerald-100: 66 32 6;
+  --emerald-200: 113 63 18;
+  --emerald-300: 161 98 7;
+  --emerald-400: 202 138 4;
+  --emerald-500: 234 179 8;
+  --emerald-600: 161 98 7;
+  --emerald-900: 254 249 195;
+  --emerald-950: 254 252 232;
+
+  --amber-100: 69 26 3;
+  --amber-200: 120 53 15;
+  --amber-300: 146 64 14;
+  --amber-400: 180 83 9;
+  --amber-500: 245 158 11;
+  --amber-600: 217 119 6;
+  --amber-900: 254 243 199;
+  --amber-950: 255 251 235;
+
+  --ink: 28 25 23;
+
+  /* The hint is the one deliberate cool note, deepened so it stays legible on
+     paper; typing runs orange and settles to a near-black burnt orange. */
+  --hint: 14 116 144;
+  --typing: 134 25 143;
+  --done: 234 88 12;
+
+  /* Skeuomorphism reads through relief, not light — no glow here. Every
+     "glow" shadow just becomes the plain embossed card shadow. */
+  --glow-alpha: 0;
+
+  --shadow-card:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 0 rgba(146, 124, 96, 0.18),
+    0 1px 2px 0 rgba(120, 100, 80, 0.2),
+    0 10px 24px -8px rgba(120, 100, 80, 0.3);
+  --shadow-glow: var(--shadow-card);
+  --shadow-glow-lg: var(--shadow-card);
+  --shadow-glow-teal: var(--shadow-card);
+  --shadow-glow-emerald: var(--shadow-card);
+  --shadow-glow-amber: var(--shadow-card);
+  --shadow-glow-rose: var(--shadow-card);
+  --shadow-card-glow: var(--shadow-card);
+
+  --selection-bg: rgba(234, 88, 12, 0.28);
+  --selection-fg: #1c1917;
+  --scrollbar-thumb: rgb(var(--abyss-600));
+  --scrollbar-thumb-hover: rgb(var(--ocean-cyan));
+
+  --body-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(234, 88, 12, 0.1), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 90%, rgba(217, 119, 6, 0.08), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 10% 80%, rgba(180, 83, 9, 0.06), transparent 70%);
+
+  color-scheme: light;
+}
+
 :root {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  /* Overwritten per-user by applyTheme() in src/theme.ts. */
+  --font-ui: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-typing: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  font-family: var(--font-ui);
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark;
-  color: #f1f5f9;
-  background-color: #060d1a;
+  color: rgb(var(--slate-100));
+  background-color: rgb(var(--abyss-900));
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -65,8 +340,8 @@
 }
 
 ::selection {
-  background: rgba(6, 182, 212, 0.35);
-  color: #ffffff;
+  background: var(--selection-bg);
+  color: var(--selection-fg);
 }
 
 body {
@@ -74,13 +349,86 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #060d1a;
-  background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6, 182, 212, 0.12), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 85% 90%, rgba(20, 184, 166, 0.08), transparent 70%),
-    radial-gradient(ellipse 50% 30% at 10% 80%, rgba(56, 189, 248, 0.07), transparent 70%);
+  font-family: var(--font-ui);
+  background-color: rgb(var(--abyss-900));
+  background-image: var(--body-image);
   background-attachment: fixed;
-  color: #f1f5f9;
+  color: rgb(var(--slate-100));
+}
+
+/* Paper grain — a hair of texture so the light theme reads as a surface
+   rather than a flat fill. Inline SVG, no asset to ship. */
+[data-theme='skeuo'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+}
+
+/* Skeuomorphic relief. The palette utilities are the only reliable marker of
+   "this is a surface", so the bevel is keyed off the abyss background classes
+   themselves — skipping anything that already declares its own shadow, which
+   is how selected/glowing states keep theirs. */
+[data-theme='skeuo'] [class*='bg-abyss-']:not([class*='shadow-']) {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 0 rgba(146, 124, 96, 0.14),
+    0 1px 2px 0 rgba(120, 100, 80, 0.16);
+}
+
+/* The deepest step reads as a recessed well: inputs, tracks, inset panels. */
+[data-theme='skeuo'] [class*='bg-abyss-950']:not([class*='shadow-']) {
+  box-shadow:
+    inset 0 2px 4px -1px rgba(120, 100, 80, 0.3),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.75);
+}
+
+/* The logo is a static asset with cyan baked into its gradient; rotate it onto
+   the warm side so nothing in this theme reads cool. */
+[data-theme='skeuo'] img[src$='logo.svg'] {
+  filter: hue-rotate(198deg) saturate(1.2);
+}
+
+/* The keybind-capture pulse animates its own box-shadow directly (not through
+   a shadow-* class), so --glow-alpha can't reach it — swap the animation off. */
+[data-theme='skeuo'] .animate-glow-pulse {
+  animation: none;
+  box-shadow: var(--shadow-card);
+}
+
+/* Embossed edges on the controls the light theme leans on. */
+[data-theme='skeuo'] input:not([type='range']):not([type='checkbox']):not([class*='bg-transparent']),
+[data-theme='skeuo'] textarea,
+[data-theme='skeuo'] select {
+  box-shadow:
+    inset 0 2px 3px -1px rgba(120, 100, 80, 0.25),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+[data-theme='skeuo'] button:not(:disabled):active {
+  box-shadow: inset 0 2px 4px -1px rgba(120, 100, 80, 0.35);
+}
+
+/* Primary buttons animate a two-color sheen (from-cyan-500 → sky-600); flatten
+   them to one solid accent so this theme reads as painted controls, not a
+   color transition. from-cyan-500 only ever appears on these CTAs — text
+   gradients use the 300/100 stops and progress fills use 400/600. */
+[data-theme='skeuo'] [class*='from-cyan-500'] {
+  background-image: none;
+  background-color: rgb(var(--ocean-cyan));
+}
+[data-theme='skeuo'] [class*='from-cyan-500']:hover {
+  background-color: rgb(var(--ocean-sky));
+}
+
+/* The quieter glass-chip buttons (from-cyan-950/80 to-teal-950/80) lose their
+   two-stop tint the same way, settling on the first stop's flat color. */
+[data-theme='skeuo'] [class*='from-cyan-950'] {
+  background-image: none;
+  background-color: rgb(var(--cyan-950) / 0.8);
 }
 
 /* Custom Sleek Oceanic Scrollbars */
@@ -90,18 +438,18 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #060d1a;
+  background: rgb(var(--abyss-900));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #132547;
+  background: var(--scrollbar-thumb);
   border-radius: 9999px;
-  border: 1px solid rgba(6, 182, 212, 0.15);
+  border: 1px solid rgb(var(--ocean-cyan) / 0.15);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0ea5e9;
-  box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+  background: var(--scrollbar-thumb-hover);
+  box-shadow: 0 0 10px rgb(var(--ocean-sky) / 0.5);
 }
 
 /* Mobile: top-aligned full-width app; desktop unchanged */
@@ -127,4 +475,6 @@ body {
   margin: 0 auto;
   text-align: center;
   background: transparent;
+  position: relative;
+  z-index: 1;
 }

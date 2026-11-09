@@ -243,3 +243,8 @@ Thumbs.db
 
 # Local Qdrant dev data
 .dev-qdrant/
+
+# TypeScript/Vite build outputs
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts

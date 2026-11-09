@@ -146,18 +146,18 @@ export function DrillCard({
           aria-label="Practice word"
           autoComplete="off"
           spellCheck={false}
-          className={`w-full bg-transparent border-0 outline-none px-1.5 py-1.5 text-slate-100 placeholder:text-slate-600 ${underlineClass}`}
+          className={`font-typing w-full bg-transparent border-0 outline-none px-1.5 py-1.5 text-slate-100 placeholder:text-slate-600 ${underlineClass}`}
           style={{ fontSize: 'clamp(1.4rem, 5vw, 2.5rem)' }}
         />
 
         <div className="mt-3 min-h-[1.75rem] flex items-center gap-3">
           {isCorrect && (
-            <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-sm drop-shadow-[0_0_10px_rgba(52,211,153,0.7)]">
+            <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold text-sm drop-shadow-[0_0_10px_rgb(var(--emerald-400)/calc(0.7*var(--glow-alpha)))]">
               ✔ Correct
             </span>
           )}
           {hintShown && !isCorrect && (
-            <span className="font-mono text-amber-300 text-lg drop-shadow-[0_0_8px_rgba(251,191,36,0.55)]">{target}</span>
+            <span className="font-mono text-amber-300 text-lg drop-shadow-[0_0_8px_rgb(var(--amber-400)/calc(0.55*var(--glow-alpha)))]">{target}</span>
           )}
         </div>
 
