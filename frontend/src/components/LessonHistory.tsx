@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AI_COACH_ENABLED } from '../features'
 import {
   getLessonSessions,
   getCoachFeedback,
@@ -212,7 +213,7 @@ export default function LessonHistory({ videoId, onResume, isLessonFinished }: L
                                   Resume
                                 </button>
                               )}
-                              {isLessonFinished && (
+                              {AI_COACH_ENABLED && isLessonFinished && (
                                 <button
                                   type="button"
                                   onClick={() => handleAskCoach(s)}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from './AppHeader'
+import { AI_COACH_ENABLED } from '../features'
 import {
   getUserStats,
   getCoachFeedback,
@@ -200,7 +201,7 @@ export default function Dashboard() {
               </section>
 
               {/* Daily trends */}
-              <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <section className={`grid grid-cols-1 gap-4 ${AI_COACH_ENABLED ? 'lg:grid-cols-2' : ''}`}>
                 <div className="bg-abyss-800/80 rounded-xl border border-cyan-500/20 p-4">
                   <h2 className="text-sm font-semibold text-slate-100 mb-1">
                     Daily stats
@@ -323,6 +324,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
+                {AI_COACH_ENABLED && (
                 <div className="bg-abyss-800/80 rounded-xl border border-cyan-500/20 px-5 py-4 w-full flex flex-col min-h-[260px]">
                   <div className="flex flex-col items-start text-left flex-1">
                     <h2 className="text-sm font-semibold text-slate-100 mb-1">
@@ -395,6 +397,7 @@ export default function Dashboard() {
                     Tap for more →
                   </button>
                 </div>
+                )}
               </section>
 
               {/* Tricky words moved to the Practice page */}
