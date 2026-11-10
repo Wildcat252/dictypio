@@ -83,6 +83,19 @@ export async function addPracticeWords(words: string[]): Promise<PracticeWordSta
   return data
 }
 
+export interface TrickySentence {
+  word: string
+  sentence: string
+  sentence_id: number
+  video_id: number
+}
+
+/** The most recent sentence each tricky word (hinted twice) was struggled in. */
+export async function getTrickySentences(): Promise<TrickySentence[]> {
+  const { data } = await api.get<TrickySentence[]>('/api/user/tricky-sentences')
+  return data
+}
+
 export async function getPracticeWordStates(): Promise<PracticeWordStates> {
   const { data } = await api.get<PracticeWordStates>('/api/user/practice/words')
   return data

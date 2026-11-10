@@ -480,7 +480,7 @@ export function PlayerPanel({
             <div className="w-2.5 h-2.5 bg-rose-400 rounded-full shadow-glow-rose" />
             <span className="text-xs font-mono font-semibold text-rose-300">{videoSessionScores.incorrectChars}</span>
           </div>
-          {AI_COACH_ENABLED && selectedLesson && (
+          {AI_COACH_ENABLED && selectedLesson && selectedLesson.video_id > 0 && (
             <button
               type="button"
               onClick={() => onAskCoach(selectedLesson.video_id)}

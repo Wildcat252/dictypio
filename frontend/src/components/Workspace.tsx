@@ -13,6 +13,7 @@ import { loadKeybindings, displayKey } from '../keybindings'
 import { loadAudioSettings, playCelebrationChime } from '../audio'
 import { usePremiumVoices } from '../voices'
 import { useTtsPlayback } from './workspace/useTtsPlayback'
+import { isTrickyLesson, trickySentenceVideoId } from './workspace/trickyLesson'
 import { useWorkspaceShortcuts } from './workspace/useWorkspaceShortcuts'
 import { useAudioPlayback } from './workspace/useAudioPlayback'
 import { useLessonData } from './workspace/useLessonData'
@@ -290,6 +291,8 @@ export default function Workspace() {
     setMobileSidebarOpen(false)
     if (
       selectedLesson &&
+      // The virtual tricky lesson keeps no session history
+      !isTrickyLesson(selectedLesson) &&
       lesson.video_id !== selectedLesson.video_id &&
       (currentSentenceIndex >= 1 || isCurrentSentenceFullyCorrect)
     ) {
@@ -326,7 +329,7 @@ export default function Workspace() {
     // Try auto-resume from latest session history for this lesson.
     let resumed = false
     try {
-      const sessions = await getLessonSessions(lesson.video_id)
+      const sessions = isTrickyLesson(lesson) ? [] : await getLessonSessions(lesson.video_id)
       const latest = sessions[0]
       if (latest && latest.sentences_practiced > 0 && nextSentences.length > 0) {
         const targetIndex = Math.max(
@@ -551,7 +554,7 @@ export default function Workspace() {
 
   // Auto-save lesson session when at least one sentence has been completed.
   useEffect(() => {
-    if (!selectedLesson || !hasCompletedOneSentence) return
+    if (!selectedLesson || !hasCompletedOneSentence || isTrickyLesson(selectedLesson)) return
     const payload = {
       video_id: selectedLesson.video_id,
       started_at: sessionStartedAtRef.current,
@@ -667,7 +670,10 @@ export default function Workspace() {
 
     api
       .post('/api/user/progress', {
-        video_id: selectedLesson.video_id,
+        // Tricky sentences come from many lessons; credit the source lesson
+        video_id: isTrickyLesson(selectedLesson)
+          ? trickySentenceVideoId(currentSentence.id) ?? selectedLesson.video_id
+          : selectedLesson.video_id,
         sentence_id: currentSentence.id,
         data,
       })
@@ -802,7 +808,7 @@ export default function Workspace() {
 
       {/* Lesson History - bottom-right */}
       <LessonHistory
-        videoId={selectedLesson?.video_id ?? null}
+        videoId={selectedLesson && !isTrickyLesson(selectedLesson) ? selectedLesson.video_id : null}
         onResume={handleResumeLessonSession}
         isLessonFinished={isLessonFinished}
       />

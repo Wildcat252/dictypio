@@ -10,6 +10,7 @@ import {
   type LessonSessionRecord,
 } from '../../api'
 import { useWorkspace, type Lesson } from '../../contexts/WorkspaceContext'
+import { fetchTrickySentences, isTrickyLesson, makeTrickyLesson } from './trickyLesson'
 
 function formatDuration(seconds: number) {
   const mins = Math.floor(seconds / 60)
@@ -67,6 +68,17 @@ export function WorkspaceSidebar({
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false)
   // undefined = not fetched yet; null = fetched, no session on record.
   const [lessonStats, setLessonStats] = useState<Record<number, LessonSessionRecord | null>>({})
+  // null = not loaded yet. Refreshed on lesson switch, since practice adds tricky words.
+  const [trickyCount, setTrickyCount] = useState<number | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    fetchTrickySentences()
+      .then((s) => !cancelled && setTrickyCount(s.length))
+      .catch(() => !cancelled && setTrickyCount(0))
+    return () => {
+      cancelled = true
+    }
+  }, [selectedLesson?.video_id])
 
   // Preload most recent lesson history per video to drive sidebar progress bars.
   useEffect(() => {
@@ -100,7 +112,8 @@ export function WorkspaceSidebar({
     const nextId = selectedLesson?.video_id ?? null
     const prevId = prevVideoIdRef.current
     prevVideoIdRef.current = nextId
-    const ids = [...new Set([nextId, prevId])].filter((x): x is number => x !== null)
+    // Negative ids are virtual lessons (Tricky sentences) with no session history
+    const ids = [...new Set([nextId, prevId])].filter((x): x is number => x !== null && x > 0)
     if (!ids.length) return
     let cancelled = false
     const timer = setTimeout(() => {
@@ -313,6 +326,27 @@ export function WorkspaceSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {trickyCount !== null && trickyCount > 0 && (
+          <button
+            type="button"
+            onClick={() => onLessonSelect(makeTrickyLesson(trickyCount))}
+            className={`w-full p-3.5 rounded-xl text-left transition-all duration-150 border ${isTrickyLesson(selectedLesson)
+              ? 'bg-gradient-to-r from-amber-950/80 via-abyss-800/95 to-amber-950/60 border-amber-400/60 text-amber-100'
+              : 'bg-abyss-850/60 border-amber-500/30 hover:border-amber-400/60 hover:bg-abyss-800/80 text-slate-200'
+              }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Tricky sentences
+              </span>
+              <span className="text-[11px] text-amber-300/80">{trickyCount} sentences</span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-400">Sentences with words you needed two hints for</p>
+          </button>
+        )}
         {lessons.map((lesson) => {
           const latestSession = lessonStats[lesson.video_id] ?? null
           const practicedSentences = latestSession?.sentences_practiced ?? 0
