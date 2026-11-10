@@ -61,6 +61,9 @@ def make_llm_for_user(user_id: int, db: Session) -> BaseChatModel:
     return ChatGoogleGenerativeAI(
         google_api_key=api_key,
         model=GEMINI_MODEL,
+        # Preview models (the default gemini-3-flash-preview) exist only on
+        # v1beta; pin it so a library that defaults to v1 doesn't 404.
+        api_version="v1beta",
     )
 
 
