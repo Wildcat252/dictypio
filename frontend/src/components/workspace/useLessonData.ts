@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../../api'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { TRICKY_LESSON_ID, fetchTrickySentences } from './trickyLesson'
 
 export interface Notification {
   id: string
@@ -119,6 +120,12 @@ export function useLessonData() {
 
   const fetchSentences = async (videoId: number) => {
     try {
+      if (videoId === TRICKY_LESSON_ID) {
+        const tricky = await fetchTrickySentences()
+        setSentences(tricky)
+        setSentencesVideoId(videoId)
+        return tricky
+      }
       const response = await api.get(`/api/youtube/videos/${videoId}/sentences`)
       setSentences(response.data)
       setSentencesVideoId(videoId)

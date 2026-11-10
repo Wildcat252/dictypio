@@ -548,6 +548,60 @@ def _set_word_status(db: Session, user_id: int, word: str, status: str) -> None:
         row.status = status
 
 
+class TrickySentence(BaseModel):
+    word: str
+    sentence: str
+    sentence_id: int
+    video_id: int
+
+
+@router.get("/user/tricky-sentences", response_model=List[TrickySentence])
+async def get_tricky_sentences(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[TrickySentence]:
+    """The most recent sentence in which each tricky word was hinted twice."""
+    rows = (
+        db.query(LearningProgress, Sentence.sentence_text)
+        .join(Sentence, Sentence.id == LearningProgress.sentence_id)
+        .filter(LearningProgress.user_id == current_user.id)
+        .order_by(LearningProgress.updated_at.desc())
+        .all()
+    )
+    deleted = {
+        r.word
+        for r in db.query(PracticeWordState)
+        .filter(
+            PracticeWordState.user_id == current_user.id,
+            PracticeWordState.status == "deleted",
+        )
+        .all()
+    }
+    found: Dict[str, TrickySentence] = {}
+    for progress, text in rows:
+        try:
+            blob = json.loads(progress.data or "{}")
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(blob, dict) or not text:
+            continue
+        words = blob.get("repeat_hint_words") or []
+        if isinstance(words, str):
+            words = [words]
+        if not isinstance(words, list):
+            continue
+        for w in words:
+            w = str(w)
+            if w and w not in deleted and w not in found:
+                found[w] = TrickySentence(
+                    word=w,
+                    sentence=text,
+                    sentence_id=progress.sentence_id,
+                    video_id=progress.video_id,
+                )
+    return list(found.values())
+
+
 @router.get("/user/practice/words", response_model=PracticeWordStates)
 async def get_practice_word_states(
     db: Session = Depends(get_db),

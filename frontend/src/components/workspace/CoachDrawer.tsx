@@ -73,7 +73,8 @@ export const CoachDrawer = forwardRef<CoachDrawerHandle, { isLessonFinished: boo
 
     useEffect(() => {
       const videoId = selectedLesson?.video_id ?? null
-      if (!videoId || !isLessonFinished) return
+      // Coach feedback is per real video; the virtual tricky lesson (id < 0) has none
+      if (!videoId || videoId < 0 || !isLessonFinished) return
       if (coachShownForVideoId === videoId) return
       setCoachShownForVideoId(videoId)
       setCoachLoading(true)
