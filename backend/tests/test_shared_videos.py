@@ -139,5 +139,35 @@ class SharedVideoTest(AppTestCase):
         self.assertNotEqual(self.import_video(b).json()["video_id"], legacy_id)
 
 
+class BlockedByYouTubeTest(AppTestCase):
+    def import_with(self, error):
+        def fail(_processor, _url, video_id=None):
+            raise Exception(f"Failed to extract video info: {error}")
+
+        self._replace(YouTubeProcessor, "extract_video_info", fail)
+        self._replace(youtube_router, "_processor", YouTubeProcessor(
+            download_dir=str(TMP_DIR / "dl"), audio_dir=str(TMP_DIR)))
+        self.attempts = getattr(self, "attempts", 0) + 1
+        token = self.signup(f"blocked{self.attempts}@example.com")
+        return self.client.post("/api/youtube/process", json={"url": URL}, headers=bearer(token))
+
+    def test_a_block_gets_a_plain_message(self):
+        for error in (
+            "ERROR: [youtube] abc: Failed to extract any player response; please report this issue on ...",
+            "ERROR: [youtube] abc: Sign in to confirm you’re not a bot",
+            "HTTP Error 429: Too Many Requests",
+        ):
+            with self.subTest(error=error[:40]):
+                r = self.import_with(error)
+                self.assertEqual(r.status_code, 503, r.text)
+                self.assertEqual(r.json()["detail"], youtube_router.YOUTUBE_BLOCKED_MESSAGE)
+                self.assertNotIn("yt-dlp", r.json()["detail"])
+
+    def test_other_failures_keep_their_message(self):
+        r = self.import_with("Video unavailable")
+        self.assertEqual(r.status_code, 500)
+        self.assertIn("Video unavailable", r.json()["detail"])
+
+
 if __name__ == "__main__":
     unittest.main()
