@@ -8,6 +8,132 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+const TOKEN_KEY = 'dictypio_token'
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setAuthToken(token: string | null) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token)
+    else localStorage.removeItem(TOKEN_KEY)
+  } catch {
+    // Storage unavailable (private mode): the session just won't survive a reload.
+  }
+}
+
+/** Fired when the server rejects our session, so AuthContext can send the user to sign in. */
+export const AUTH_LOGOUT_EVENT = 'auth:logout'
+
+api.interceptors.request.use((config) => {
+  const token = getAuthToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const url: string = err.config?.url ?? ''
+    // A 401 from the sign-in form itself is a wrong password, not a dead session.
+    const isSessionCheck = !url.startsWith('/api/auth/') || url === '/api/auth/me'
+    if (err.response?.status === 401 && isSessionCheck) {
+      setAuthToken(null)
+      window.dispatchEvent(new CustomEvent(AUTH_LOGOUT_EVENT))
+    }
+    return Promise.reject(err)
+  }
+)
+
+export interface AuthUser {
+  id: number
+  email: string | null
+  /** Optional name shown instead of the email. */
+  display_name: string | null
+  is_superuser: boolean
+  created_at: string | null
+}
+
+interface TokenResponse {
+  access_token: string
+  user: AuthUser
+}
+
+export async function fetchAuthConfig(): Promise<{ auth_enabled: boolean }> {
+  return (await api.get('/api/auth/config')).data
+}
+
+export async function fetchMe(): Promise<AuthUser> {
+  return (await api.get('/api/auth/me')).data
+}
+
+export async function login(email: string, password: string): Promise<TokenResponse> {
+  return (await api.post('/api/auth/login', { email, password })).data
+}
+
+export async function register(email: string, password: string): Promise<TokenResponse> {
+  return (await api.post('/api/auth/register', { email, password })).data
+}
+
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  return (await api.post('/api/auth/forgot-password', { email })).data
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  return (await api.post('/api/auth/reset-password', { token, new_password: newPassword })).data
+}
+
+/** Empty string clears the name. */
+export async function updateDisplayName(displayName: string): Promise<AuthUser> {
+  return (await api.patch('/api/account', { display_name: displayName })).data
+}
+
+/** Signs out every other session; the returned token keeps this one going. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<TokenResponse> {
+  return (
+    await api.post('/api/account/password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+  ).data
+}
+
+/** Mails a confirmation link to the new address; the email changes when that link is confirmed. */
+export async function requestEmailChange(newEmail: string, currentPassword: string): Promise<{ email: string }> {
+  return (
+    await api.post('/api/account/email', { new_email: newEmail, current_password: currentPassword })
+  ).data
+}
+
+export async function confirmEmailChange(token: string): Promise<{ email: string }> {
+  return (await api.post('/api/auth/confirm-email-change', { token })).data
+}
+
+/** Permanent: removes the account with all its lessons, progress and keys. */
+export async function deleteAccount(password: string): Promise<void> {
+  await api.post('/api/account/delete', { password })
+}
+
+/** Human-readable message from a failed API call, including FastAPI validation errors. */
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  if (!axios.isAxiosError(err)) return fallback
+  if (!err.response) return 'Cannot reach the server. Check your connection and try again.'
+  const detail = err.response.data?.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail
+      .map((d: { msg?: string }) => String(d?.msg ?? '').replace(/^Value error, /, ''))
+      .filter(Boolean)
+      .join(' ')
+  }
+  return fallback
+}
+
 export interface DistributionStats {
   mean: number
   variance: number

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import { MAX_VOICE_POOL, type VoiceOrder } from '../voiceRotation'
+import { WORKSPACE_PROGRESS_KEY } from '../accountStorage'
 
 export interface Playlist {
   id: number
@@ -78,7 +79,7 @@ const defaultScores: VideoSessionScores = {
   typingMs: 0,
 }
 
-const STORAGE_KEY = 'ear2finger-workspace-progress'
+const STORAGE_KEY = WORKSPACE_PROGRESS_KEY
 // The chosen dictation voice has its own key so it survives even if the
 // workspace snapshot below is cleared.
 const VOICE_STORAGE_KEY = 'ear2finger-tts-voice'

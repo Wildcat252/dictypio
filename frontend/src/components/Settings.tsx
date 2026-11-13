@@ -26,6 +26,9 @@ import {
 } from '../audio'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { usePremiumVoices } from '../voices'
+import { useLocation } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { AccountSection } from './settings/AccountSection'
 import { AudioSection } from './settings/AudioSection'
 import { ThemeSection } from './settings/ThemeSection'
 import {
@@ -35,7 +38,7 @@ import {
   type ThemeSettings,
 } from '../theme'
 
-type SettingsSection = 'ai-api-key' | 'keybindings' | 'audio' | 'playback' | 'appearance'
+type SettingsSection = 'ai-api-key' | 'keybindings' | 'audio' | 'playback' | 'appearance' | 'account'
 
 export default function Settings() {
   const {
@@ -65,7 +68,19 @@ export default function Settings() {
     setTtsVoiceOrder,
   } = useWorkspace()
   const availableVoices = usePremiumVoices()
-  const [activeSection, setActiveSection] = useState<SettingsSection>('ai-api-key')
+  // Accounts exist only on the web deployment; the desktop app has no ACCOUNT section.
+  const { authEnabled, user } = useAuth()
+  const showAccount = authEnabled && user !== null
+  // The header's account name links here with the section to open.
+  const location = useLocation()
+  const wantsAccount = (location.state as { section?: string } | null)?.section === 'account'
+  const [activeSection, setActiveSection] = useState<SettingsSection>(
+    wantsAccount ? 'account' : 'ai-api-key'
+  )
+  // The same link pressed while Settings is already open.
+  useEffect(() => {
+    if (wantsAccount) setActiveSection('account')
+  }, [wantsAccount, location.key])
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [hasGeminiKey, setHasGeminiKey] = useState(false)
@@ -175,6 +190,7 @@ export default function Settings() {
     { id: 'audio' as SettingsSection, label: 'AUDIO' },
     { id: 'playback' as SettingsSection, label: 'PLAYBACK & GRADING' },
     { id: 'appearance' as SettingsSection, label: 'APPEARANCE' },
+    ...(showAccount ? [{ id: 'account' as SettingsSection, label: 'ACCOUNT' }] : []),
   ]
 
   const handleApply = async () => {
@@ -623,6 +639,8 @@ export default function Settings() {
           {activeSection === 'appearance' && (
             <ThemeSection theme={theme} updateTheme={updateTheme} />
           )}
+
+          {activeSection === 'account' && showAccount && <AccountSection />}
         </main>
       </div>
     </div>

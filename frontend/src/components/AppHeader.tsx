@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 export type AppPage = 'workspace' | 'practice' | 'dashboard' | 'settings'
 
@@ -84,6 +85,7 @@ interface AppHeaderProps {
 /** Shared top bar: logo, optional sidebar toggle, and the page nav with Deep Sea glow styling. */
 export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHeaderProps) {
   const navigate = useNavigate()
+  const { authEnabled, user, logout } = useAuth()
 
   return (
     <header className="bg-abyss-900/90 backdrop-blur-md border-b border-cyan-500/20 px-3 py-2 md:px-4 md:py-2.5 flex flex-wrap items-center justify-between gap-y-2 gap-x-2 md:flex-nowrap md:gap-0 shadow-[0_4px_24px_rgba(0,0,0,0.5)] z-30">
@@ -132,6 +134,25 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
               {item.label}
             </button>
           )
+        )}
+        {authEnabled && user && (
+          <div className="ml-auto md:ml-2 md:pl-3 md:border-l md:border-cyan-500/20 flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate('/settings', { state: { section: 'account' } })}
+              title="Account settings"
+              className="hidden lg:inline text-sm text-slate-400 hover:text-cyan-300 truncate max-w-[14rem] transition-colors"
+            >
+              {user.display_name || user.email}
+            </button>
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="px-3 py-1.5 md:py-2 text-sm text-slate-300 hover:text-cyan-300 hover:bg-abyss-800/90 border border-transparent hover:border-cyan-500/30 rounded-lg whitespace-nowrap transition-all duration-150"
+            >
+              Sign out
+            </button>
+          </div>
         )}
       </nav>
     </header>

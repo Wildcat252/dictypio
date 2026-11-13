@@ -83,6 +83,8 @@ hiddenimports += [
     "sqlalchemy.sql.default_comparator",
 ]
 hiddenimports += [
+    "routers.account",
+    "routers.auth",
     "routers.health",
     "routers.dictation",
     "routers.youtube",
@@ -95,6 +97,8 @@ hiddenimports += [
 ]
 hiddenimports += [
     "services.ai_client_factory",
+    "services.audio_files",
+    "services.mailer",
     "services.qdrant_client",
     "services.youtube_processor",
 ]
