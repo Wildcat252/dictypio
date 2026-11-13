@@ -4,13 +4,25 @@ from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 import os
 
-# Database URL
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ear2finger.db")
+def _normalize_database_url(url: str) -> str:
+    """Hosts such as Render hand out postgres:// URLs; SQLAlchemy needs the
+    driver named, and psycopg (v3) is the one in requirements.txt."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
+# SQLite by default (desktop app, local dev); a Postgres URL for the web deployment.
+DATABASE_URL = _normalize_database_url(os.getenv("DATABASE_URL", "sqlite:///./ear2finger.db"))
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 # Create engine
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+    connect_args={"check_same_thread": False} if IS_SQLITE else {},
+    # Hosted Postgres drops idle connections; test each one before use.
+    pool_pre_ping=not IS_SQLITE,
 )
 
 # Create session factory
@@ -214,7 +226,7 @@ def migrate_db():
             user_column_names = [col['name'] if isinstance(col, dict) else col.name for col in user_columns]
             if 'is_superuser' not in user_column_names:
                 with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE users ADD COLUMN is_superuser BOOLEAN NOT NULL DEFAULT 0"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN is_superuser BOOLEAN NOT NULL DEFAULT FALSE"))
                 print("Database migrated: Added is_superuser to users")
             if 'display_name' not in user_column_names:
                 with engine.begin() as conn:
@@ -230,7 +242,7 @@ def migrate_db():
             if 'is_custom' not in column_names:
                 with engine.begin() as conn:
                     conn.execute(text(
-                        "ALTER TABLE practice_word_states ADD COLUMN is_custom BOOLEAN NOT NULL DEFAULT 0"
+                        "ALTER TABLE practice_word_states ADD COLUMN is_custom BOOLEAN NOT NULL DEFAULT FALSE"
                     ))
                 print("Database migrated: Added is_custom to practice_word_states")
 
@@ -251,7 +263,7 @@ def migrate_db():
                 print("Database migrated: Added user_id to videos")
             if 'deleted_at' not in column_names:
                 with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE videos ADD COLUMN deleted_at DATETIME"))
+                    conn.execute(text("ALTER TABLE videos ADD COLUMN deleted_at TIMESTAMP"))
                 print("Database migrated: Added deleted_at to videos (soft-delete)")
 
         # Ensure we have a default user and assign existing rows to it (run after tables exist)
@@ -270,7 +282,7 @@ def migrate_db():
                 if default_hashed is not None:
                     with engine.begin() as conn:
                         conn.execute(
-                            text("INSERT INTO users (username, hashed_password, created_at, is_superuser) VALUES ('default', :h, datetime('now'), 1)"),
+                            text("INSERT INTO users (username, hashed_password, created_at, is_superuser) VALUES ('default', :h, CURRENT_TIMESTAMP, TRUE)"),
                             {"h": default_hashed}
                         )
                         r = conn.execute(text("SELECT id FROM users WHERE username = 'default'")).fetchone()
@@ -291,7 +303,7 @@ def migrate_db():
                     first_id, is_super = r
                     # SQLite may store booleans as 0/1; treat any truthy as already superuser
                     if not bool(is_super):
-                        conn.execute(text("UPDATE users SET is_superuser = 1 WHERE id = :id"), {"id": first_id})
+                        conn.execute(text("UPDATE users SET is_superuser = TRUE WHERE id = :id"), {"id": first_id})
                         print("Database migrated: Marked first user as superuser")
     except Exception as e:
         # If migration fails, log the error but don't crash
