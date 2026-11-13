@@ -21,6 +21,53 @@ import os
 YT_DLP_JS_RUNTIMES = {'deno': {}, 'node': {}}
 YT_DLP_JS_RUNTIME_ARGS = [arg for name in YT_DLP_JS_RUNTIMES for arg in ('--js-runtimes', name)]
 
+# YouTube refuses requests from datacenter IPs (Render, cloud hosts) unless they
+# carry a signed-in browser's cookies. Point YOUTUBE_COOKIES_FILE at a
+# Netscape-format cookies.txt; on Render, a Secret File named
+# youtube_cookies.txt is picked up without setting anything.
+_COOKIE_SOURCES = (
+    os.getenv('YOUTUBE_COOKIES_FILE', '').strip(),
+    '/etc/secrets/youtube_cookies.txt',
+)
+_cookie_copy: Optional[str] = None
+
+
+def _youtube_cookie_file() -> Optional[str]:
+    """A writable copy of the cookies file, or None when there is none.
+
+    yt-dlp saves refreshed cookies back into the file it was given, and
+    Render's secret files are read-only, so it works on a private copy.
+    """
+    global _cookie_copy
+    if _cookie_copy and os.path.isfile(_cookie_copy):
+        return _cookie_copy
+    source = next((p for p in _COOKIE_SOURCES if p and os.path.isfile(p)), None)
+    if not source:
+        return None
+    fd, copy = tempfile.mkstemp(prefix='yt-cookies-', suffix='.txt')
+    os.close(fd)
+    shutil.copyfile(source, copy)
+    _cookie_copy = copy
+    return copy
+
+
+def yt_dlp_common_options() -> Dict:
+    """Options every in-process yt-dlp call shares."""
+    options: Dict = {'js_runtimes': YT_DLP_JS_RUNTIMES}
+    cookie_file = _youtube_cookie_file()
+    if cookie_file:
+        options['cookiefile'] = cookie_file
+    return options
+
+
+def yt_dlp_common_args() -> List[str]:
+    """The same settings for the yt-dlp command line."""
+    args = list(YT_DLP_JS_RUNTIME_ARGS)
+    cookie_file = _youtube_cookie_file()
+    if cookie_file:
+        args += ['--cookies', cookie_file]
+    return args
+
 
 class YouTubeProcessor:
     # YouTube exposes multiple subtitle payloads per language; `json3` is common first
@@ -58,7 +105,7 @@ class YouTubeProcessor:
     @staticmethod
     def _yt_dlp_cli():
         """Same interpreter + yt-dlp as `import yt_dlp` (Windows often has an older `yt-dlp` earlier on PATH)."""
-        return [sys.executable, '-m', 'yt_dlp', *YT_DLP_JS_RUNTIME_ARGS]
+        return [sys.executable, '-m', 'yt_dlp', *yt_dlp_common_args()]
 
     @staticmethod
     def _clean_subtitle_display_text(text: str) -> str:
@@ -191,7 +238,7 @@ class YouTubeProcessor:
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
-            'js_runtimes': YT_DLP_JS_RUNTIMES,
+            **yt_dlp_common_options(),
             'format': 'bestaudio/best',
             'outtmpl': temp_pattern,
             'postprocessors': [
@@ -217,7 +264,7 @@ class YouTubeProcessor:
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
-            'js_runtimes': YT_DLP_JS_RUNTIMES,
+            **yt_dlp_common_options(),
             'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/ba/b',
             'outtmpl': temp_pattern,
         }
@@ -241,7 +288,7 @@ class YouTubeProcessor:
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
-            'js_runtimes': YT_DLP_JS_RUNTIMES,
+            **yt_dlp_common_options(),
         }
 
         try:
