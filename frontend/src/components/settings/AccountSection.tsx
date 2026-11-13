@@ -9,6 +9,7 @@ import {
 } from '../../api'
 import { useAuth } from '../../contexts/AuthContext'
 import { MIN_PASSWORD_LENGTH, passwordProblem } from '../auth/password'
+import { InfoTip } from './InfoTip'
 
 /** Keep in sync with MAX_DISPLAY_NAME_LENGTH in backend/routers/account.py. */
 const MAX_DISPLAY_NAME_LENGTH = 50
@@ -122,16 +123,14 @@ function EmailCard({ user }: { user: AuthUser }) {
   return (
     <Card
       title="Email"
-      description={
-        <>
-          You sign in with <span className="font-medium text-slate-100">{user.email}</span>, and
-          password reset links go there. A new address takes effect once you confirm it from a link
-          we send to it.
-        </>
-      }
+      description="You sign in with this address, and password reset links go there. A new address takes effect once you confirm it from a link we send to it."
     >
       <form onSubmit={handleSubmit} className="space-y-3">
         <StatusMessage status={status} />
+        <div>
+          <p className="text-sm font-medium text-slate-300 mb-1">Current email</p>
+          <p className="text-sm text-slate-100 break-all">{user.email}</p>
+        </div>
         <Field
           label="New email"
           type="email"
@@ -272,6 +271,11 @@ function DeleteAccountCard() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
           <StatusMessage status={status} />
+          {/* Stays visible even though the card's description moved into a
+              tooltip: nobody should confirm this without seeing what it does. */}
+          <p className="text-sm text-rose-400">
+            This deletes all your lessons, audio, practice history and API keys. It cannot be undone.
+          </p>
           <Field
             label="Enter your password to confirm"
             type="password"
@@ -337,8 +341,12 @@ function Card({
     <section
       className={`rounded-lg border p-4 shadow-glass-card ${danger ? 'border-rose-500/40' : 'border-cyan-500/20'}`}
     >
-      <h2 className={`text-sm font-semibold ${danger ? 'text-rose-400' : 'text-slate-100'}`}>{title}</h2>
-      <p className="text-xs text-slate-400 mt-0.5 mb-3">{description}</p>
+      <h2
+        className={`flex items-center gap-1.5 mb-3 text-sm font-semibold ${danger ? 'text-rose-400' : 'text-slate-100'}`}
+      >
+        {title}
+        <InfoTip label={`About ${title}`}>{description}</InfoTip>
+      </h2>
       {children}
     </section>
   )

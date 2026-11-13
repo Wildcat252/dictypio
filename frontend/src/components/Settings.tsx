@@ -29,6 +29,7 @@ import { usePremiumVoices } from '../voices'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { AccountSection } from './settings/AccountSection'
+import { InfoTip, OptionTitle } from './settings/InfoTip'
 import { AudioSection } from './settings/AudioSection'
 import { ThemeSection } from './settings/ThemeSection'
 import {
@@ -443,10 +444,10 @@ export default function Settings() {
                   ))}
                 </ul>
 
-                <div className="pt-4 border-t border-cyan-500/20 flex items-center justify-between">
-                  <p className="text-xs text-slate-400">
+                <div className="pt-4 border-t border-cyan-500/20 flex items-center justify-end gap-2">
+                  <InfoTip label="When shortcut changes apply">
                     Changes apply the next time you open the Workspace.
-                  </p>
+                  </InfoTip>
                   <button
                     type="button"
                     onClick={() => {
@@ -496,8 +497,10 @@ export default function Settings() {
                 {/* Repeat count */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-100">Repeat count</p>
-                    <p className="text-xs text-slate-400">How many times each sentence plays before advancing (∞ = until you move on).</p>
+                    <OptionTitle
+                      title="Repeat count"
+                      hint="How many times each sentence plays before advancing (∞ = until you move on)."
+                    />
                   </div>
                   <div className="flex items-center gap-1">
                     {([0, 1, 3, 5, 10, '∞'] as const).map((count) => (
@@ -519,8 +522,10 @@ export default function Settings() {
                 {/* Pause interval */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-100">Pause between plays</p>
-                    <p className="text-xs text-slate-400">Silent gap after a sentence finishes, in seconds.</p>
+                    <OptionTitle
+                      title="Pause between plays"
+                      hint="Silent gap after a sentence finishes, in seconds."
+                    />
                   </div>
                   <div className="flex items-center gap-2">
                     <input
@@ -542,8 +547,10 @@ export default function Settings() {
                 {/* Speak comma */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-100">Speak &ldquo;comma&rdquo;</p>
-                    <p className="text-xs text-slate-400">In word-by-word mode, read commas aloud as &ldquo;comma&rdquo;.</p>
+                    <OptionTitle
+                      title="Speak “comma”"
+                      hint="In word-by-word mode, read commas aloud as “comma”."
+                    />
                   </div>
                   <label className="inline-flex items-center cursor-pointer">
                     <input
@@ -560,8 +567,10 @@ export default function Settings() {
                 {!speakComma && (
                   <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4 ml-6">
                     <div>
-                      <p className="text-sm font-semibold text-slate-100">Comma pause</p>
-                      <p className="text-xs text-slate-400">Silent gap at each comma instead of saying &ldquo;comma&rdquo;, in seconds.</p>
+                      <OptionTitle
+                        title="Comma pause"
+                        hint="Silent gap at each comma instead of saying “comma”, in seconds."
+                      />
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -602,8 +611,10 @@ export default function Settings() {
                 {/* Ignore punctuation */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-100">Ignore punctuation</p>
-                    <p className="text-xs text-slate-400">When on, punctuation isn't required to match (commas, periods, etc.).</p>
+                    <OptionTitle
+                      title="Ignore punctuation"
+                      hint="When on, punctuation isn't required to match (commas, periods, etc.)."
+                    />
                   </div>
                   <label className="inline-flex items-center cursor-pointer">
                     <input
@@ -619,8 +630,10 @@ export default function Settings() {
                 {/* Ignore case */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-100">Ignore case</p>
-                    <p className="text-xs text-slate-400">When on, uppercase and lowercase are treated the same.</p>
+                    <OptionTitle
+                      title="Ignore case"
+                      hint="When on, uppercase and lowercase are treated the same."
+                    />
                   </div>
                   <label className="inline-flex items-center cursor-pointer">
                     <input
