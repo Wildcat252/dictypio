@@ -14,7 +14,11 @@ _tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
 TMP_DIR = Path(_tmp.name)
 
 # The app reads its environment at import time.
-os.environ["DATABASE_URL"] = "sqlite:///" + (TMP_DIR / "test.db").as_posix()
+# TEST_DATABASE_URL runs the suite against Postgres instead. The tests drop
+# every table, so point it only at an empty, throwaway database.
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL") or (
+    "sqlite:///" + (TMP_DIR / "test.db").as_posix()
+)
 os.environ["AUTH_ENABLED"] = "1"
 os.environ["SECRET_KEY"] = "test-secret-not-used-anywhere-else"
 os.environ.pop("SMTP_HOST", None)
