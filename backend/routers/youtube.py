@@ -99,7 +99,29 @@ async def process_youtube_video(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        if is_youtube_block_error(str(e)):
+            raise HTTPException(status_code=503, detail=YOUTUBE_BLOCKED_MESSAGE)
         raise HTTPException(status_code=500, detail=f"Failed to process video: {str(e)}")
+
+
+# What yt-dlp says when YouTube refuses a request outright, as it does for the
+# datacenter IPs that web hosts use. It says nothing about the video itself.
+_YOUTUBE_BLOCK_MARKERS = (
+    "failed to extract any player response",
+    "sign in to confirm you",
+    "confirm you're not a bot",
+    "http error 429",
+)
+
+YOUTUBE_BLOCKED_MESSAGE = (
+    "YouTube is blocking this server, so videos can't be imported here. "
+    "Use Custom Text (TTS) instead, or import the video in the desktop app."
+)
+
+
+def is_youtube_block_error(message: str) -> bool:
+    lowered = message.lower().replace("’", "'")
+    return any(marker in lowered for marker in _YOUTUBE_BLOCK_MARKERS)
 
 
 @router.get("/youtube/videos", response_model=List[VideoResponse])
