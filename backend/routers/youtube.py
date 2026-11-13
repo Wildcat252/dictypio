@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db, Video, Sentence, User, PlaylistVideo, LearningProgress
 from auth import get_current_user
+from services.audio_files import remove_unreferenced_audio
 from services.youtube_processor import YouTubeProcessor
 from services.qdrant_client import delete_sentence_vectors_for_video, ingest_sentences_for_video
 import re
@@ -276,18 +277,15 @@ async def delete_video(
         synchronize_session=False
     )
 
-    ap = video.audio_file_path
-    if ap and os.path.isfile(ap):
-        try:
-            os.remove(ap)
-        except OSError:
-            pass
+    old_audio = video.audio_file_path
     video.audio_file_path = None
 
     from datetime import datetime
 
     video.deleted_at = datetime.utcnow()
     db.commit()
+    # Another account's copy of this lesson may still play the same file.
+    remove_unreferenced_audio(db, [old_audio])
 
     delete_sentence_vectors_for_video(video_id)
 

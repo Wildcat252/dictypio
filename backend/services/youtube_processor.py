@@ -8,8 +8,10 @@ import xml.etree.ElementTree as ET
 import tempfile
 import shutil
 from typing import List, Dict, Optional
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from database import Video, Sentence, LearningProgress
+from services.audio_files import remove_unreferenced_audio
 import os
 
 class YouTubeProcessor:
@@ -757,11 +759,19 @@ class YouTubeProcessor:
     def process_youtube_video(self, youtube_url: str, db: Session, user_id: int) -> Dict:
         """Process a YouTube video: extract, segment, and store in database"""
         youtube_url = youtube_url.strip().rstrip(',;')
-        existing_video = db.query(Video).filter(Video.youtube_url == youtube_url).first()
+        # Each account keeps its own copy of a lesson, so another account's row
+        # for the same URL is not a match. Rows from before accounts existed have
+        # no owner and go to whoever imports the URL next.
+        existing_video = (
+            db.query(Video)
+            .filter(
+                Video.youtube_url == youtube_url,
+                or_(Video.user_id == user_id, Video.user_id.is_(None)),
+            )
+            .order_by(Video.user_id.is_(None), Video.id)
+            .first()
+        )
         if existing_video:
-            if existing_video.user_id is not None and existing_video.user_id != user_id:
-                raise ValueError("This video URL was already imported by another user.")
-
             was_deleted = getattr(existing_video, "deleted_at", None) is not None
 
             if was_deleted:
@@ -792,17 +802,14 @@ class YouTubeProcessor:
             ).update({LearningProgress.sentence_id: None}, synchronize_session=False)
 
             old_audio = existing_video.audio_file_path
-            if old_audio and os.path.isfile(old_audio):
-                try:
-                    os.remove(old_audio)
-                except OSError:
-                    pass
             existing_video.audio_file_path = None
 
             db.query(Sentence).filter(Sentence.video_id == existing_video.id).delete(
                 synchronize_session=False
             )
             db.flush()
+            # Another account's copy of this lesson may still play the same file.
+            remove_unreferenced_audio(db, [old_audio])
 
             video_info = self.extract_video_info(youtube_url)
 

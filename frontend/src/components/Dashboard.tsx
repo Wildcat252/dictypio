@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from './AppHeader'
 import { AI_COACH_ENABLED } from '../features'
+import { COACH_FEEDBACK_KEY } from '../accountStorage'
 import {
   getUserStats,
   getCoachFeedback,
@@ -12,7 +13,7 @@ import {
   type PracticeRecommendationItem,
 } from '../api'
 
-const COACH_FEEDBACK_STORAGE_KEY = 'ear2finger_ai_coach_feedback_v1'
+const COACH_FEEDBACK_STORAGE_KEY = COACH_FEEDBACK_KEY
 
 export default function Dashboard() {
   const navigate = useNavigate()

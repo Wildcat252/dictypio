@@ -88,6 +88,24 @@ export function isNetworkVoice(voice: SpeechSynthesisVoice | null | undefined): 
   return /online\s*\(natural\)/i.test(voice.name)
 }
 
+/**
+ * Short display name for a voice picker, e.g.
+ * "Microsoft BrianMultilingual Online (Natural) - English (United States)"
+ * becomes "Brian Multilingual (Natural) (en-US)". Store and match by
+ * voice.name; this is only for showing.
+ */
+export function voiceLabel(voice: SpeechSynthesisVoice): string {
+  const short = voice.name
+    .replace(/^Microsoft\s+/i, '')
+    .replace(/\s+Online\b/i, '')
+    // The language part; voice.lang says the same in fewer letters.
+    .replace(/\s+-\s+.*$/, '')
+    .replace(/([a-z])(Multilingual)\b/, '$1 $2')
+    .trim()
+  const name = short || voice.name
+  return voice.lang ? `${name} (${voice.lang})` : name
+}
+
 // Rolling estimate of how long a voice takes between speak() and onstart, kept
 // per voice name. Word-by-word playback subtracts this from the gap it waits so
 // the silence the learner hears is the gap they configured, not gap + latency.

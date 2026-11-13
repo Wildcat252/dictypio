@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from routers import (
+    account,
+    auth as auth_router,
     health,
     dictation,
     youtube,
@@ -53,6 +55,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(auth_router.router, prefix="/api", tags=["auth"])
+app.include_router(account.router, prefix="/api", tags=["account"])
 app.include_router(dictation.router, prefix="/api", tags=["dictation"])
 app.include_router(youtube.router, prefix="/api", tags=["youtube"])
 app.include_router(playlists.router, prefix="/api", tags=["playlists"])

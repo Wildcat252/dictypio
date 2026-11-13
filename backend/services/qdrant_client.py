@@ -399,6 +399,37 @@ def search_sentences_by_queries(
 # -----------------------------------------------------------------------------
 
 
+def _delete_points_matching(client: QdrantClient, collection_name: str, flt: Filter) -> int:
+    """
+    Delete every point in the collection that matches the payload filter and
+    return how many there were. The caller holds _embedded_qdrant_lock.
+    """
+    point_ids: List[Any] = []
+    offset = None
+    while True:
+        records, next_offset = client.scroll(
+            collection_name=collection_name,
+            scroll_filter=flt,
+            limit=256,
+            offset=offset,
+            with_payload=False,
+            with_vectors=False,
+        )
+        if not records:
+            break
+        point_ids.extend(r.id for r in records)
+        if next_offset is None:
+            break
+        offset = next_offset
+    batch = 512
+    for i in range(0, len(point_ids), batch):
+        client.delete(
+            collection_name=collection_name,
+            points_selector=point_ids[i : i + batch],
+        )
+    return len(point_ids)
+
+
 def delete_sentence_vectors_for_video(video_id: int) -> None:
     """
     Remove sentence vectors for a DB video (e.g. before replacing sentences after
@@ -416,40 +447,52 @@ def delete_sentence_vectors_for_video(video_id: int) -> None:
                     )
                 ]
             )
-            point_ids: List[Any] = []
-            offset = None
-            while True:
-                records, next_offset = client.scroll(
-                    collection_name=COLLECTION_SENTENCES,
-                    scroll_filter=flt,
-                    limit=256,
-                    offset=offset,
-                    with_payload=False,
-                    with_vectors=False,
+            deleted = _delete_points_matching(client, COLLECTION_SENTENCES, flt)
+            if deleted:
+                logger.info(
+                    "qdrant: deleted %s sentence vectors for video_id=%s",
+                    deleted,
+                    video_id,
                 )
-                if not records:
-                    break
-                point_ids.extend(r.id for r in records)
-                if next_offset is None:
-                    break
-                offset = next_offset
-            if not point_ids:
-                return
-            batch = 512
-            for i in range(0, len(point_ids), batch):
-                client.delete(
-                    collection_name=COLLECTION_SENTENCES,
-                    points_selector=point_ids[i : i + batch],
-                )
-            logger.info(
-                "qdrant: deleted %s sentence vectors for video_id=%s",
-                len(point_ids),
-                video_id,
-            )
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning(
             "qdrant: delete_sentence_vectors_for_video video_id=%s failed: %s",
             video_id,
+            exc,
+        )
+
+
+def delete_vectors_for_user(user_id: int) -> None:
+    """
+    Remove everything indexed for a user, in both collections (account deletion).
+    Uses payload filter user_id. Best effort: the SQL rows are already gone, so a
+    failure here is logged rather than raised.
+    """
+    try:
+        with _embedded_qdrant_lock():
+            ensure_collections()
+            client = get_qdrant_client()
+            flt = Filter(
+                must=[
+                    FieldCondition(
+                        key="user_id",
+                        match=MatchValue(value=int(user_id)),
+                    )
+                ]
+            )
+            for collection_name in (COLLECTION_SENTENCES, COLLECTION_USER_LEARNING_EVENTS):
+                deleted = _delete_points_matching(client, collection_name, flt)
+                if deleted:
+                    logger.info(
+                        "qdrant: deleted %s vectors from %s for user_id=%s",
+                        deleted,
+                        collection_name,
+                        user_id,
+                    )
+    except Exception as exc:
+        logger.warning(
+            "qdrant: delete_vectors_for_user user_id=%s failed: %s",
+            user_id,
             exc,
         )
 

@@ -15,7 +15,8 @@ import {
   type AudioSettings,
   type Waveform,
 } from '../../audio'
-import { isNetworkVoice } from '../../voices'
+import { isNetworkVoice, voiceLabel } from '../../voices'
+import { InfoTip, OptionTitle } from './InfoTip'
 import {
   MAX_VOICE_POOL,
   MIN_VOICE_POOL,
@@ -77,6 +78,18 @@ export function AudioSection({
   const noRotationPicked =
     ttsMultiVoice && !ttsVoicePerSentenceRepeat && !ttsVoicePerWordRepeat
 
+  // Everything wrong with the picked voices, shown in one tooltip beside the list.
+  const poolProblems = [
+    poolTooSmall &&
+      `Pick at least ${MIN_VOICE_POOL} voices. Until then playback uses the single dictation voice above.`,
+    missingVoices.length > 0 &&
+      `Saved but not offered by this browser, so they are skipped: ${missingVoices.join(', ')}.`,
+    poolHasCloudVoice &&
+      'A cloud voice is in the pool. Every handover waits on its own network round-trip, which is most noticeable when splitting a sentence.',
+  ].filter((p): p is string => Boolean(p))
+  const poolWarning =
+    poolProblems.length > 0 ? poolProblems.map((p) => <p key={p}>{p}</p>) : undefined
+
   // Keep the size the pool already has, so pressing Randomize is a re-draw
   // rather than a resize; an unset or under-sized pool fills up to the cap.
   const canRandomize = availableVoices.length >= MIN_VOICE_POOL
@@ -104,8 +117,16 @@ export function AudioSection({
             <div className="space-y-6">
               {/* TTS voice */}
               <div className="rounded-lg border border-cyan-500/20 p-4">
-                <p className="text-sm font-semibold text-slate-100">Dictation voice</p>
-                <p className="text-xs text-slate-400 mb-3">Voice used to read text lessons aloud.</p>
+                <OptionTitle
+                  title="Dictation voice"
+                  hint="Voice used to read text lessons aloud."
+                  warning={
+                    isNetworkVoice(selectedVoice) && !ttsMultiVoice
+                      ? 'This voice is synthesized online, so each phrase waits on a network round-trip before it plays. It sounds better but starts slower — for word-by-word practice a local voice is noticeably more responsive.'
+                      : undefined
+                  }
+                  className="mb-3"
+                />
                 <select
                   value={ttsVoiceName}
                   onChange={(e) => setTtsVoiceName(e.target.value)}
@@ -113,30 +134,20 @@ export function AudioSection({
                 >
                   <option value="">Default</option>
                   {availableVoices.map((v) => (
-                    <option key={v.name} value={v.name}>
-                      {v.name} ({v.lang}){isNetworkVoice(v) ? ' — cloud, slower to start' : ''}
+                    <option key={v.name} value={v.name} title={v.name}>
+                      {voiceLabel(v)}
                     </option>
                   ))}
                 </select>
-                {isNetworkVoice(selectedVoice) && !ttsMultiVoice && (
-                  <p className="text-xs text-amber-300 mt-2">
-                    This voice is synthesized online, so each phrase waits on a network
-                    round-trip before it plays. It sounds better but starts slower — for
-                    word-by-word practice a local voice is noticeably more responsive.
-                  </p>
-                )}
 
                 {/* Multi-voice */}
                 <div className="mt-5 pt-4 border-t border-cyan-500/20">
                   <div className="flex items-center justify-between">
                     <div className="pr-4">
-                      <p className="text-sm font-semibold text-slate-100">
-                        Multiple voices per sentence
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        Read each sentence with {MIN_VOICE_POOL}&ndash;{MAX_VOICE_POOL} voices
-                        instead of one, so your ear does not settle into a single speaker.
-                      </p>
+                      <OptionTitle
+                        title="Multiple voices per sentence"
+                        hint={`Read each sentence with ${MIN_VOICE_POOL}–${MAX_VOICE_POOL} voices instead of one, so your ear does not settle into a single speaker.`}
+                      />
                     </div>
                     <label className="inline-flex items-center cursor-pointer">
                       <input
@@ -153,8 +164,9 @@ export function AudioSection({
                     <div className="mt-4 space-y-4">
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-slate-400">
+                          <p className="flex items-center gap-1.5 text-xs text-slate-400">
                             Voices ({ttsVoiceNames.length}/{MAX_VOICE_POOL} picked)
+                            <InfoTip label="Voice pool problems" warning={poolWarning} />
                           </p>
                           <button
                             type="button"
@@ -177,6 +189,7 @@ export function AudioSection({
                             return (
                               <label
                                 key={v.name}
+                                title={v.name}
                                 className={
                                   locked
                                     ? 'flex items-center gap-3 px-3 py-2 text-sm opacity-40 cursor-not-allowed'
@@ -190,30 +203,25 @@ export function AudioSection({
                                   onChange={() => toggleVoiceInPool(v.name)}
                                   className="accent-cyan-400"
                                 />
-                                <span className="text-slate-200">
-                                  {v.name} ({v.lang})
-                                  {isNetworkVoice(v) ? ' — cloud, slower to start' : ''}
-                                </span>
+                                <span className="text-slate-200">{voiceLabel(v)}</span>
                               </label>
                             )
                           })}
                         </div>
-                        {poolTooSmall && (
-                          <p className="text-xs text-amber-300 mt-2">
-                            Pick at least {MIN_VOICE_POOL} voices. Until then playback uses the
-                            single dictation voice above.
-                          </p>
-                        )}
-                        {missingVoices.length > 0 && (
-                          <p className="text-xs text-amber-300 mt-2">
-                            Saved but not offered by this browser, so they are skipped:{' '}
-                            {missingVoices.join(', ')}.
-                          </p>
-                        )}
                       </div>
 
                       <div>
-                        <p className="text-xs text-slate-400 mb-2">When the voice changes</p>
+                        <p className="flex items-center gap-1.5 text-xs text-slate-400 mb-2">
+                          When the voice changes
+                          <InfoTip
+                            label="Voice change problem"
+                            warning={
+                              noRotationPicked
+                                ? 'Tick at least one, or there is nothing for the voices to change on and playback stays on the single dictation voice above.'
+                                : undefined
+                            }
+                          />
+                        </p>
                         <div className="space-y-2">
                           <label className="flex items-start gap-3 text-sm cursor-pointer">
                             <input
@@ -222,12 +230,12 @@ export function AudioSection({
                               onChange={(e) => setTtsVoicePerSentenceRepeat(e.target.checked)}
                               className="mt-1 accent-cyan-400"
                             />
-                            <span className="text-slate-200">
+                            <span className="inline-flex items-center gap-1.5 text-slate-200">
                               A different voice each repeat
-                              <span className="block text-xs text-slate-400">
+                              <InfoTip label="About A different voice each repeat">
                                 One voice reads the whole sentence; the next repeat uses the next
                                 voice. Needs Repeat above 1x to be heard.
-                              </span>
+                              </InfoTip>
                             </span>
                           </label>
                           <label className="flex items-start gap-3 text-sm cursor-pointer">
@@ -237,23 +245,17 @@ export function AudioSection({
                               onChange={(e) => setTtsVoicePerWordRepeat(e.target.checked)}
                               className="mt-1 accent-cyan-400"
                             />
-                            <span className="text-slate-200">
+                            <span className="inline-flex items-center gap-1.5 text-slate-200">
                               A different voice each word repeat
-                              <span className="block text-xs text-slate-400">
+                              <InfoTip label="About A different voice each word repeat">
                                 Word-by-word mode only, following its Repeat control: each time a
                                 word is spoken again it changes voice, and the rotation carries on
                                 into the next word rather than starting over. Can be combined with
                                 the setting above.
-                              </span>
+                              </InfoTip>
                             </span>
                           </label>
                         </div>
-                        {noRotationPicked && (
-                          <p className="text-xs text-amber-300 mt-2">
-                            Tick at least one, or there is nothing for the voices to change on and
-                            playback stays on the single dictation voice above.
-                          </p>
-                        )}
                       </div>
 
                       <div>
@@ -277,23 +279,16 @@ export function AudioSection({
                               onChange={() => setTtsVoiceOrder('random')}
                               className="mt-1 accent-cyan-400"
                             />
-                            <span className="text-slate-200">
+                            <span className="inline-flex items-center gap-1.5 text-slate-200">
                               Shuffle per sentence
-                              <span className="block text-xs text-slate-400">
+                              <InfoTip label="About Shuffle per sentence">
                                 Each sentence gets its own order, kept the same across every
                                 repeat of that sentence.
-                              </span>
+                              </InfoTip>
                             </span>
                           </label>
                         </div>
                       </div>
-
-                      {poolHasCloudVoice && (
-                        <p className="text-xs text-amber-300">
-                          A cloud voice is in the pool. Every handover waits on its own network
-                          round-trip, which is most noticeable when splitting a sentence.
-                        </p>
-                      )}
                     </div>
                   )}
                 </div>
@@ -303,8 +298,7 @@ export function AudioSection({
               <div className="rounded-lg border border-cyan-500/20 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-100">Correct sound</p>
-                    <p className="text-xs text-slate-400">Chime when a sentence is fully correct.</p>
+                    <OptionTitle title="Correct sound" hint="Chime when a sentence is fully correct." />
                   </div>
                   <label className="inline-flex items-center cursor-pointer">
                     <input
@@ -434,8 +428,7 @@ export function AudioSection({
               <div className="rounded-lg border border-cyan-500/20 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-100">Error sound</p>
-                    <p className="text-xs text-slate-400">Buzz on a wrong keystroke.</p>
+                    <OptionTitle title="Error sound" hint="Buzz on a wrong keystroke." />
                   </div>
                   <label className="inline-flex items-center cursor-pointer">
                     <input
@@ -543,8 +536,10 @@ export function AudioSection({
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-cyan-500/20 flex items-center justify-between">
-                <p className="text-xs text-slate-400">Changes apply the next time you open the Workspace.</p>
+              <div className="pt-4 border-t border-cyan-500/20 flex items-center justify-end gap-2">
+                <InfoTip label="When audio changes apply">
+                  Changes apply the next time you open the Workspace.
+                </InfoTip>
                 <button
                   type="button"
                   onClick={() => { setAudio({ ...AUDIO_DEFAULTS }); saveAudioSettings({ ...AUDIO_DEFAULTS }) }}

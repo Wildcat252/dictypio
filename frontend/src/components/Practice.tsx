@@ -11,6 +11,7 @@ import {
   type WordStat,
 } from '../api'
 import { useWorkspace } from '../contexts/WorkspaceContext'
+import { PRACTICE_STATE_KEY } from '../accountStorage'
 import { isNetworkVoice, usePremiumVoices } from '../voices'
 import {
   MIN_VOICE_POOL,
@@ -25,7 +26,7 @@ import { DrillCard } from './practice/DrillCard'
 
 const PAGE_SIZE = 30
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
-const STATE_KEY = 'ear2finger-practice-state'
+const STATE_KEY = PRACTICE_STATE_KEY
 
 /** Strip surrounding punctuation the way the stats list stores it. */
 function displayOf(word: string): string {

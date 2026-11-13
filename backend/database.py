@@ -26,6 +26,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, nullable=False, unique=True, index=True)
     email = Column(String, nullable=True, index=True)
+    # Free-form name shown in the UI. Unlike username it need not be unique, and
+    # username must stay untouched: "default" marks the desktop app's local user.
+    display_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
      # True if this user can manage other users
@@ -213,6 +216,13 @@ def migrate_db():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE users ADD COLUMN is_superuser BOOLEAN NOT NULL DEFAULT 0"))
                 print("Database migrated: Added is_superuser to users")
+            if 'display_name' not in user_column_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN display_name VARCHAR"))
+                print("Database migrated: Added display_name to users")
+            # Email is the sign-in identity; users without one (the default user) stay NULL.
+            with engine.begin() as conn:
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email ON users (email)"))
 
         if 'practice_word_states' in table_names:
             columns = inspector.get_columns('practice_word_states')
