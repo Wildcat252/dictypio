@@ -14,6 +14,14 @@ from database import Video, Sentence, LearningProgress
 from services.audio_files import remove_unreferenced_audio
 import os
 
+# YouTube now needs a JavaScript runtime to decode its player; without one
+# yt-dlp warns and some formats go missing. yt-dlp only tries deno by default,
+# which the servers here lack, so also allow Node (present on Render and on any
+# machine that builds the frontend). The first one found is used.
+YT_DLP_JS_RUNTIMES = {'deno': {}, 'node': {}}
+YT_DLP_JS_RUNTIME_ARGS = [arg for name in YT_DLP_JS_RUNTIMES for arg in ('--js-runtimes', name)]
+
+
 class YouTubeProcessor:
     # YouTube exposes multiple subtitle payloads per language; `json3` is common first
     # in API metadata but is not SRT/VTT — prefer text-based formats, then json3.
@@ -50,7 +58,7 @@ class YouTubeProcessor:
     @staticmethod
     def _yt_dlp_cli():
         """Same interpreter + yt-dlp as `import yt_dlp` (Windows often has an older `yt-dlp` earlier on PATH)."""
-        return [sys.executable, '-m', 'yt_dlp']
+        return [sys.executable, '-m', 'yt_dlp', *YT_DLP_JS_RUNTIME_ARGS]
 
     @staticmethod
     def _clean_subtitle_display_text(text: str) -> str:
@@ -183,6 +191,7 @@ class YouTubeProcessor:
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
+            'js_runtimes': YT_DLP_JS_RUNTIMES,
             'format': 'bestaudio/best',
             'outtmpl': temp_pattern,
             'postprocessors': [
@@ -208,6 +217,7 @@ class YouTubeProcessor:
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
+            'js_runtimes': YT_DLP_JS_RUNTIMES,
             'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/ba/b',
             'outtmpl': temp_pattern,
         }
@@ -231,6 +241,7 @@ class YouTubeProcessor:
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
+            'js_runtimes': YT_DLP_JS_RUNTIMES,
         }
 
         try:
