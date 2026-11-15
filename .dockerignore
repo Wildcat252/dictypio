@@ -12,3 +12,4 @@ backend/__pycache__
 **/__pycache__
 storage
 *.db
+youtube_cookies.txt

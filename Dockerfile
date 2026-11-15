@@ -10,10 +10,13 @@ RUN npm run build
 
 # --- Stage 2: Python backend ---
 FROM python:3.12-slim
-# ffmpeg: audio extraction. nodejs: JS runtime yt-dlp needs for YouTube.
+# ffmpeg: audio extraction.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg nodejs ca-certificates \
+    && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+# JS runtime yt-dlp needs for YouTube's challenges. Debian's nodejs (20) is too
+# old for yt-dlp's solver, so take the binary from the official Node 22 image.
+COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
