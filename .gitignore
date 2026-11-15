@@ -250,3 +250,7 @@ frontend/vite.config.js
 frontend/vite.config.d.ts
 .neon
 .env.local
+
+# Cloud Run secrets (local only)
+.env.cloudrun
+youtube_cookies.txt
