@@ -1,10 +1,12 @@
 /**
  * API client. Uses relative /api so Vite proxy forwards to backend.
+ * A build served from a different origin than the API (Firebase Hosting)
+ * sets VITE_API_BASE_URL to the API's origin.
  */
 import axios from 'axios'
 
 export const api = axios.create({
-  baseURL: '',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   headers: { 'Content-Type': 'application/json' },
 })
 

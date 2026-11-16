@@ -2,7 +2,7 @@
 # Auth is keyless (Workload Identity Federation): the provider only accepts
 # tokens from Wildcat252/dictypio on refs/heads/main.
 # Env vars and secrets stay as set on the service; this only ships new code.
-name: Deploy Cloud Run
+name: Deploy Cloud Run and Firebase Hosting
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -43,3 +43,33 @@ jobs:
             --region "$REGION" \
             --source . \
             --quiet
+
+  # The frontend on Firebase Hosting (dictypio.web.app). It calls the Cloud Run
+  # API cross-origin; CORS_EXTRA_ORIGINS on the service allows it.
+  hosting:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: https://dictypio-407335272998.asia-southeast1.run.app
+        run: |
+          npm ci
+          npm run build
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/407335272998/locations/global/workloadIdentityPools/github/providers/dictypio
+          service_account: github-deployer@project-3b8da5db-0980-48be-ad7.iam.gserviceaccount.com
+
+      - name: Deploy to Firebase Hosting
+        run: npx --yes firebase-tools@15.36.0 deploy --only hosting --project dictypio --non-interactive
