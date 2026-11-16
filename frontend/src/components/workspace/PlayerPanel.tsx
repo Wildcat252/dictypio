@@ -74,7 +74,7 @@ function OptionMenu({
         aria-expanded={open}
         aria-label={`${label}: ${value}${suffix}`}
         onClick={() => setOpen((v) => !v)}
-        className="max-md:min-h-[34px] max-md:text-xs bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
+        className="max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
       >
         <span><span className="max-md:hidden">{label}: </span>{value}{suffix}</span>
         <svg
@@ -233,9 +233,9 @@ export function PlayerPanel({
         />
       )}
 
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4 mb-2 md:mb-4">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4 mb-1.5 md:mb-4">
         {/* Media Player */}
-        <div className="flex-1 flex flex-wrap md:flex-nowrap items-center justify-center md:justify-start gap-2.5 min-w-0 w-full">
+        <div className="flex-1 flex flex-nowrap items-center justify-start gap-1.5 md:gap-2.5 min-w-0 w-full">
           <button
             onClick={() => {
               if (currentSentenceIndex > 0) {
@@ -253,10 +253,10 @@ export function PlayerPanel({
               }
             }}
             disabled={currentSentenceIndex === 0}
-            className="max-md:w-9 max-md:h-9 flex items-center justify-center p-1.5 md:p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-7 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Previous sentence"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
             </svg>
           </button>
@@ -274,15 +274,15 @@ export function PlayerPanel({
               }
             }}
             disabled={!selectedLesson || !sentences.length}
-            className="max-md:w-11 max-md:h-9 flex items-center justify-center p-1.5 md:p-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
+            className="max-md:w-9 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
             title={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             ) : (
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
               </svg>
             )}
@@ -307,10 +307,10 @@ export function PlayerPanel({
               }
             }}
             disabled={!selectedLesson || !sentences.length}
-            className="max-md:w-9 max-md:h-9 flex items-center justify-center p-1.5 md:p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-7 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Replay current sentence"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311V15a.75.75 0 01-1.5 0v-3.5a.75.75 0 01.75-.75H8.5a.75.75 0 010 1.5H7.058l.162.162a4 4 0 006.693-1.793.75.75 0 011.399.555zM4.688 8.576a5.5 5.5 0 019.201-2.466l.312.311V5a.75.75 0 011.5 0v3.5a.75.75 0 01-.75.75H11.5a.75.75 0 010-1.5h1.442l-.162-.162a4 4 0 00-6.693 1.793.75.75 0 11-1.399-.555z" clipRule="evenodd" />
             </svg>
           </button>
@@ -340,14 +340,14 @@ export function PlayerPanel({
               setIsPlaying(true)
             }}
             disabled={currentSentenceIndex >= sentences.length - 1}
-            className="max-md:w-9 max-md:h-9 flex items-center justify-center p-1.5 md:p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-7 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Next sentence"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0011 6v2.798l-5.445-3.63z" />
             </svg>
           </button>
-          <div className="flex-1 max-md:basis-full max-md:order-first flex items-center gap-3 min-w-0">
+          <div className="flex-1 flex items-center gap-1.5 md:gap-3 min-w-0">
             <div
               className="flex-1 min-w-0 h-2.5 rounded-full overflow-hidden relative pointer-events-none bg-abyss-950 border border-cyan-500/20"
               aria-hidden
@@ -367,16 +367,16 @@ export function PlayerPanel({
                 }}
               />
             </div>
-            <span className="text-xs text-slate-300 font-mono min-w-[3.5rem] whitespace-nowrap">
+            <span className="text-xs text-slate-300 font-mono md:min-w-[3.5rem] whitespace-nowrap">
               {isTextLesson ? (
-                <span className="text-cyan-300 bg-abyss-800/80 border border-cyan-500/30 text-xs font-semibold rounded-full px-2.5 py-0.5 shadow-sm">
-                  Sentence {currentSentenceIndex + 1} / {sentences.length}
+                <span className="text-cyan-300 bg-abyss-800/80 border border-cyan-500/30 text-xs font-semibold rounded-full px-2 md:px-2.5 py-0.5 shadow-sm">
+                  <span className="max-md:hidden">Sentence </span>{currentSentenceIndex + 1} / {sentences.length}
                 </span>
               ) : (
                 <>
-                  <span className="text-slate-300">{formatTime(currentTime)}</span> / <span className="text-slate-400">{formatTime(totalDuration)}</span>
+                  <span className="max-md:hidden"><span className="text-slate-300">{formatTime(currentTime)}</span> / <span className="text-slate-400">{formatTime(totalDuration)}</span></span>
                   {sentenceCount > 0 && (
-                    <span className="ml-2 text-cyan-300 bg-abyss-800/80 border border-cyan-500/30 text-xs font-semibold rounded-full px-2 py-0.5 shadow-sm">
+                    <span className="md:ml-2 text-cyan-300 bg-abyss-800/80 border border-cyan-500/30 text-xs font-semibold rounded-full px-2 py-0.5 shadow-sm">
                       {currentSentenceIndex + 1} / {sentenceCount}
                     </span>
                   )}
@@ -388,7 +388,7 @@ export function PlayerPanel({
       </div>
 
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2 md:gap-2.5">
+      <div className="flex max-md:flex-nowrap md:flex-wrap items-center gap-1 md:gap-2.5">
         <OptionMenu
           label="Speed"
           value={playbackSpeed}
@@ -399,7 +399,7 @@ export function PlayerPanel({
           <button
             type="button"
             aria-pressed={ttsWordByWord}
-            className={`max-md:min-h-[34px] max-md:text-xs px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
+            className={`max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
               ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-cyan-400 shadow-glow-cyan'
               : 'bg-abyss-800/90 text-slate-300 border-cyan-500/30 hover:border-cyan-400/50 hover:bg-abyss-750'
               }`}
@@ -409,7 +409,7 @@ export function PlayerPanel({
               setTtsWordByWord(!ttsWordByWord)
             }}
           >
-            <span><span className="max-md:hidden">Word-by-Word</span><span className="md:hidden">WbW</span>: {ttsWordByWord ? 'ON' : 'OFF'}</span>
+            <span><span className="max-md:hidden">Word-by-Word</span><span className="md:hidden">WbW</span><span className="max-md:hidden">: {ttsWordByWord ? 'ON' : 'OFF'}</span></span>
           </button>
         )}
         {isTextLesson && ttsWordByWord && (
@@ -419,7 +419,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsPrevWord()}
             aria-label="Previous word"
-            className="md:hidden w-9 h-9 flex items-center justify-center bg-abyss-800/90 border border-cyan-500/30 text-slate-200 rounded-xl text-sm"
+            className="md:hidden w-7 h-7 shrink-0 flex items-center justify-center bg-abyss-800/90 border border-cyan-500/30 text-slate-200 rounded-xl text-sm"
           >
             ⏮
           </button>
@@ -427,7 +427,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsSkipWord()}
             aria-label="Skip word"
-            className="md:hidden w-9 h-9 flex items-center justify-center bg-abyss-800/90 border border-cyan-500/30 text-slate-200 rounded-xl text-sm"
+            className="md:hidden w-7 h-7 shrink-0 flex items-center justify-center bg-abyss-800/90 border border-cyan-500/30 text-slate-200 rounded-xl text-sm"
           >
             ⏭
           </button>
@@ -436,9 +436,9 @@ export function PlayerPanel({
             onClick={() => setShowWbwOptions((v) => !v)}
             aria-expanded={showWbwOptions}
             aria-label="Word-by-word options"
-            className={`md:hidden w-9 h-9 flex items-center justify-center rounded-xl border transition-colors ${showWbwOptions ? 'border-cyan-400 bg-cyan-950/80 text-cyan-200' : 'border-cyan-500/30 bg-abyss-800/90 text-slate-300'}`}
+            className={`md:hidden w-7 h-7 shrink-0 flex items-center justify-center rounded-xl border transition-colors ${showWbwOptions ? 'border-cyan-400 bg-cyan-950/80 text-cyan-200' : 'border-cyan-500/30 bg-abyss-800/90 text-slate-300'}`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
               <circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" />
             </svg>
@@ -446,7 +446,7 @@ export function PlayerPanel({
           </>
         )}
         {isTextLesson && ttsWordByWord && (
-          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[34px] max-md:text-xs bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
+          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
             <span className="text-cyan-300 font-medium">Word Gap:</span>
             <input
               key={ttsWordInterval}
@@ -475,7 +475,7 @@ export function PlayerPanel({
           </div>
         )}
         {isTextLesson && ttsWordByWord && (
-          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[34px] max-md:text-xs bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
+          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
             <span className="text-cyan-300 font-medium">Letters/Gap:</span>
             <input
               key={ttsLettersPerGap}
@@ -517,7 +517,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsPrevWord()}
             title={`Go back to previous word (${displayKey(keybinds.prevWord)})`}
-            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[34px] max-md:text-xs px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
+            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
           >
             ⏮ Prev
           </button>
@@ -527,23 +527,23 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsSkipWord()}
             title={`Skip word (${displayKey(keybinds.skipWord)})`}
-            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[34px] max-md:text-xs px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
+            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
           >
             Skip ⏭
           </button>
         )}
-        <div className="flex flex-wrap items-center gap-1.5 md:gap-2.5 ml-auto justify-end">
-          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-emerald-500/30 rounded-lg px-2.5 py-1" title="Correct keystrokes" aria-label={`Correct keystrokes: ${videoSessionScores.correctChars}`}>
-            <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-glow-emerald" />
-            <span className="text-xs font-mono font-semibold text-emerald-300">{videoSessionScores.correctChars}</span>
+        <div className="flex max-md:flex-nowrap md:flex-wrap items-center gap-1 md:gap-2.5 ml-auto justify-end shrink-0">
+          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-emerald-500/30 rounded-md md:rounded-lg px-1 md:px-2.5 py-0.5 md:py-1 gap-1 md:gap-1.5" title="Correct keystrokes" aria-label={`Correct keystrokes: ${videoSessionScores.correctChars}`}>
+            <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 bg-emerald-400 rounded-full shadow-glow-emerald" />
+            <span className="text-[11px] md:text-xs font-mono font-semibold text-emerald-300">{videoSessionScores.correctChars}</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-amber-500/30 rounded-lg px-2.5 py-1" title="Hints used" aria-label={`Hints used: ${videoSessionScores.hintCount}`}>
-            <div className="w-2.5 h-2.5 bg-amber-400 rounded-full shadow-glow-amber" />
-            <span className="text-xs font-mono font-semibold text-amber-300">{videoSessionScores.hintCount}</span>
+          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-amber-500/30 rounded-md md:rounded-lg px-1 md:px-2.5 py-0.5 md:py-1 gap-1 md:gap-1.5" title="Hints used" aria-label={`Hints used: ${videoSessionScores.hintCount}`}>
+            <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 bg-amber-400 rounded-full shadow-glow-amber" />
+            <span className="text-[11px] md:text-xs font-mono font-semibold text-amber-300">{videoSessionScores.hintCount}</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-rose-500/30 rounded-lg px-2.5 py-1" title="Incorrect keystrokes" aria-label={`Incorrect keystrokes: ${videoSessionScores.incorrectChars}`}>
-            <div className="w-2.5 h-2.5 bg-rose-400 rounded-full shadow-glow-rose" />
-            <span className="text-xs font-mono font-semibold text-rose-300">{videoSessionScores.incorrectChars}</span>
+          <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-rose-500/30 rounded-md md:rounded-lg px-1 md:px-2.5 py-0.5 md:py-1 gap-1 md:gap-1.5" title="Incorrect keystrokes" aria-label={`Incorrect keystrokes: ${videoSessionScores.incorrectChars}`}>
+            <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 bg-rose-400 rounded-full shadow-glow-rose" />
+            <span className="text-[11px] md:text-xs font-mono font-semibold text-rose-300">{videoSessionScores.incorrectChars}</span>
           </div>
           {AI_COACH_ENABLED && selectedLesson && selectedLesson.video_id > 0 && (
             <button
