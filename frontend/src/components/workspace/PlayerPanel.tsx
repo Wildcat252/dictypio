@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import { displayKey, type Keybindings } from '../../keybindings'
@@ -74,7 +74,7 @@ function OptionMenu({
         aria-expanded={open}
         aria-label={`${label}: ${value}${suffix}`}
         onClick={() => setOpen((v) => !v)}
-        className="max-md:min-h-[40px] max-md:text-sm bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
+        className="max-md:min-h-[34px] max-md:text-xs bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
       >
         <span><span className="max-md:hidden">{label}: </span>{value}{suffix}</span>
         <svg
@@ -187,9 +187,27 @@ export function PlayerPanel({
   const totalDuration = selectedLesson?.duration || 0
   const sentenceCount = sentences.length
 
+  // Lock-screen / Control Center "Now Playing" card: give it a proper
+  // full-bleed square artwork instead of letting iOS guess from the page.
+  const lessonTitle = selectedLesson?.title
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    if (typeof MediaMetadata === 'undefined') return
+    const origin = window.location.origin
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: lessonTitle || 'Dictypio',
+      artist: 'Dictypio',
+      album: 'English Listening & Dictation',
+      artwork: [
+        { src: `${origin}/apple-touch-icon.png`, sizes: '180x180', type: 'image/png' },
+        { src: `${origin}/icon-512.png`, sizes: '512x512', type: 'image/png' },
+      ],
+    })
+  }, [lessonTitle])
+
   return (
-    <div className="w-full max-w-4xl mx-auto shrink-0 bg-abyss-900/90 backdrop-blur-md rounded-2xl border border-cyan-500/25 p-3 md:p-4 shadow-glass-glow">
-      <div className="mb-2 md:mb-4 text-center">
+    <div className="w-full max-w-4xl mx-auto shrink-0 bg-abyss-900/90 backdrop-blur-md rounded-2xl border border-cyan-500/25 p-2.5 md:p-4 shadow-glass-glow">
+      <div className="mb-1.5 md:mb-4 text-center">
         <h1 className="text-base md:text-xl font-bold bg-gradient-to-r from-slate-100 via-cyan-100 to-teal-200 bg-clip-text text-transparent text-center max-md:line-clamp-1 md:line-clamp-2 tracking-wide">
           {selectedLesson?.title || 'Select a lesson'}
         </h1>
@@ -215,7 +233,7 @@ export function PlayerPanel({
         />
       )}
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4 mb-2.5 md:mb-4">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4 mb-2 md:mb-4">
         {/* Media Player */}
         <div className="flex-1 flex flex-wrap md:flex-nowrap items-center justify-center md:justify-start gap-2.5 min-w-0 w-full">
           <button
@@ -235,7 +253,7 @@ export function PlayerPanel({
               }
             }}
             disabled={currentSentenceIndex === 0}
-            className="max-md:w-11 max-md:h-11 flex items-center justify-center p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-9 max-md:h-9 flex items-center justify-center p-1.5 md:p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Previous sentence"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -256,7 +274,7 @@ export function PlayerPanel({
               }
             }}
             disabled={!selectedLesson || !sentences.length}
-            className="max-md:w-14 max-md:h-12 flex items-center justify-center p-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
+            className="max-md:w-11 max-md:h-9 flex items-center justify-center p-1.5 md:p-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
             title={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
@@ -289,7 +307,7 @@ export function PlayerPanel({
               }
             }}
             disabled={!selectedLesson || !sentences.length}
-            className="max-md:w-11 max-md:h-11 flex items-center justify-center p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-9 max-md:h-9 flex items-center justify-center p-1.5 md:p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Replay current sentence"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -322,7 +340,7 @@ export function PlayerPanel({
               setIsPlaying(true)
             }}
             disabled={currentSentenceIndex >= sentences.length - 1}
-            className="max-md:w-11 max-md:h-11 flex items-center justify-center p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-9 max-md:h-9 flex items-center justify-center p-1.5 md:p-2 rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Next sentence"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -381,7 +399,7 @@ export function PlayerPanel({
           <button
             type="button"
             aria-pressed={ttsWordByWord}
-            className={`max-md:min-h-[40px] max-md:text-sm px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
+            className={`max-md:min-h-[34px] max-md:text-xs px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
               ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-cyan-400 shadow-glow-cyan'
               : 'bg-abyss-800/90 text-slate-300 border-cyan-500/30 hover:border-cyan-400/50 hover:bg-abyss-750'
               }`}
@@ -401,7 +419,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsPrevWord()}
             aria-label="Previous word"
-            className="md:hidden w-10 h-10 flex items-center justify-center bg-abyss-800/90 border border-cyan-500/30 text-slate-200 rounded-xl text-sm"
+            className="md:hidden w-9 h-9 flex items-center justify-center bg-abyss-800/90 border border-cyan-500/30 text-slate-200 rounded-xl text-sm"
           >
             ⏮
           </button>
@@ -409,7 +427,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsSkipWord()}
             aria-label="Skip word"
-            className="md:hidden w-10 h-10 flex items-center justify-center bg-abyss-800/90 border border-cyan-500/30 text-slate-200 rounded-xl text-sm"
+            className="md:hidden w-9 h-9 flex items-center justify-center bg-abyss-800/90 border border-cyan-500/30 text-slate-200 rounded-xl text-sm"
           >
             ⏭
           </button>
@@ -418,7 +436,7 @@ export function PlayerPanel({
             onClick={() => setShowWbwOptions((v) => !v)}
             aria-expanded={showWbwOptions}
             aria-label="Word-by-word options"
-            className={`md:hidden w-10 h-10 flex items-center justify-center rounded-xl border transition-colors ${showWbwOptions ? 'border-cyan-400 bg-cyan-950/80 text-cyan-200' : 'border-cyan-500/30 bg-abyss-800/90 text-slate-300'}`}
+            className={`md:hidden w-9 h-9 flex items-center justify-center rounded-xl border transition-colors ${showWbwOptions ? 'border-cyan-400 bg-cyan-950/80 text-cyan-200' : 'border-cyan-500/30 bg-abyss-800/90 text-slate-300'}`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
@@ -428,7 +446,7 @@ export function PlayerPanel({
           </>
         )}
         {isTextLesson && ttsWordByWord && (
-          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[40px] max-md:text-sm bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
+          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[34px] max-md:text-xs bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
             <span className="text-cyan-300 font-medium">Word Gap:</span>
             <input
               key={ttsWordInterval}
@@ -457,7 +475,7 @@ export function PlayerPanel({
           </div>
         )}
         {isTextLesson && ttsWordByWord && (
-          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[40px] max-md:text-sm bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
+          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[34px] max-md:text-xs bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
             <span className="text-cyan-300 font-medium">Letters/Gap:</span>
             <input
               key={ttsLettersPerGap}
@@ -499,7 +517,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsPrevWord()}
             title={`Go back to previous word (${displayKey(keybinds.prevWord)})`}
-            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[40px] max-md:text-sm px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
+            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[34px] max-md:text-xs px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
           >
             ⏮ Prev
           </button>
@@ -509,7 +527,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsSkipWord()}
             title={`Skip word (${displayKey(keybinds.skipWord)})`}
-            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[40px] max-md:text-sm px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
+            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[34px] max-md:text-xs px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
           >
             Skip ⏭
           </button>

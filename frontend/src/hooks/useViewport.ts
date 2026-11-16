@@ -36,9 +36,9 @@ export function isTouchOnly(): boolean {
 }
 
 /**
- * Keep `--vvh` on <html> equal to the visual viewport height, so `.h-app`
- * frames shrink to the area above the iOS on-screen keyboard instead of the
- * keyboard covering the bottom of the page.
+ * Keep `--vvh` on <html> equal to the visual viewport height, for
+ * overlays (modals, drawers) that must fit above the iOS keyboard. The main
+ * `.h-app` frame deliberately ignores it so typing never reflows the page.
  */
 export function useVisualViewportHeight(): void {
   useEffect(() => {
@@ -50,10 +50,6 @@ export function useVisualViewportHeight(): void {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
         root.style.setProperty('--vvh', `${Math.round(vv.height)}px`)
-        // Only on viewport resize (keyboard open/close), never on scroll:
-        // iOS scrolls the whole page to reveal a focused field, which would
-        // push the header off-screen now that the frame already fits.
-        if (window.scrollY !== 0) window.scrollTo(0, 0)
       })
     }
     update()

@@ -494,12 +494,12 @@ body {
    Tailwind utilities where they need to (input font size).           */
 /* ------------------------------------------------------------------ */
 
-/* App frame height: the visible area above the on-screen keyboard
-   (--vvh, set by useVisualViewportHeight), falling back to dvh/vh. */
+/* App frame height: full dynamic viewport
+   (dvh does not change when the iOS keyboard opens, so typing never
+   reflows the page; overlays use --vvh instead). */
 .h-app {
   height: 100vh;
   height: 100dvh;
-  height: var(--vvh, 100dvh);
 }
 
 .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
