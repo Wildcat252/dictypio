@@ -444,28 +444,42 @@ export function DictationArea({
                 })}
               </div>
               <div className="mt-5 pt-3 border-t border-cyan-500/20">
-                <div className="flex items-center flex-wrap gap-2">
+                <div className="flex items-center flex-wrap gap-1.5 md:gap-2">
                   <button
                     type="button"
                     onClick={onToggleTranslation}
                     title={`Translate this sentence (${displayKey(keybinds.translate)})`}
-                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 max-md:min-h-[44px] max-md:px-4 max-md:text-sm text-xs font-semibold transition-all ${translationVisible
+                    className={`inline-flex items-center gap-1.5 m-chip rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${translationVisible
                       ? 'border-cyan-400 bg-cyan-950/80 text-cyan-200 shadow-glow-cyan'
                       : 'border-cyan-500/30 bg-abyss-800/90 text-slate-300 hover:text-cyan-300 hover:border-cyan-400/50'
                       }`}
                   >
                     Translate
                   </button>
-                  <select
-                    value={translateLang}
-                    onChange={(e) => onChangeTranslateLang(e.target.value)}
-                    title="Translation language"
-                    className="rounded-xl border border-cyan-500/30 bg-abyss-800/90 px-3 py-1.5 max-md:min-h-[44px] text-xs text-cyan-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-                  >
-                    {translateLanguages.map((l) => (
-                      <option key={l.code} value={l.code} className="bg-abyss-850 text-slate-100">{l.label}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    {/* Phones: a compact chip shows the language; the real select sits
+                        invisibly on top (kept at 16px so iOS doesn't zoom on tap). */}
+                    <span
+                      aria-hidden
+                      className="md:hidden m-chip inline-flex items-center border border-cyan-500/30 bg-abyss-800/90 text-cyan-200"
+                    >
+                      {translateLanguages.find((l) => l.code === translateLang)?.label ?? translateLang}
+                      <svg className="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </span>
+                    <select
+                      value={translateLang}
+                      onChange={(e) => onChangeTranslateLang(e.target.value)}
+                      title="Translation language"
+                      aria-label="Translation language"
+                      className="max-md:absolute max-md:inset-0 max-md:w-full max-md:opacity-0 rounded-xl border border-cyan-500/30 bg-abyss-800/90 px-3 py-1.5 text-xs text-cyan-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                    >
+                      {translateLanguages.map((l) => (
+                        <option key={l.code} value={l.code} className="bg-abyss-850 text-slate-100">{l.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 {translationVisible && (
                   <div className="mt-3 text-sm md:text-base text-cyan-200/90 bg-abyss-950/60 border border-cyan-500/20 rounded-xl p-3 shadow-inner italic">

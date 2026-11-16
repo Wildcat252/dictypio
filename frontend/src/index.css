@@ -530,6 +530,28 @@ body {
     min-height: 44px;
   }
 
+  /* In-page controls on Workspace and Practice share one compact size,
+     matching the player row: 28px tall chips with 11px text. */
+  .m-chip {
+    min-height: 28px;
+    padding: 2px 6px;
+    gap: 4px;
+    font-size: 11px;
+    line-height: 1rem;
+    border-radius: 0.75rem;
+  }
+
+  /* Square icon buttons at the same height (speed −/+, bin, pager). */
+  .m-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+    font-size: 11px;
+    border-radius: 0.5rem;
+  }
+
   /* While typing, the bottom tab bar and floating history button would sit
      right above the keyboard — hide them until the field loses focus. */
   .app-root:has(input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):focus, textarea:focus) .hide-while-typing {

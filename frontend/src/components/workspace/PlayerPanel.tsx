@@ -75,7 +75,7 @@ function OptionMenu({
         aria-expanded={open}
         aria-label={`${label}: ${value}${suffix}`}
         onClick={() => setOpen((v) => !v)}
-        className="max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
+        className="m-chip max-md:shrink-0 bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
       >
         <span><span className="max-md:hidden">{label}: </span>{value}{suffix}</span>
         <svg
@@ -430,7 +430,7 @@ export function PlayerPanel({
             type="button"
             aria-pressed={ttsWordByWord}
             title="Word gap, letters per gap and repeat: Settings › Playback & Grading"
-            className={`max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
+            className={`m-chip max-md:shrink-0 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
               ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-cyan-400 shadow-glow-cyan'
               : 'bg-abyss-800/90 text-slate-300 border-cyan-500/30 hover:border-cyan-400/50 hover:bg-abyss-750'
               }`}
@@ -469,7 +469,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsPrevWord()}
             title={`Go back to previous word (${displayKey(keybinds.prevWord)})`}
-            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
+            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
           >
             ⏮ Prev
           </button>
@@ -479,7 +479,7 @@ export function PlayerPanel({
             type="button"
             onClick={() => ttsSkipWord()}
             title={`Skip word (${displayKey(keybinds.skipWord)})`}
-            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
+            className="max-md:hidden bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-cyan-300 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shadow-sm"
           >
             Skip ⏭
           </button>
@@ -501,7 +501,7 @@ export function PlayerPanel({
             <button
               type="button"
               onClick={() => onAskCoach(selectedLesson.video_id)}
-              className="ml-2 max-md:min-h-[40px] inline-flex items-center rounded-full border border-cyan-400/50 bg-gradient-to-r from-cyan-950/80 to-teal-950/80 px-3.5 py-1 text-xs font-semibold text-cyan-300 hover:text-white hover:bg-cyan-900/60 shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95"
+              className="ml-2 m-chip inline-flex items-center rounded-full border border-cyan-400/50 bg-gradient-to-r from-cyan-950/80 to-teal-950/80 px-3.5 py-1 text-xs font-semibold text-cyan-300 hover:text-white hover:bg-cyan-900/60 shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95"
             >
               Ask coach
             </button>
