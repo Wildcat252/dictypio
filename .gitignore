@@ -254,3 +254,6 @@ frontend/vite.config.d.ts
 # Cloud Run secrets (local only)
 .env.cloudrun
 youtube_cookies.txt
+
+# Firebase CLI cache
+.firebase/
