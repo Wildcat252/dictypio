@@ -68,6 +68,14 @@ export default function Settings() {
     setTtsVoicePerWordRepeat,
     ttsVoiceOrder,
     setTtsVoiceOrder,
+    ttsWordByWord,
+    setTtsWordByWord,
+    ttsWordInterval,
+    setTtsWordInterval,
+    ttsLettersPerGap,
+    setTtsLettersPerGap,
+    ttsWordRepeat,
+    setTtsWordRepeat,
   } = useWorkspace()
   const availableVoices = useAvailableVoices()
   // Accounts exist only on the web deployment; the desktop app has no ACCOUNT section.
@@ -547,69 +555,203 @@ export default function Settings() {
                   </div>
                 </div>
 
-                {/* Speak comma */}
+                {/* Word-by-word (text lessons) */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
                   <div>
                     <OptionTitle
-                      title="Speak “comma”"
-                      hint="In word-by-word mode, read commas aloud as “comma”."
+                      title="Word-by-word mode"
+                      hint="Text lessons speak a few words at a time with pauses in between, and you type each group. You can also switch it on and off from the player."
                     />
                   </div>
                   <label className="inline-flex items-center cursor-pointer max-md:min-h-[44px] max-md:min-w-[44px] max-md:justify-end">
                     <input
                       type="checkbox"
                       className="sr-only peer"
-                      checked={speakComma}
-                      onChange={(e) => setSpeakComma(e.target.checked)}
+                      checked={ttsWordByWord}
+                      onChange={(e) => setTtsWordByWord(e.target.checked)}
                     />
                     <div className="relative w-11 h-6 bg-abyss-750 rounded-full peer peer-checked:bg-cyan-600 shadow-glow-cyan after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-abyss-800/80 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
                   </label>
                 </div>
 
-                {/* Comma pause (replaces the spoken "comma") */}
-                {!speakComma && (
-                  <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4 ml-6">
+                <div className={`space-y-4 ml-3 md:ml-6 ${ttsWordByWord ? '' : 'opacity-50'}`}>
+                  {/* Word gap */}
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-cyan-500/20 p-4">
                     <div>
                       <OptionTitle
-                        title="Comma pause"
-                        hint="Silent gap at each comma instead of saying “comma”, in seconds."
+                        title="Word gap"
+                        hint="Silent gap between spoken words, in seconds (0–10)."
                       />
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setCommaPause(Math.max(0, Math.round((commaPause - 0.1) * 10) / 10))}
-                        disabled={commaPause <= 0}
-                        className="w-8 h-8 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Decrease comma pause"
+                        onClick={() => setTtsWordInterval(Math.max(0, Math.round((ttsWordInterval - 0.05) * 100) / 100))}
+                        disabled={ttsWordInterval <= 0}
+                        className="w-8 h-8 max-md:w-11 max-md:h-11 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Decrease word gap"
                       >
                         &minus;
                       </button>
                       <input
                         type="number"
+                        inputMode="decimal"
                         min={0}
-                        max={5}
-                        step={0.1}
-                        value={commaPause}
+                        max={10}
+                        step={0.05}
+                        value={ttsWordInterval}
                         onChange={(e) => {
                           const v = parseFloat(e.target.value)
-                          if (Number.isFinite(v)) setCommaPause(Math.min(5, Math.max(0, v)))
+                          if (Number.isFinite(v)) setTtsWordInterval(Math.min(10, Math.max(0, v)))
                         }}
                         className="w-20 border border-cyan-500/30 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                       />
                       <button
                         type="button"
-                        onClick={() => setCommaPause(Math.min(5, Math.round((commaPause + 0.1) * 10) / 10))}
-                        disabled={commaPause >= 5}
-                        className="w-8 h-8 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Increase comma pause"
+                        onClick={() => setTtsWordInterval(Math.min(10, Math.round((ttsWordInterval + 0.05) * 100) / 100))}
+                        disabled={ttsWordInterval >= 10}
+                        className="w-8 h-8 max-md:w-11 max-md:h-11 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Increase word gap"
                       >
                         +
                       </button>
                       <span className="text-sm text-slate-400">sec</span>
                     </div>
                   </div>
-                )}
+
+                  {/* Letters per gap */}
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-cyan-500/20 p-4">
+                    <div>
+                      <OptionTitle
+                        title="Letters per gap"
+                        hint="Speak about this many letters before pausing (1–120). Words are never split — a word that would exceed the budget starts the next group."
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTtsLettersPerGap(Math.max(1, ttsLettersPerGap - 1))}
+                        disabled={ttsLettersPerGap <= 1}
+                        className="w-8 h-8 max-md:w-11 max-md:h-11 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Decrease letters per gap"
+                      >
+                        &minus;
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={120}
+                        step={1}
+                        value={ttsLettersPerGap}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value, 10)
+                          if (Number.isFinite(v)) setTtsLettersPerGap(Math.min(120, Math.max(1, v)))
+                        }}
+                        className="w-20 border border-cyan-500/30 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setTtsLettersPerGap(Math.min(120, ttsLettersPerGap + 1))}
+                        disabled={ttsLettersPerGap >= 120}
+                        className="w-8 h-8 max-md:w-11 max-md:h-11 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Increase letters per gap"
+                      >
+                        +
+                      </button>
+                      <span className="text-sm text-slate-400 max-md:hidden">letters</span>
+                    </div>
+                  </div>
+
+                  {/* Repeat each group */}
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-cyan-500/20 p-4">
+                    <div>
+                      <OptionTitle
+                        title="Repeat each group"
+                        hint="How many times each group of words is spoken before moving on."
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((count) => (
+                        <button
+                          key={count}
+                          type="button"
+                          onClick={() => setTtsWordRepeat(count)}
+                          className={`px-3 py-1.5 max-md:px-2 max-md:min-h-[44px] max-md:min-w-[36px] text-sm rounded-lg border transition-colors ${ttsWordRepeat === count
+                            ? 'border-cyan-400/60 bg-cyan-500/10 text-cyan-300 font-semibold'
+                            : 'border-cyan-500/30 bg-abyss-800/80 text-slate-100 hover:bg-abyss-750'
+                            }`}
+                        >
+                          {count}×
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Speak comma */}
+                  <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">
+                    <div>
+                      <OptionTitle
+                        title="Speak “comma”"
+                        hint="In word-by-word mode, read commas aloud as “comma”."
+                      />
+                    </div>
+                    <label className="inline-flex items-center cursor-pointer max-md:min-h-[44px] max-md:min-w-[44px] max-md:justify-end">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={speakComma}
+                        onChange={(e) => setSpeakComma(e.target.checked)}
+                      />
+                      <div className="relative w-11 h-6 bg-abyss-750 rounded-full peer peer-checked:bg-cyan-600 shadow-glow-cyan after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-abyss-800/80 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                    </label>
+                  </div>
+
+                  {/* Comma pause (replaces the spoken "comma") */}
+                  {!speakComma && (
+                    <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4 ml-6">
+                      <div>
+                        <OptionTitle
+                          title="Comma pause"
+                          hint="Silent gap at each comma instead of saying “comma”, in seconds."
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCommaPause(Math.max(0, Math.round((commaPause - 0.1) * 10) / 10))}
+                          disabled={commaPause <= 0}
+                          className="w-8 h-8 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                          aria-label="Decrease comma pause"
+                        >
+                          &minus;
+                        </button>
+                        <input
+                          type="number"
+                          min={0}
+                          max={5}
+                          step={0.1}
+                          value={commaPause}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value)
+                            if (Number.isFinite(v)) setCommaPause(Math.min(5, Math.max(0, v)))
+                          }}
+                          className="w-20 border border-cyan-500/30 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCommaPause(Math.min(5, Math.round((commaPause + 0.1) * 10) / 10))}
+                          disabled={commaPause >= 5}
+                          className="w-8 h-8 rounded-lg border border-cyan-500/30 text-slate-100 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                          aria-label="Increase comma pause"
+                        >
+                          +
+                        </button>
+                        <span className="text-sm text-slate-400">sec</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Ignore punctuation */}
                 <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 p-4">

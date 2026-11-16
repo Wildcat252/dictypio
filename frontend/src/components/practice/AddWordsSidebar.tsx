@@ -79,7 +79,7 @@ export function AddWordsSidebar({
           type="button"
           onClick={handleAddWords}
           disabled={adding || newWords.trim().length === 0}
-          className="mt-2.5 w-full px-3 py-2.5 bg-gradient-to-r from-cyan-500 via-teal-500 to-sky-600 hover:from-cyan-400 hover:via-teal-400 hover:to-sky-500 text-white text-sm font-bold rounded-xl shadow-glow-cyan disabled:opacity-40 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+          className="m-chip mt-2.5 w-full px-3 py-2.5 bg-gradient-to-r from-cyan-500 via-teal-500 to-sky-600 hover:from-cyan-400 hover:via-teal-400 hover:to-sky-500 text-white text-sm font-bold rounded-xl shadow-glow-cyan disabled:opacity-40 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
         >
           {adding ? 'Adding…' : 'Add to practice'}
         </button>
