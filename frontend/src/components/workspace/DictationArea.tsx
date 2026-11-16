@@ -1,4 +1,6 @@
-import { useEffect, useRef, type MutableRefObject } from 'react'
+import { useEffect, useRef, useState, type MutableRefObject } from 'react'
+import { createPortal } from 'react-dom'
+import { MOBILE_HINT_SLOT_ID } from './PlayerPanel'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import { displayKey, type Keybindings } from '../../keybindings'
 import { playMistakeBuzz, type AudioSettings } from '../../audio'
@@ -79,6 +81,12 @@ export function DictationArea({
       wordInputRefs.current[nextIndex]?.focus()
     }
   }
+
+  // Phones: the Hint button lives in the player's first row (see PlayerPanel).
+  const [hintSlot, setHintSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    setHintSlot(document.getElementById(MOBILE_HINT_SLOT_ID))
+  }, [])
 
   const handleMobileHintClick = () => {
     if (!currentSentence || isCurrentSentenceFullyCorrect) return
@@ -209,13 +217,15 @@ export function DictationArea({
                   <span>Correct</span>
                 </p>
               </div>
-              <div className="-mt-1 mb-3 md:hidden">
+              {hintSlot && createPortal(
                 <button
                   type="button"
                   onClick={handleMobileHintClick}
+                  onMouseDown={(e) => e.preventDefault()}
                   disabled={Boolean(isCurrentSentenceFullyCorrect)}
                   title="Reveal current word (Tab)"
-                  className="inline-flex items-center gap-2 min-h-[44px] rounded-xl border border-amber-400/40 bg-amber-950/60 px-4 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-900/60 shadow-glow-amber disabled:pointer-events-none disabled:opacity-40 transition-all"
+                  aria-label="Hint"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-amber-400/40 bg-amber-950/60 text-amber-300 shadow-glow-amber disabled:pointer-events-none disabled:opacity-40 transition-all"
                 >
                   <svg className="w-4 h-4 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                     <path
@@ -225,9 +235,9 @@ export function DictationArea({
                       d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
                     />
                   </svg>
-                  Hint
-                </button>
-              </div>
+                </button>,
+                hintSlot,
+              )}
               <div className="font-typing text-lg md:text-xl leading-relaxed text-slate-100 flex flex-wrap items-baseline gap-x-2 gap-y-3 md:gap-x-2.5 md:gap-y-4 flex-1 content-start">
                 {words.map((word, idx) => {
                   if (isPunctuationOnlyToken(word)) {
