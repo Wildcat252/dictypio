@@ -329,6 +329,8 @@ class YouTubeProcessor:
                             timeout=60
                         )
 
+                        if result_manual.returncode != 0:
+                            print(f"Warning: manual subtitle download failed: {result_manual.stderr[-800:]}")
                         if result_manual.returncode == 0:
                             # Look for downloaded SRT subtitle files
                             for file in os.listdir(tmpdir):
@@ -365,6 +367,8 @@ class YouTubeProcessor:
                                 timeout=60
                             )
 
+                            if result_auto.returncode != 0:
+                                print(f"Warning: auto subtitle download failed: {result_auto.stderr[-800:]}")
                             if result_auto.returncode == 0:
                                 # Look for downloaded SRT subtitle files
                                 for file in os.listdir(tmpdir):
@@ -378,6 +382,8 @@ class YouTubeProcessor:
                                         subtitle_path = os.path.join(tmpdir, file)
                                         with open(subtitle_path, 'r', encoding='utf-8') as f:
                                             subtitles_data = f.read()
+                        if not subtitles_data:
+                            print(f"Warning: no subtitle file written; yt-dlp said: {result_auto.stderr[-800:]}")
                     except subprocess.TimeoutExpired:
                         print("Warning: Subtitle download timed out")
                     except FileNotFoundError:
