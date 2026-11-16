@@ -16,7 +16,7 @@ const MAX_DISPLAY_NAME_LENGTH = 50
 
 /** Settings → ACCOUNT: display name, email, password, and deleting the account. */
 export function AccountSection() {
-  const { user, refreshUser } = useAuth()
+  const { user, refreshUser, logout } = useAuth()
 
   // An email change is confirmed from a link, usually in another tab; pick it
   // up when the user comes back to this one.
@@ -43,6 +43,15 @@ export function AccountSection() {
         <PasswordCard />
         <DeleteAccountCard />
       </div>
+
+      {/* Phones have no header Sign out button (the nav moved to a bottom tab bar). */}
+      <button
+        type="button"
+        onClick={() => logout()}
+        className="md:hidden mt-6 w-full min-h-[44px] rounded-lg border border-cyan-500/30 text-slate-200 active:bg-abyss-800 font-medium"
+      >
+        Sign out
+      </button>
     </div>
   )
 }

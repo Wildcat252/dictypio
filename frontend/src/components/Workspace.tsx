@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { AppHeader } from './AppHeader'
+import { AppHeader, MobileTabBar } from './AppHeader'
+import { straightenPunctuation } from '../lib/smartPunctuation'
 import {
   api,
   upsertCurrentLessonSession,
@@ -159,8 +160,6 @@ export default function Workspace() {
     waveform: audio.correctWaveform,
   }
   const translationCacheRef = useRef<Map<string, string>>(new Map())
-  const [lessonMenuOpen, setLessonMenuOpen] = useState<number | null>(null)
-  const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   // Desktop sidebar collapse, remembered across visits
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -184,20 +183,6 @@ export default function Workspace() {
     wordIndex: number
     type: 'correct' | 'wrong'
   } | null>(null)
-
-  useEffect(() => {
-    if (!lessonMenuOpen) return
-    const onClose = () => setLessonMenuOpen(null)
-    window.addEventListener('click', onClose)
-    return () => window.removeEventListener('click', onClose)
-  }, [lessonMenuOpen])
-
-  useEffect(() => {
-    if (!playlistMenuOpen) return
-    const onClose = () => setPlaylistMenuOpen(false)
-    window.addEventListener('click', onClose)
-    return () => window.removeEventListener('click', onClose)
-  }, [playlistMenuOpen])
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 768px)')
@@ -288,7 +273,6 @@ export default function Workspace() {
   } = useLessonData()
 
   const handleLessonSelect = async (lesson: Lesson) => {
-    setLessonMenuOpen(null)
     setMobileSidebarOpen(false)
     if (
       selectedLesson &&
@@ -445,7 +429,7 @@ export default function Workspace() {
 
 
   const normalizeWord = (w: string) => {
-    let s = w
+    let s = straightenPunctuation(w)
     if (ignoreCase) s = s.toLowerCase()
     if (ignorePunctuation) s = s.replace(/[^\w\s,.?!]/g, '')
     return s
@@ -692,7 +676,7 @@ export default function Workspace() {
 
 
   return (
-    <div className="h-screen min-h-0 flex flex-col bg-transparent text-slate-100">
+    <div className="app-root h-app min-h-0 flex flex-col bg-transparent text-slate-100">
       {/* Header */}
       <AppHeader
         active="workspace"
@@ -704,6 +688,7 @@ export default function Workspace() {
 
         <WorkspaceSidebar
           mobileSidebarOpen={mobileSidebarOpen}
+          onCloseMobile={() => setMobileSidebarOpen(false)}
           sidebarCollapsed={sidebarCollapsed}
           onLessonSelect={handleLessonSelect}
           onOpenImport={() => setIsImportModalOpen(true)}
@@ -757,7 +742,7 @@ export default function Workspace() {
       </div>
 
       {/* Bottom bar: import progress + shortcuts */}
-      <footer className="flex-shrink-0 border-t border-cyan-500/20 bg-abyss-900/90 backdrop-blur-md px-3 md:px-4 py-2 md:py-1.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-6 text-xs text-slate-300">
+      <footer className={`${isImportInProgress ? '' : 'max-md:hidden'} flex-shrink-0 border-t border-cyan-500/20 bg-abyss-900/90 backdrop-blur-md px-3 md:px-4 py-2 md:py-1.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-6 text-xs text-slate-300`}>
         <div className="flex-1 min-w-0 md:pr-4">
           {isImportInProgress && (
             <div className="flex items-center gap-3">
@@ -771,7 +756,7 @@ export default function Workspace() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-start md:justify-end">
+        <div className="hidden md:flex items-center gap-2 md:gap-3 flex-wrap justify-start md:justify-end">
           <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.playPause)}</kbd> play/pause</span>
           <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.replay)}</kbd> replay</span>
           <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">{displayKey(keybinds.prevSentence)}</kbd> previous</span>
@@ -799,6 +784,8 @@ export default function Workspace() {
         </div>
       </footer>
 
+      <MobileTabBar active="workspace" />
+
       {/* Import Modal */}
       <ImportModal
         isOpen={isImportModalOpen}
@@ -815,7 +802,7 @@ export default function Workspace() {
       />
 
       {/* Notifications */}
-      <div className="fixed top-3 right-3 left-3 md:left-auto md:top-4 md:right-4 z-[60] space-y-2 max-md:max-w-none">
+      <div className="fixed top-[calc(env(safe-area-inset-top)+0.75rem)] right-3 left-3 md:left-auto md:top-4 md:right-4 z-[60] space-y-2 max-md:max-w-none">
         {notifications.map((note) => (
           <div
             key={note.id}

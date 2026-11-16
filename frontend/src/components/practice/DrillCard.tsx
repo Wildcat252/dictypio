@@ -71,12 +71,12 @@ export function DrillCard({
           </span>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2.5 mb-5">
+        <div className="grid grid-cols-2 sm:flex sm:items-center sm:flex-wrap gap-2.5 mb-5">
           <button
             type="button"
             onClick={() => speak(target)}
             title="Replay the word (Enter)"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white text-sm font-semibold shadow-glow-cyan transition-all transform hover:scale-[1.03] active:scale-[0.97]"
+            className="max-md:min-h-[44px] max-md:justify-center inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white text-sm font-semibold shadow-glow-cyan transition-all transform hover:scale-[1.03] active:scale-[0.97]"
           >
             ▶ Replay
           </button>
@@ -84,7 +84,7 @@ export function DrillCard({
             type="button"
             onClick={spell}
             title="Spell the word letter by letter (\)"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-cyan-500/30 bg-abyss-800/90 text-sm text-slate-200 hover:text-cyan-300 hover:border-cyan-400/60 hover:bg-abyss-750 transition-all"
+            className="max-md:min-h-[44px] max-md:justify-center inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-cyan-500/30 bg-abyss-800/90 text-sm text-slate-200 hover:text-cyan-300 hover:border-cyan-400/60 hover:bg-abyss-750 transition-all"
           >
             Spell
           </button>
@@ -92,7 +92,7 @@ export function DrillCard({
             type="button"
             onClick={() => setHintShown((h) => !h)}
             title="Reveal or hide the word (Tab)"
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-semibold transition-all ${hintShown
+            className={`max-md:min-h-[44px] max-md:justify-center inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-semibold transition-all ${hintShown
               ? 'border-amber-400/60 bg-amber-950/80 text-amber-300 shadow-glow-amber'
               : 'border-amber-500/30 bg-abyss-800/80 text-amber-300/80 hover:bg-amber-950/60 hover:border-amber-400/50'
               }`}
@@ -103,7 +103,7 @@ export function DrillCard({
             type="button"
             onClick={toggleTranslation}
             title="Translate the word (`)"
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-semibold transition-all ${translationVisible
+            className={`max-md:min-h-[44px] max-md:justify-center inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-semibold transition-all ${translationVisible
               ? 'border-cyan-400 bg-cyan-950/80 text-cyan-200 shadow-glow-cyan'
               : 'border-cyan-500/30 bg-abyss-800/80 text-slate-300 hover:text-cyan-300 hover:border-cyan-400/50'
               }`}
@@ -111,14 +111,14 @@ export function DrillCard({
             Translate
           </button>
 
-          <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-300">
+          <div className="col-span-2 max-md:justify-center sm:ml-auto flex items-center gap-1.5 text-xs max-md:text-sm text-slate-300">
             <span className="mr-1 text-cyan-400 font-semibold">Speed</span>
             <button
               type="button"
               onClick={() => stepSpeed(-1)}
               disabled={playbackSpeed <= SPEED_OPTIONS[0]}
               title="Slower (-)"
-              className="w-7 h-7 rounded-lg border border-cyan-500/30 bg-abyss-800/90 hover:bg-abyss-750 hover:text-cyan-300 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold"
+              className="w-7 h-7 max-md:w-11 max-md:h-11 rounded-lg border border-cyan-500/30 bg-abyss-800/90 hover:bg-abyss-750 hover:text-cyan-300 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold"
             >
               −
             </button>
@@ -130,7 +130,7 @@ export function DrillCard({
               onClick={() => stepSpeed(1)}
               disabled={playbackSpeed >= SPEED_OPTIONS[SPEED_OPTIONS.length - 1]}
               title="Faster (=)"
-              className="w-7 h-7 rounded-lg border border-cyan-500/30 bg-abyss-800/90 hover:bg-abyss-750 hover:text-cyan-300 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold"
+              className="w-7 h-7 max-md:w-11 max-md:h-11 rounded-lg border border-cyan-500/30 bg-abyss-800/90 hover:bg-abyss-750 hover:text-cyan-300 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold"
             >
               +
             </button>
@@ -145,7 +145,10 @@ export function DrillCard({
           placeholder="Type what you hear…"
           aria-label="Practice word"
           autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
           spellCheck={false}
+          enterKeyHint="go"
           className={`font-typing w-full bg-transparent border-0 outline-none px-1.5 py-1.5 text-slate-100 placeholder:text-slate-600 ${underlineClass}`}
           style={{ fontSize: 'clamp(1.4rem, 5vw, 2.5rem)' }}
         />
@@ -178,14 +181,14 @@ export function DrillCard({
             <button
               type="button"
               onClick={() => goTo(index - 1)}
-              className="px-3 py-1.5 text-sm border border-cyan-500/30 bg-abyss-800/80 text-slate-200 rounded-xl hover:text-cyan-300 hover:border-cyan-400/50 hover:bg-abyss-750 transition-all"
+              className="max-md:min-h-[44px] max-md:px-4 px-3 py-1.5 text-sm border border-cyan-500/30 bg-abyss-800/80 text-slate-200 rounded-xl hover:text-cyan-300 hover:border-cyan-400/50 hover:bg-abyss-750 transition-all"
             >
               Prev
             </button>
             <button
               type="button"
               onClick={() => goTo(index + 1)}
-              className="px-3 py-1.5 text-sm border border-cyan-500/30 bg-abyss-800/80 text-slate-200 rounded-xl hover:text-cyan-300 hover:border-cyan-400/50 hover:bg-abyss-750 transition-all"
+              className="max-md:min-h-[44px] max-md:px-4 px-3 py-1.5 text-sm border border-cyan-500/30 bg-abyss-800/80 text-slate-200 rounded-xl hover:text-cyan-300 hover:border-cyan-400/50 hover:bg-abyss-750 transition-all"
             >
               Next
             </button>
@@ -193,7 +196,7 @@ export function DrillCard({
               type="button"
               onClick={goRandom}
               title="Jump to a random word (/)"
-              className="px-3 py-1.5 text-sm border border-cyan-500/30 bg-abyss-800/80 text-slate-200 rounded-xl hover:text-cyan-300 hover:border-cyan-400/50 hover:bg-abyss-750 transition-all"
+              className="max-md:min-h-[44px] max-md:px-4 px-3 py-1.5 text-sm border border-cyan-500/30 bg-abyss-800/80 text-slate-200 rounded-xl hover:text-cyan-300 hover:border-cyan-400/50 hover:bg-abyss-750 transition-all"
             >
               random
             </button>

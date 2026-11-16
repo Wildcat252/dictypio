@@ -112,7 +112,7 @@ export default function YouTubeProcessor() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-abyss-800/60 text-left">
+    <div className="min-h-dvh bg-abyss-800/60 text-left">
       <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 space-y-6 pb-12">
       {/* YouTube URL Input Form */}
       <div className="bg-abyss-800/80 rounded-lg shadow-xl p-4 sm:p-6">

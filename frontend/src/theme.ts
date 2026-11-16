@@ -162,6 +162,9 @@ export function applyTheme(settings: ThemeSettings): void {
   root.dataset.theme = resolveTheme(settings.theme)
   root.style.setProperty('--font-ui', fontStack(settings.uiFont))
   root.style.setProperty('--font-typing', fontStack(settings.typingFont))
+  // Tint the iOS/Android browser chrome to match the page ground (--abyss-900).
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta) meta.setAttribute('content', root.dataset.theme === 'skeuo' ? '#faf8f4' : '#060d1a')
 }
 
 /**

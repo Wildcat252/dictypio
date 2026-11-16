@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { AppHeader } from './AppHeader'
+import { AppHeader, MobileTabBar } from './AppHeader'
+import { useIsTouchOnly } from '../hooks/useViewport'
 import {
   getConfig,
   setConfig,
@@ -185,9 +186,11 @@ export default function Settings() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
+  const isTouchOnlyDevice = useIsTouchOnly()
   const settingsSections = [
     { id: 'ai-api-key' as SettingsSection, label: 'AI API-KEY' },
-    { id: 'keybindings' as SettingsSection, label: 'KEYBOARD SHORTCUTS' },
+    // Capturing a shortcut needs a physical keyboard — hide it on phones.
+    ...(isTouchOnlyDevice ? [] : [{ id: 'keybindings' as SettingsSection, label: 'KEYBOARD SHORTCUTS' }]),
     { id: 'audio' as SettingsSection, label: 'AUDIO' },
     { id: 'playback' as SettingsSection, label: 'PLAYBACK & GRADING' },
     { id: 'appearance' as SettingsSection, label: 'APPEARANCE' },
@@ -245,7 +248,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="h-screen min-h-0 flex flex-col bg-abyss-800/80">
+    <div className="app-root h-app min-h-0 flex flex-col bg-abyss-800/80">
       {/* Header */}
       <AppHeader
         active="settings"
@@ -271,14 +274,14 @@ export default function Settings() {
         {/* Left Sidebar */}
         <aside
           id="settings-nav-sidebar"
-          className={`w-full md:w-80 shrink-0 max-md:max-h-[min(50vh,380px)] md:max-h-none bg-abyss-900/60 border-cyan-500/20 border-b md:border-b-0 md:border-r flex flex-col min-h-0 ${!mobileNavOpen ? 'max-md:hidden' : ''
+          className={`w-full md:w-80 shrink-0 max-md:max-h-[min(50dvh,380px)] md:max-h-none bg-abyss-900/60 border-cyan-500/20 border-b md:border-b-0 md:border-r flex flex-col min-h-0 ${!mobileNavOpen ? 'max-md:hidden' : ''
             }`}
         >
           <div className="md:hidden flex justify-end border-b border-cyan-500/20 px-3 py-1.5 bg-abyss-900/60">
             <button
               type="button"
               onClick={() => setMobileNavOpen(false)}
-              className="text-sm font-medium text-cyan-300 hover:text-cyan-200 py-1 px-2 rounded-md hover:bg-cyan-500/10"
+              className="max-md:min-h-[44px] max-md:px-4 text-sm font-medium text-cyan-300 hover:text-cyan-200 py-1 px-2 rounded-md hover:bg-cyan-500/10"
             >
               Done
             </button>
@@ -552,7 +555,7 @@ export default function Settings() {
                       hint="In word-by-word mode, read commas aloud as “comma”."
                     />
                   </div>
-                  <label className="inline-flex items-center cursor-pointer">
+                  <label className="inline-flex items-center cursor-pointer max-md:min-h-[44px] max-md:min-w-[44px] max-md:justify-end">
                     <input
                       type="checkbox"
                       className="sr-only peer"
@@ -616,7 +619,7 @@ export default function Settings() {
                       hint="When on, punctuation isn't required to match (commas, periods, etc.)."
                     />
                   </div>
-                  <label className="inline-flex items-center cursor-pointer">
+                  <label className="inline-flex items-center cursor-pointer max-md:min-h-[44px] max-md:min-w-[44px] max-md:justify-end">
                     <input
                       type="checkbox"
                       className="sr-only peer"
@@ -635,7 +638,7 @@ export default function Settings() {
                       hint="When on, uppercase and lowercase are treated the same."
                     />
                   </div>
-                  <label className="inline-flex items-center cursor-pointer">
+                  <label className="inline-flex items-center cursor-pointer max-md:min-h-[44px] max-md:min-w-[44px] max-md:justify-end">
                     <input
                       type="checkbox"
                       className="sr-only peer"
@@ -656,6 +659,8 @@ export default function Settings() {
           {activeSection === 'account' && showAccount && <AccountSection />}
         </main>
       </div>
+
+      <MobileTabBar active="settings" />
     </div>
   )
 }

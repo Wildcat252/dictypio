@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
 // Same backdrop as the app, so there is no flash while the session is checked.
-const BLANK = <div className="min-h-screen bg-abyss-900" aria-busy="true" />
+const BLANK = <div className="min-h-dvh bg-abyss-900" aria-busy="true" />
 
 /** The app itself: needs a signed-in user when accounts are enabled. */
 export function ProtectedRoute() {

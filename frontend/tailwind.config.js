@@ -10,6 +10,9 @@ const scale = (prefix, steps) =>
   Object.fromEntries(steps.map((step) => [step, v(`${prefix}-${step}`)]))
 
 export default {
+  // Hover styles only where a real pointer hovers — stops taps on iPhone
+  // leaving buttons stuck in their hover state.
+  future: { hoverOnlyWhenSupported: true },
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",

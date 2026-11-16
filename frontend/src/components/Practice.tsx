@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { AppHeader } from './AppHeader'
+import { AppHeader, MobileTabBar } from './AppHeader'
+import { straightenPunctuation } from '../lib/smartPunctuation'
+import { isTouchOnly } from '../hooks/useViewport'
 import {
   getUserStats,
   getPracticeWordStates,
@@ -204,7 +206,7 @@ export default function Practice() {
 
   const normalizeWord = useCallback(
     (w: string) => {
-      let s = w
+      let s = straightenPunctuation(w)
       if (ignoreCase) s = s.toLowerCase()
       if (ignorePunctuation) s = s.replace(/[^\w\s,.?!]/g, '')
       return s
@@ -455,6 +457,10 @@ export default function Practice() {
   // input has focus, so they must not be characters you'd type.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // On-screen keyboard: characters typed into the answer are text, not
+      // shortcuts (e.g. "well-known"). Return still replays; the rest have buttons.
+      const t = e.target as HTMLElement | null
+      if (isTouchOnly() && t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') && e.key !== 'Enter') return
       if (e.key === 'Enter') {
         e.preventDefault()
         speak(target)
@@ -696,7 +702,7 @@ export default function Practice() {
   )
 
   return (
-    <div className="h-screen min-h-0 flex flex-col bg-abyss-800/80">
+    <div className="app-root h-app min-h-0 flex flex-col bg-abyss-800/80">
       {/* Header */}
       <AppHeader
         active="practice"
@@ -707,6 +713,7 @@ export default function Practice() {
         {/* Sidebar: import more words */}
         <AddWordsSidebar
           sidebarOpen={sidebarOpen}
+          onCloseMobile={() => setSidebarOpen(false)}
           sidebarCollapsed={sidebarCollapsed}
           newWords={newWords}
           setNewWords={setNewWords}
@@ -788,7 +795,7 @@ export default function Practice() {
       </div>
 
       {/* Bottom bar: keyboard shortcuts */}
-      <footer className="flex-shrink-0 border-t border-cyan-500/20 bg-abyss-900/60 px-3 md:px-4 py-2 md:py-1.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-6 text-xs text-slate-400">
+      <footer className="hide-while-typing flex-shrink-0 border-t border-cyan-500/20 bg-abyss-900/60 px-3 md:px-4 py-2 md:py-1.5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-6 text-xs text-slate-400">
         <div className="flex-1 min-w-0 md:pr-4">
           {words.length > 0 && (
             <span className="whitespace-nowrap">
@@ -797,7 +804,7 @@ export default function Practice() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 md:gap-4 flex-wrap justify-start md:justify-end">
+        <div className="hidden md:flex items-center gap-2 md:gap-4 flex-wrap justify-start md:justify-end">
           <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">Enter</kbd> replay</span>
           <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">[</kbd> previous</span>
           <span><kbd className="px-1.5 py-0.5 bg-abyss-800 border border-cyan-500/30 text-cyan-300 rounded font-mono shadow-sm">]</kbd> next</span>
@@ -817,6 +824,8 @@ export default function Practice() {
           </span>
         </div>
       </footer>
+
+      <MobileTabBar active="practice" />
     </div>
   )
 }

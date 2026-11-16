@@ -95,9 +95,9 @@ export default function LessonHistory({ videoId, onResume, isLessonFinished }: L
   }
 
   return (
-    <div className="fixed bottom-6 right-3 left-3 md:left-auto md:bottom-8 md:right-4 z-40 flex flex-col items-stretch md:items-end space-y-2">
+    <div className="hide-while-typing pointer-events-none [&>*]:pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-3 left-3 md:left-auto md:bottom-8 md:right-4 z-40 flex flex-col items-stretch md:items-end space-y-2">
       {coachOpen && (
-        <div className="w-full max-w-sm md:w-80 max-h-[60vh] overflow-hidden rounded-2xl border border-cyan-500/30 bg-abyss-900/95 backdrop-blur-xl shadow-glass-glow flex flex-col text-slate-100">
+        <div className="w-full max-w-sm md:w-80 max-h-[calc(var(--vvh,100dvh)*0.6)] overflow-hidden rounded-2xl border border-cyan-500/30 bg-abyss-900/95 backdrop-blur-xl shadow-glass-glow flex flex-col text-slate-100">
           <div className="px-3.5 py-2.5 border-b border-cyan-500/20 flex items-center justify-between bg-abyss-850/60">
             <div className="min-w-0">
               <h2 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-teal-200 truncate">Ask coach about session</h2>
@@ -110,7 +110,7 @@ export default function LessonHistory({ videoId, onResume, isLessonFinished }: L
             <button
               type="button"
               onClick={() => setCoachOpen(false)}
-              className="p-1 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-colors"
+              className="tap flex items-center justify-center p-1 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-colors"
               aria-label="Close coach panel"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,12 +169,12 @@ export default function LessonHistory({ videoId, onResume, isLessonFinished }: L
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-xl bg-abyss-800/90 border border-cyan-500/30 text-cyan-300 hover:text-cyan-200 hover:bg-abyss-750 hover:border-cyan-400/60 px-3.5 py-2 text-xs font-semibold shadow-glow-cyan backdrop-blur-md transition-all self-end md:self-auto"
+        className="max-md:min-h-[44px] max-md:text-sm rounded-xl bg-abyss-800/90 border border-cyan-500/30 text-cyan-300 hover:text-cyan-200 hover:bg-abyss-750 hover:border-cyan-400/60 px-3.5 py-2 text-xs font-semibold shadow-glow-cyan backdrop-blur-md transition-all self-end md:self-auto"
       >
         {open ? 'Hide History' : 'Lesson History'}
       </button>
       {open && (
-        <div className="mt-1 w-full max-w-sm md:w-80 max-h-[min(60vh,400px)] overflow-hidden rounded-2xl border border-cyan-500/30 bg-abyss-900/95 backdrop-blur-xl shadow-glass-glow flex flex-col text-slate-100">
+        <div className="mt-1 w-full max-w-sm md:w-80 max-h-[min(calc(var(--vvh,100dvh)*0.55),400px)] overflow-hidden rounded-2xl border border-cyan-500/30 bg-abyss-900/95 backdrop-blur-xl shadow-glass-glow flex flex-col text-slate-100">
           <div className="p-3 border-b border-cyan-500/20 font-bold text-sm shrink-0 bg-abyss-850/60 bg-gradient-to-r from-cyan-300 to-teal-200 bg-clip-text text-transparent">
             Lesson history
           </div>

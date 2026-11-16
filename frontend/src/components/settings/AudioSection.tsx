@@ -193,7 +193,7 @@ export function AudioSection({
                         hint={`Read each sentence with ${MIN_VOICE_POOL}–${MAX_VOICE_POOL} voices instead of one, so your ear does not settle into a single speaker.`}
                       />
                     </div>
-                    <label className="inline-flex items-center cursor-pointer">
+                    <label className="inline-flex items-center cursor-pointer max-md:min-h-[44px] max-md:min-w-[44px] max-md:justify-end">
                       <input
                         type="checkbox"
                         className="sr-only peer"
@@ -352,7 +352,7 @@ export function AudioSection({
                   <div>
                     <OptionTitle title="Correct sound" hint="Chime when a sentence is fully correct." />
                   </div>
-                  <label className="inline-flex items-center cursor-pointer">
+                  <label className="inline-flex items-center cursor-pointer max-md:min-h-[44px] max-md:min-w-[44px] max-md:justify-end">
                     <input
                       type="checkbox"
                       className="sr-only peer"
@@ -371,7 +371,7 @@ export function AudioSection({
                     value={Math.round(audio.correctVolume * 100)}
                     disabled={!audio.correctEnabled}
                     onChange={(e) => updateAudio({ correctVolume: Number(e.target.value) / 100 })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-10 text-right tabular-nums">{Math.round(audio.correctVolume * 100)}%</span>
                   <button
@@ -385,7 +385,7 @@ export function AudioSection({
                       waveform: audio.correctWaveform,
                     })}
                     disabled={!audio.correctEnabled}
-                    className="px-3 py-1.5 text-xs font-medium text-slate-300 border border-cyan-500/30 rounded-lg hover:bg-abyss-750 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="max-md:min-h-[40px] px-3 py-1.5 text-xs font-medium text-slate-300 border border-cyan-500/30 rounded-lg hover:bg-abyss-750 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Test
                   </button>
@@ -394,14 +394,14 @@ export function AudioSection({
                 {/* Waveform */}
                 <div className="mt-3 flex items-center gap-3">
                   <span className="text-xs text-slate-400 w-14 shrink-0">Waveform</span>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {WAVEFORMS.map((wf) => (
                       <button
                         key={wf}
                         type="button"
                         disabled={!audio.correctEnabled}
                         onClick={() => updateAudio({ correctWaveform: wf as Waveform })}
-                        className={`px-2.5 py-1 text-xs rounded-lg border capitalize transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${audio.correctWaveform === wf
+                        className={`max-md:min-h-[40px] px-2.5 py-1 text-xs rounded-lg border capitalize transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${audio.correctWaveform === wf
                           ? 'border-cyan-400/60 bg-cyan-500/10 text-cyan-300 font-semibold'
                           : 'border-cyan-500/30 bg-abyss-800/80 text-slate-100 hover:bg-abyss-750'
                           }`}
@@ -422,7 +422,7 @@ export function AudioSection({
                     value={Math.round(audio.correctBaseFreq)}
                     disabled={!audio.correctEnabled}
                     onChange={(e) => updateAudio({ correctBaseFreq: Number(e.target.value) })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-14 text-right tabular-nums">{Math.round(audio.correctBaseFreq)} Hz</span>
                 </div>
@@ -438,7 +438,7 @@ export function AudioSection({
                     value={audio.correctNoteCount}
                     disabled={!audio.correctEnabled}
                     onChange={(e) => updateAudio({ correctNoteCount: Number(e.target.value) })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-14 text-right tabular-nums">{audio.correctNoteCount}</span>
                 </div>
@@ -454,7 +454,7 @@ export function AudioSection({
                     value={Math.round(audio.correctNoteSpacing * 1000)}
                     disabled={!audio.correctEnabled}
                     onChange={(e) => updateAudio({ correctNoteSpacing: Number(e.target.value) / 1000 })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-14 text-right tabular-nums">{Math.round(audio.correctNoteSpacing * 1000)} ms</span>
                 </div>
@@ -470,7 +470,7 @@ export function AudioSection({
                     value={Math.round(audio.correctNoteDuration * 1000)}
                     disabled={!audio.correctEnabled}
                     onChange={(e) => updateAudio({ correctNoteDuration: Number(e.target.value) / 1000 })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-14 text-right tabular-nums">{Math.round(audio.correctNoteDuration * 1000)} ms</span>
                 </div>
@@ -482,7 +482,7 @@ export function AudioSection({
                   <div>
                     <OptionTitle title="Error sound" hint="Buzz on a wrong keystroke." />
                   </div>
-                  <label className="inline-flex items-center cursor-pointer">
+                  <label className="inline-flex items-center cursor-pointer max-md:min-h-[44px] max-md:min-w-[44px] max-md:justify-end">
                     <input
                       type="checkbox"
                       className="sr-only peer"
@@ -501,7 +501,7 @@ export function AudioSection({
                     value={Math.round(audio.errorVolume * 100)}
                     disabled={!audio.errorEnabled}
                     onChange={(e) => updateAudio({ errorVolume: Number(e.target.value) / 100 })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-10 text-right tabular-nums">{Math.round(audio.errorVolume * 100)}%</span>
                   <button
@@ -514,7 +514,7 @@ export function AudioSection({
                       waveform: audio.errorWaveform,
                     })}
                     disabled={!audio.errorEnabled}
-                    className="px-3 py-1.5 text-xs font-medium text-slate-300 border border-cyan-500/30 rounded-lg hover:bg-abyss-750 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="max-md:min-h-[40px] px-3 py-1.5 text-xs font-medium text-slate-300 border border-cyan-500/30 rounded-lg hover:bg-abyss-750 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Test
                   </button>
@@ -523,14 +523,14 @@ export function AudioSection({
                 {/* Waveform */}
                 <div className="mt-3 flex items-center gap-3">
                   <span className="text-xs text-slate-400 w-14 shrink-0">Waveform</span>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {WAVEFORMS.map((wf) => (
                       <button
                         key={wf}
                         type="button"
                         disabled={!audio.errorEnabled}
                         onClick={() => updateAudio({ errorWaveform: wf as Waveform })}
-                        className={`px-2.5 py-1 text-xs rounded-lg border capitalize transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${audio.errorWaveform === wf
+                        className={`max-md:min-h-[40px] px-2.5 py-1 text-xs rounded-lg border capitalize transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${audio.errorWaveform === wf
                           ? 'border-cyan-400/60 bg-cyan-500/10 text-cyan-300 font-semibold'
                           : 'border-cyan-500/30 bg-abyss-800/80 text-slate-100 hover:bg-abyss-750'
                           }`}
@@ -551,7 +551,7 @@ export function AudioSection({
                     value={Math.round(audio.errorFreqStart)}
                     disabled={!audio.errorEnabled}
                     onChange={(e) => updateAudio({ errorFreqStart: Number(e.target.value) })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-14 text-right tabular-nums">{Math.round(audio.errorFreqStart)} Hz</span>
                 </div>
@@ -566,7 +566,7 @@ export function AudioSection({
                     value={Math.round(audio.errorFreqEnd)}
                     disabled={!audio.errorEnabled}
                     onChange={(e) => updateAudio({ errorFreqEnd: Number(e.target.value) })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-14 text-right tabular-nums">{Math.round(audio.errorFreqEnd)} Hz</span>
                 </div>
@@ -582,7 +582,7 @@ export function AudioSection({
                     value={Math.round(audio.errorDuration * 1000)}
                     disabled={!audio.errorEnabled}
                     onChange={(e) => updateAudio({ errorDuration: Number(e.target.value) / 1000 })}
-                    className="flex-1 accent-cyan-400 disabled:opacity-40"
+                    className="flex-1 min-w-0 max-md:h-8 accent-cyan-400 disabled:opacity-40"
                   />
                   <span className="text-xs text-slate-400 w-14 text-right tabular-nums">{Math.round(audio.errorDuration * 1000)} ms</span>
                 </div>

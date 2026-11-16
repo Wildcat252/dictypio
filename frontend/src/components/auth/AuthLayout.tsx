@@ -14,7 +14,7 @@ interface AuthLayoutProps {
 /** Centered card shared by the sign-in, sign-up and password reset pages. */
 export function AuthLayout({ title, subtitle, error, notice, children, footer }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-abyss-900 px-4 py-8 text-slate-100">
+    <div className="min-h-dvh pt-safe pb-safe pl-safe pr-safe flex items-center justify-center bg-abyss-900 px-4 py-8 text-slate-100">
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-2.5 mb-6">
           <img src="/logo.svg" alt="" className="w-10 h-10 rounded-lg" aria-hidden />
@@ -63,7 +63,7 @@ export function AuthField({ label, labelAside, ...inputProps }: AuthFieldProps) 
         id={id}
         required
         {...inputProps}
-        className="w-full px-3 py-2 rounded-lg bg-abyss-900 border border-cyan-500/20 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+        className="w-full px-3 py-2 max-md:py-3 rounded-lg bg-abyss-900 border border-cyan-500/20 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
       />
     </div>
   )
@@ -74,7 +74,7 @@ export function AuthSubmit({ busy, children }: { busy: boolean; children: ReactN
     <button
       type="submit"
       disabled={busy}
-      className="w-full py-2.5 rounded-lg font-semibold text-white bg-gradient-to-r from-cyan-500 via-teal-500 to-sky-600 shadow-glow-cyan hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition"
+      className="w-full py-2.5 max-md:py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-cyan-500 via-teal-500 to-sky-600 shadow-glow-cyan hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition"
     >
       {children}
     </button>
