@@ -17,6 +17,8 @@ const WORD_REPEAT_OPTIONS = [1, 2, 3, 4, 5]
  * `backdrop-blur`, which creates a stacking context on each panel, so an
  * in-tree menu can never paint over the panel that follows it.
  */
+export const MOBILE_HINT_SLOT_ID = 'mobile-hint-slot'
+
 function OptionMenu({
   label,
   value,
@@ -349,7 +351,7 @@ export function PlayerPanel({
           </button>
           <div className="flex-1 flex items-center gap-1.5 md:gap-3 min-w-0">
             <div
-              className="flex-1 min-w-0 h-2.5 rounded-full overflow-hidden relative pointer-events-none bg-abyss-950 border border-cyan-500/20"
+              className="flex-1 min-w-0 h-1.5 md:h-2.5 rounded-full overflow-hidden relative pointer-events-none bg-abyss-950 border border-cyan-500/20"
               aria-hidden
             >
               <div
@@ -384,6 +386,7 @@ export function PlayerPanel({
               )}
             </span>
           </div>
+          <div id={MOBILE_HINT_SLOT_ID} className="md:hidden shrink-0 empty:hidden" />
         </div>
       </div>
 
