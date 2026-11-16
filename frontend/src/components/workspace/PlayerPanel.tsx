@@ -1,4 +1,4 @@
-import type { MutableRefObject } from 'react'
+import type { MouseEvent as ReactMouseEvent, MutableRefObject, PointerEvent as ReactPointerEvent } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
@@ -189,6 +189,37 @@ export function PlayerPanel({
   const totalDuration = selectedLesson?.duration || 0
   const sentenceCount = sentences.length
 
+  // Phones: tapping a player button must not close the on-screen keyboard.
+  // Remember the word input that had focus when the tap started, stop the
+  // button from taking focus, and hand focus back after the click ran.
+  const typingInputRef = useRef<HTMLInputElement | null>(null)
+  const isWordInput = (el: Element | null): el is HTMLInputElement =>
+    el instanceof HTMLInputElement && wordInputRefs.current.includes(el)
+  const keepKeyboardOnPointerDown = (e: ReactPointerEvent | ReactMouseEvent) => {
+    const target = e.target as HTMLElement
+    if (!target.closest('button')) return
+    const active = document.activeElement
+    if (!isWordInput(active)) return
+    typingInputRef.current = active
+    e.preventDefault()
+  }
+  const restoreKeyboardAfterClick = () => {
+    const prev = typingInputRef.current
+    typingInputRef.current = null
+    if (!prev) return
+    const refocus = () => {
+      if (isWordInput(document.activeElement)) return
+      const target = prev.isConnected
+        ? prev
+        : wordInputRefs.current.find((el) => el && el.isConnected && !el.disabled)
+      target?.focus({ preventScroll: true })
+    }
+    // Synchronously (still inside the tap, so iOS keeps the keyboard up) and
+    // once more after React re-renders the sentence on next/previous.
+    refocus()
+    requestAnimationFrame(refocus)
+  }
+
   // Lock-screen / Control Center "Now Playing" card: give it a proper
   // full-bleed square artwork instead of letting iOS guess from the page.
   const lessonTitle = selectedLesson?.title
@@ -208,7 +239,12 @@ export function PlayerPanel({
   }, [lessonTitle])
 
   return (
-    <div className="w-full max-w-4xl mx-auto shrink-0 bg-abyss-900/90 backdrop-blur-md rounded-2xl border border-cyan-500/25 p-2.5 md:p-4 shadow-glass-glow">
+    <div
+      onPointerDown={keepKeyboardOnPointerDown}
+      onMouseDown={keepKeyboardOnPointerDown}
+      onClick={restoreKeyboardAfterClick}
+      className="w-full max-w-4xl mx-auto shrink-0 bg-abyss-900/90 backdrop-blur-md rounded-2xl border border-cyan-500/25 p-2.5 md:p-4 shadow-glass-glow"
+    >
       <div className="mb-1.5 md:mb-4 text-center">
         <h1 className="text-base md:text-xl font-bold bg-gradient-to-r from-slate-100 via-cyan-100 to-teal-200 bg-clip-text text-transparent text-center max-md:line-clamp-1 md:line-clamp-2 tracking-wide">
           {selectedLesson?.title || 'Select a lesson'}
