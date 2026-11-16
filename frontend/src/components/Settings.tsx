@@ -25,7 +25,7 @@ import {
   type AudioSettings,
 } from '../audio'
 import { useWorkspace } from '../contexts/WorkspaceContext'
-import { usePremiumVoices } from '../voices'
+import { useAvailableVoices } from '../voices'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { AccountSection } from './settings/AccountSection'
@@ -68,7 +68,7 @@ export default function Settings() {
     ttsVoiceOrder,
     setTtsVoiceOrder,
   } = useWorkspace()
-  const availableVoices = usePremiumVoices()
+  const availableVoices = useAvailableVoices()
   // Accounts exist only on the web deployment; the desktop app has no ACCOUNT section.
   const { authEnabled, user } = useAuth()
   const showAccount = authEnabled && user !== null

@@ -1,6 +1,7 @@
 import { useEffect, type MutableRefObject } from 'react'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import type { Keybindings } from '../../keybindings'
+import { cancelSpeech } from '../../tts'
 
 /**
  * Global keyboard shortcuts for the Workspace (rebindable in Settings).
@@ -131,7 +132,7 @@ export function useWorkspaceShortcuts(params: {
         resetTtsWordQueue()
         repeatCountRef.current = 0
         if (selectedLesson.youtube_url?.startsWith('text://')) {
-          window.speechSynthesis.cancel()
+          cancelSpeech()
           setIsPlaying(false)
           setTimeout(() => setIsPlaying(true), 10)
         } else if (audioRef.current) {

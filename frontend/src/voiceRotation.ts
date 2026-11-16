@@ -7,6 +7,11 @@
 
 export type VoiceOrder = 'fixed' | 'random'
 
+/** Anything with a stable name: a browser voice or a Google Cloud one. */
+export interface NamedVoice {
+  name: string
+}
+
 /** A pool below this is indistinguishable from single-voice playback. */
 export const MIN_VOICE_POOL = 2
 /** Past this the voices stop being tellable apart within one sentence. */
@@ -19,13 +24,13 @@ export const MAX_VOICE_POOL = 4
  * before an OS voice pack was removed) can name voices that no longer exist.
  * Those are dropped rather than treated as an error.
  */
-export function resolveVoicePool(
+export function resolveVoicePool<V extends NamedVoice>(
   names: readonly string[],
-  availableVoices: readonly SpeechSynthesisVoice[]
-): SpeechSynthesisVoice[] {
+  availableVoices: readonly V[]
+): V[] {
   if (!names.length || !availableVoices.length) return []
   const byName = new Map(availableVoices.map((v) => [v.name, v]))
-  const resolved: SpeechSynthesisVoice[] = []
+  const resolved: V[] = []
   for (const name of names) {
     const voice = byName.get(name)
     // Guard against a duplicate name in storage claiming two slots
@@ -54,11 +59,11 @@ function hashString(input: string): number {
  * within a sentence and different between sentences, which is what "shuffle
  * per sentence" should mean.
  */
-export function orderPoolForSentence(
-  pool: readonly SpeechSynthesisVoice[],
+export function orderPoolForSentence<V>(
+  pool: readonly V[],
   order: VoiceOrder,
   sentenceKey: string
-): SpeechSynthesisVoice[] {
+): V[] {
   if (order === 'fixed' || pool.length < 2) return [...pool]
 
   // Fisher-Yates driven by a seeded LCG so the shuffle is reproducible.
@@ -82,7 +87,7 @@ export function orderPoolForSentence(
  * re-drawing still changes the order playback rotates through.
  */
 export function pickRandomVoices(
-  available: readonly SpeechSynthesisVoice[],
+  available: readonly NamedVoice[],
   count: number
 ): string[] {
   const wanted = Math.max(MIN_VOICE_POOL, Math.min(MAX_VOICE_POOL, Math.floor(count) || 0))
@@ -99,10 +104,10 @@ export function pickRandomVoices(
  * sentence repeat or a word repeat inside word-by-word mode; callers add those
  * two steps together so both can advance the rotation at once.
  */
-export function voiceForRepeat(
-  pool: readonly SpeechSynthesisVoice[],
+export function voiceForRepeat<V>(
+  pool: readonly V[],
   repeatIndex: number
-): SpeechSynthesisVoice | null {
+): V | null {
   if (!pool.length) return null
   const safeIndex = Number.isFinite(repeatIndex) && repeatIndex > 0 ? Math.floor(repeatIndex) : 0
   return pool[safeIndex % pool.length]

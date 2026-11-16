@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import { displayKey, type Keybindings } from '../../keybindings'
 import { AI_COACH_ENABLED } from '../../features'
+import { cancelSpeech } from '../../tts'
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 // How many times each word is spoken in word-by-word mode
@@ -269,7 +270,7 @@ export function PlayerPanel({
               repeatCountRef.current = 0
               if (isTextLesson) {
                 // Cancel current speech, then re-trigger by toggling isPlaying
-                window.speechSynthesis.cancel()
+                cancelSpeech()
                 setIsPlaying(false)
                 setTimeout(() => setIsPlaying(true), 10)
               } else if (audioRef.current) {

@@ -16,6 +16,7 @@ from routers import (
     lesson_sessions,
     ai_keys,
     ai_coach,
+    tts,
 )
 from database import init_db
 
@@ -65,6 +66,7 @@ app.include_router(learning_progress.router, prefix="/api", tags=["user"])
 app.include_router(lesson_sessions.router, prefix="/api", tags=["lesson-sessions"])
 app.include_router(ai_keys.router, prefix="/api", tags=["user"])
 app.include_router(ai_coach.router, prefix="/api", tags=["ai-coach"])
+app.include_router(tts.router, prefix="/api", tags=["tts"])
 
 _STATIC_DIR = os.getenv("ELECTRON_STATIC_DIR", "").strip()
 

@@ -14,6 +14,7 @@ import ForgotPassword from './components/auth/ForgotPassword'
 import ResetPassword from './components/auth/ResetPassword'
 import ConfirmEmail from './components/auth/ConfirmEmail'
 import { ProtectedRoute, PublicOnlyRoute } from './components/auth/RouteGuards'
+import { TtsNotice } from './components/TtsNotice'
 
 function App() {
   // Chrome cuts speech off after ~15s without this nudge; see voices.ts.
@@ -37,6 +38,7 @@ function App() {
               element={
                 <WorkspaceProvider>
                   <Outlet />
+                  <TtsNotice />
                 </WorkspaceProvider>
               }
             >
