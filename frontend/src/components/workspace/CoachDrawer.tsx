@@ -98,7 +98,7 @@ export const CoachDrawer = forwardRef<CoachDrawerHandle, { isLessonFinished: boo
     if (!coachPanelOpen) return null
 
     return (
-      <div className="fixed inset-x-3 bottom-20 md:inset-x-auto md:right-4 md:bottom-24 z-50 w-auto md:w-[28rem] max-h-[min(65vh,520px)] md:max-h-[70vh] rounded-2xl border border-cyan-500/30 bg-abyss-900/95 backdrop-blur-xl shadow-glass-glow flex flex-col text-left text-slate-100 overflow-hidden">
+      <div className="fixed inset-x-0 bottom-0 pb-safe max-md:rounded-b-none max-md:border-b-0 md:inset-x-auto md:right-4 md:bottom-24 z-50 w-auto md:w-[28rem] max-h-[calc(var(--vvh,100dvh)*0.75)] md:max-h-[70vh] rounded-2xl border border-cyan-500/30 bg-abyss-900/95 backdrop-blur-xl shadow-glass-glow flex flex-col text-left text-slate-100 overflow-hidden">
         <div className="px-4 py-3 border-b border-cyan-500/20 flex items-center justify-between bg-abyss-850/60">
           <div>
             <h2 className="text-sm font-bold bg-gradient-to-r from-cyan-300 to-teal-200 bg-clip-text text-transparent">Session recap by AI coach</h2>
@@ -111,7 +111,7 @@ export const CoachDrawer = forwardRef<CoachDrawerHandle, { isLessonFinished: boo
           <button
             type="button"
             onClick={() => setCoachPanelOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-colors"
+            className="tap flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-colors"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

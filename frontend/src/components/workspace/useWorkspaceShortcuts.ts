@@ -2,6 +2,7 @@ import { useEffect, type MutableRefObject } from 'react'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import type { Keybindings } from '../../keybindings'
 import { cancelSpeech } from '../../tts'
+import { isTouchOnly } from '../../hooks/useViewport'
 
 /**
  * Global keyboard shortcuts for the Workspace (rebindable in Settings).
@@ -77,7 +78,10 @@ export function useWorkspaceShortcuts(params: {
       const target = e.target as HTMLElement
       const inInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable
       const isShortcutKey = Object.values(keybinds).includes(e.key)
-      if (inInput && !isShortcutKey) return
+      // On touch-only devices keys typed in a field come from the on-screen
+      // keyboard (Return, ', -, / …) — they are text, not shortcuts; every
+      // action has an on-screen button there.
+      if (inInput && (!isShortcutKey || isTouchOnly())) return
 
       if (e.key === keybinds.wordByWord && keybinds.wordByWord !== 'Meta') {
         e.preventDefault()

@@ -111,11 +111,11 @@ export function InfoTip({ label, children, warning, className = '' }: InfoTipPro
             setOpen(true)
           }
         }}
-        className={`inline-flex shrink-0 items-center justify-center w-4 h-4 align-middle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${
+        className={`relative max-md:before:absolute max-md:before:-inset-3.5 max-md:before:content-[''] inline-flex shrink-0 items-center justify-center w-4 h-4 max-md:w-5 max-md:h-5 align-middle rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${
           warning ? 'text-amber-300 hover:text-amber-200' : 'text-slate-500 hover:text-cyan-300'
         } ${className}`}
       >
-        <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" aria-hidden>
+        <svg viewBox="0 0 16 16" className="w-4 h-4 max-md:w-5 max-md:h-5" fill="none" aria-hidden>
           <circle cx="8" cy="8" r="6.75" stroke="currentColor" strokeWidth="1.5" />
           {warning ? (
             <>

@@ -110,15 +110,17 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-abyss-900/95 backdrop-blur-xl rounded-2xl border border-cyan-500/30 shadow-[0_0_60px_rgb(var(--abyss-950)/0.55),0_0_25px_rgb(var(--ocean-cyan)/calc(0.2*var(--glow-alpha)))] max-w-md w-full max-h-[90vh] overflow-y-auto text-slate-100">
-        <div className="p-6">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4 pt-safe">
+      <div className="bg-abyss-900/95 backdrop-blur-xl rounded-2xl border border-cyan-500/30 shadow-[0_0_60px_rgb(var(--abyss-950)/0.55),0_0_25px_rgb(var(--ocean-cyan)/calc(0.2*var(--glow-alpha)))] max-w-md w-full max-h-[calc(var(--vvh,100dvh)*0.9)] md:max-h-[90vh] overflow-y-auto text-slate-100 max-md:rounded-b-none max-md:border-b-0 pb-safe">
+        <div className="p-5 md:p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-300 via-teal-200 to-sky-300 bg-clip-text text-transparent">Import Lesson</h2>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-colors"
+              aria-label="Close"
+              className="tap flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -243,7 +245,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                     value={newPlaylistName}
                     onChange={(e) => setNewPlaylistName(e.target.value)}
                     placeholder="Enter playlist name..."
-                    className="flex-1 px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-slate-100 placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
+                    className="flex-1 min-w-0 px-4 py-2.5 bg-abyss-800/90 border-2 border-cyan-500/30 text-slate-100 placeholder:text-slate-500 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/40 transition-all"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         handleCreatePlaylist()

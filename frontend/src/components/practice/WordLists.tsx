@@ -61,12 +61,12 @@ export function WordLists({
             Top tricky words
             <span className="font-normal text-cyan-400/70 text-xs">({words.length})</span>
           </button>
-          <div className={`flex items-center gap-2 text-[11px] text-slate-400 ${tableVisible ? '' : 'hidden'}`}>
+          <div className={`flex items-center gap-2 text-[11px] max-md:text-xs text-slate-400 ${tableVisible ? '' : 'hidden'}`}>
             <button
               type="button"
               disabled={page === 0}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              className="px-1.5 py-0.5 rounded-lg border border-cyan-500/30 bg-abyss-800/80 hover:border-cyan-400/50 hover:text-cyan-300 disabled:opacity-30 transition-all"
+              className="max-md:min-w-[44px] max-md:min-h-[44px] max-md:text-sm px-1.5 py-0.5 rounded-lg border border-cyan-500/30 bg-abyss-800/80 hover:border-cyan-400/50 hover:text-cyan-300 disabled:opacity-30 transition-all"
             >
               ‹
             </button>
@@ -77,7 +77,7 @@ export function WordLists({
               type="button"
               disabled={page + 1 >= pageCount}
               onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-              className="px-1.5 py-0.5 rounded-lg border border-cyan-500/30 bg-abyss-800/80 hover:border-cyan-400/50 hover:text-cyan-300 disabled:opacity-30 transition-all"
+              className="max-md:min-w-[44px] max-md:min-h-[44px] max-md:text-sm px-1.5 py-0.5 rounded-lg border border-cyan-500/30 bg-abyss-800/80 hover:border-cyan-400/50 hover:text-cyan-300 disabled:opacity-30 transition-all"
             >
               ›
             </button>
@@ -137,7 +137,7 @@ export function WordLists({
                     }}
                     title="I've learnt this word — move it to the bin"
                     aria-label="Move to bin"
-                    className="ml-1 p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 disabled:opacity-40 transition-colors"
+                    className="ml-1 max-md:w-11 max-md:h-11 flex items-center justify-center p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 disabled:opacity-40 transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 12a1 1 0 001 1h6a1 1 0 001-1l1-12" />
@@ -172,7 +172,7 @@ export function WordLists({
                 onClick={handleRecoverAll}
                 title="Recover all"
                 aria-label="Recover all"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-teal-300 hover:bg-teal-950/60 disabled:opacity-40 transition-colors"
+                className="max-md:w-11 max-md:h-11 flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-teal-300 hover:bg-teal-950/60 disabled:opacity-40 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 10a8 8 0 1114.32 4.9M3 10V4m0 6h6" />
@@ -184,7 +184,7 @@ export function WordLists({
                 onClick={handleDeleteAllForever}
                 title="Delete all permanently"
                 aria-label="Delete all permanently"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 disabled:opacity-40 transition-colors"
+                className="max-md:w-11 max-md:h-11 flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 disabled:opacity-40 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 12a1 1 0 001 1h6a1 1 0 001-1l1-12" />
@@ -215,7 +215,7 @@ export function WordLists({
                         onClick={() => handleRecover(w.word)}
                         title="Recover"
                         aria-label="Recover"
-                        className="p-1 rounded-lg text-slate-400 hover:text-teal-300 hover:bg-teal-950/60 disabled:opacity-40 transition-colors"
+                        className="max-md:w-11 max-md:h-11 flex items-center justify-center p-1 rounded-lg text-slate-400 hover:text-teal-300 hover:bg-teal-950/60 disabled:opacity-40 transition-colors"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 10a8 8 0 1114.32 4.9M3 10V4m0 6h6" />
@@ -227,7 +227,7 @@ export function WordLists({
                         onClick={() => handleDeleteForever(w.word)}
                         title="Delete permanently — this cannot be undone"
                         aria-label="Delete permanently"
-                        className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 disabled:opacity-40 transition-colors"
+                        className="max-md:w-11 max-md:h-11 flex items-center justify-center p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 disabled:opacity-40 transition-colors"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 12a1 1 0 001 1h6a1 1 0 001-1l1-12" />

@@ -15,10 +15,13 @@ import ResetPassword from './components/auth/ResetPassword'
 import ConfirmEmail from './components/auth/ConfirmEmail'
 import { ProtectedRoute, PublicOnlyRoute } from './components/auth/RouteGuards'
 import { TtsNotice } from './components/TtsNotice'
+import { useVisualViewportHeight } from './hooks/useViewport'
 
 function App() {
   // Chrome cuts speech off after ~15s without this nudge; see voices.ts.
   useEffect(() => startSpeechKeepAlive(), [])
+  // Size the app frame to the area above the iOS keyboard (see .h-app).
+  useVisualViewportHeight()
 
   return (
     <Router>

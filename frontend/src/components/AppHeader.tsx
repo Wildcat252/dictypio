@@ -88,7 +88,7 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
   const { authEnabled, user, logout } = useAuth()
 
   return (
-    <header className="bg-abyss-900/90 backdrop-blur-md border-b border-cyan-500/20 px-3 py-2 md:px-4 md:py-2.5 flex flex-wrap items-center justify-between gap-y-2 gap-x-2 md:flex-nowrap md:gap-0 shadow-[0_4px_24px_rgba(0,0,0,0.5)] z-30">
+    <header className="shrink-0 pt-safe pl-safe pr-safe bg-abyss-900/90 backdrop-blur-md border-b border-cyan-500/20 px-3 py-2 md:px-4 md:py-2.5 flex flex-wrap items-center justify-between gap-y-2 gap-x-2 md:flex-nowrap md:gap-0 shadow-[0_4px_24px_rgba(0,0,0,0.5)] z-30">
       <div className="flex items-center gap-2.5 order-1 shrink-0">
         <div className="relative group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-teal-400 rounded-lg blur-xs opacity-[calc(0.6*var(--glow-alpha))] group-hover:opacity-[calc(1*var(--glow-alpha))] transition duration-300"></div>
@@ -104,7 +104,7 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
             title="Toggle sidebar"
             aria-label="Toggle sidebar"
             aria-controls={sidebarControlsId}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-abyss-800 border border-transparent hover:border-cyan-500/30 transition-all duration-150"
+            className="tap md:min-w-0 md:min-h-0 flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-abyss-800 border border-transparent hover:border-cyan-500/30 transition-all duration-150"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
               <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -114,7 +114,7 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
         )}
       </div>
 
-      <nav className="order-3 basis-full flex flex-wrap items-center gap-1.5 md:order-2 md:basis-auto md:flex-nowrap">
+      <nav className="max-md:hidden order-3 basis-full flex flex-wrap items-center gap-1.5 md:order-2 md:basis-auto md:flex-nowrap">
         {NAV_ITEMS.map((item) =>
           item.page === active ? (
             <button
@@ -156,5 +156,38 @@ export function AppHeader({ active, onToggleSidebar, sidebarControlsId }: AppHea
         )}
       </nav>
     </header>
+  )
+}
+
+/**
+ * Phone-only bottom tab bar (iOS style). Rendered as the last child of each
+ * page's flex column, so it never overlaps content; it hides while a text
+ * field has focus so it doesn't ride on top of the keyboard.
+ */
+export function MobileTabBar({ active }: { active: AppPage }) {
+  const navigate = useNavigate()
+  return (
+    <nav
+      aria-label="Main"
+      className="hide-while-typing md:hidden shrink-0 pb-safe pl-safe pr-safe bg-abyss-900/95 backdrop-blur-md border-t border-cyan-500/20 grid grid-cols-4"
+    >
+      {NAV_ITEMS.map((item) => {
+        const isActive = item.page === active
+        return (
+          <button
+            key={item.page}
+            type="button"
+            aria-current={isActive ? 'page' : undefined}
+            onClick={() => !isActive && navigate(item.path)}
+            className={`min-h-[52px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors [&_svg]:w-6 [&_svg]:h-6 ${
+              isActive ? 'text-cyan-300' : 'text-slate-400 active:text-cyan-200'
+            }`}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        )
+      })}
+    </nav>
   )
 }

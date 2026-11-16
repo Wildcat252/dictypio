@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AppHeader } from './AppHeader'
+import { AppHeader, MobileTabBar } from './AppHeader'
+import { useIsDesktop } from '../hooks/useViewport'
 import { AI_COACH_ENABLED } from '../features'
 import { COACH_FEEDBACK_KEY } from '../accountStorage'
 import {
@@ -126,11 +127,12 @@ export default function Dashboard() {
       .filter(Boolean)
   }, [coachFeedback])
 
+  const isDesktop = useIsDesktop()
   const recentDaily = useMemo<DailyUserStats[]>(() => {
     if (!stats?.daily) return []
-    const days = stats.daily.slice(-14) // last 14 days
-    return days
-  }, [stats])
+    // Last 14 days; 7 on phones so bars and labels stay readable.
+    return stats.daily.slice(isDesktop ? -14 : -7)
+  }, [stats, isDesktop])
 
   const maxDailySentences = useMemo(
     () => Math.max(1, ...recentDaily.map((d) => d.total_sentences_practiced || 0)),
@@ -153,7 +155,7 @@ export default function Dashboard() {
   )
 
   return (
-    <div className="h-screen min-h-0 flex flex-col bg-abyss-800/80">
+    <div className="app-root h-app min-h-0 flex flex-col bg-abyss-800/80">
       {/* Header */}
       <AppHeader
         active="dashboard"
@@ -235,13 +237,13 @@ export default function Dashboard() {
                                   style={{ height: `${h}%` }}
                                 />
                                 <span
-                                  className="absolute left-1/2 -translate-x-1/2 text-[10px] font-semibold text-slate-200 tabular-nums whitespace-nowrap leading-none"
+                                  className="absolute left-1/2 -translate-x-1/2 text-[10px] max-md:text-[11px] font-semibold text-slate-200 tabular-nums whitespace-nowrap leading-none"
                                   style={{ bottom: `calc(${h}% + 4px)` }}
                                 >
                                   {sentences}
                                 </span>
                               </div>
-                              <span className="mt-1 text-[10px] text-slate-400 text-center leading-tight">
+                              <span className="mt-1 text-[10px] max-md:text-[11px] text-slate-400 text-center leading-tight">
                                 {d.date.slice(5)}
                               </span>
                             </div>
@@ -293,7 +295,7 @@ export default function Dashboard() {
                                       title={`Retries: ${incorrectPct.toFixed(1)}%`}
                                     />
                                     <span
-                                      className="absolute left-1/2 -translate-x-1/2 text-[8px] font-semibold text-rose-300 tabular-nums whitespace-nowrap leading-none"
+                                      className="absolute left-1/2 -translate-x-1/2 text-[8px] max-md:text-[10px] font-semibold text-rose-300 tabular-nums whitespace-nowrap leading-none"
                                       style={{ bottom: `calc(${ih}% + 2px)` }}
                                     >
                                       {incorrectPct.toFixed(0)}%
@@ -306,14 +308,14 @@ export default function Dashboard() {
                                       title={`Hints: ${hintPct.toFixed(1)}%`}
                                     />
                                     <span
-                                      className="absolute left-1/2 -translate-x-1/2 text-[8px] font-semibold text-amber-200 tabular-nums whitespace-nowrap leading-none"
+                                      className="absolute left-1/2 -translate-x-1/2 text-[8px] max-md:text-[10px] font-semibold text-amber-200 tabular-nums whitespace-nowrap leading-none"
                                       style={{ bottom: `calc(${hh}% + 2px)` }}
                                     >
                                       {hintPct.toFixed(0)}%
                                     </span>
                                   </div>
                                 </div>
-                                <span className="mt-1 text-[9px] text-slate-400 text-center leading-tight">
+                                <span className="mt-1 text-[9px] max-md:text-[11px] text-slate-400 text-center leading-tight">
                                   {d.date.slice(5)}
                                 </span>
                               </div>
@@ -420,6 +422,8 @@ export default function Dashboard() {
         </div>
       </main>
 
+      <MobileTabBar active="dashboard" />
+
       {/* AI Language Coach Modal */}
       {coachModalOpen && (
         <div
@@ -430,7 +434,7 @@ export default function Dashboard() {
           aria-labelledby="coach-modal-title"
         >
           <div
-            className="bg-abyss-800/80 rounded-xl shadow-xl w-full max-w-3xl md:w-2/3 max-h-[85vh] overflow-hidden flex flex-col"
+            className="bg-abyss-800/80 rounded-xl shadow-xl w-full max-w-3xl md:w-2/3 max-h-[85dvh] max-md:max-h-[calc(var(--vvh,100dvh)-env(safe-area-inset-top)-1rem)] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b border-cyan-500/20 flex items-center justify-between">

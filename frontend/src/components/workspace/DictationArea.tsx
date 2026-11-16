@@ -2,6 +2,7 @@ import { useEffect, useRef, type MutableRefObject } from 'react'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import { displayKey, type Keybindings } from '../../keybindings'
 import { playMistakeBuzz, type AudioSettings } from '../../audio'
+import { isTouchOnly } from '../../hooks/useViewport'
 
 interface InputFeedback {
   wordIndex: number
@@ -192,7 +193,7 @@ export function DictationArea({
   return (
     <>
       {/* Text Input Panel - Per-word input */}
-      <div className="flex-1 w-full max-w-4xl mx-auto overflow-y-auto min-h-0 bg-abyss-900/90 backdrop-blur-md rounded-2xl border border-cyan-500/25 p-4 md:p-6 shadow-glass-glow flex flex-col">
+      <div className="flex-1 w-full max-w-4xl mx-auto overflow-y-auto min-h-0 bg-abyss-900/90 backdrop-blur-md rounded-2xl border border-cyan-500/25 p-4 max-md:pb-16 md:p-6 shadow-glass-glow flex flex-col">
         {currentSentence ? (() => {
           const words = currentSentence.sentence_text.split(/\s+/).filter(Boolean)
           return (
@@ -214,7 +215,7 @@ export function DictationArea({
                   onClick={handleMobileHintClick}
                   disabled={Boolean(isCurrentSentenceFullyCorrect)}
                   title="Reveal current word (Tab)"
-                  className="inline-flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-950/60 px-3.5 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-900/60 shadow-glow-amber disabled:pointer-events-none disabled:opacity-40 transition-all"
+                  className="inline-flex items-center gap-2 min-h-[44px] rounded-xl border border-amber-400/40 bg-amber-950/60 px-4 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-900/60 shadow-glow-amber disabled:pointer-events-none disabled:opacity-40 transition-all"
                 >
                   <svg className="w-4 h-4 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                     <path
@@ -253,11 +254,30 @@ export function DictationArea({
                           wordInputRefs.current[idx] = el
                         }}
                         type="text"
-                        disabled={Boolean(isCurrentSentenceFullyCorrect)}
+                        // readOnly, not disabled: disabling the focused field
+                        // dismisses the iOS keyboard after every sentence.
+                        readOnly={Boolean(isCurrentSentenceFullyCorrect)}
+                        aria-readonly={Boolean(isCurrentSentenceFullyCorrect)}
                         value={value}
+                        onFocus={(e) => {
+                          // Keep the active word visible above the on-screen keyboard.
+                          e.currentTarget.scrollIntoView({ block: 'nearest' })
+                        }}
                         onChange={(e) => {
+                          if (isCurrentSentenceFullyCorrect) return
                           onTypingActivity()
-                          const v = e.target.value
+                          let v = e.target.value
+                          // iOS predictive text / autocorrect inserts the word
+                          // plus a space via an input event without a usable
+                          // keydown, so treat a trailing space as "next word".
+                          // (A real Space keydown is preventDefault-ed below, so
+                          // this can't double-advance.)
+                          const advanceAfter = /\s$/.test(v)
+                          if (advanceAfter) {
+                            v = v.replace(/\s+$/, '')
+                            focusNextInputableWord(words, idx)
+                            if (v === (wordInputs[idx] ?? '')) return
+                          }
                           const prev = wordInputs[idx] ?? ''
                           // Count a wrong character event when the normalized prefix first diverges
                           if (v.length > prev.length) {
@@ -299,6 +319,18 @@ export function DictationArea({
                           })
                         }}
                         onKeyDown={(e) => {
+                          // Sentence done: inputs are read-only but stay focused
+                          // (keyboard open) — ignore editing/hint keys.
+                          if (isCurrentSentenceFullyCorrect) {
+                            if (e.key === ' ' || e.key === 'Tab' || e.key === 'Backspace') e.preventDefault()
+                            return
+                          }
+                          if (e.key === 'Enter' && isTouchOnly()) {
+                            // iOS "next" key on the keyboard: move to the next word.
+                            e.preventDefault()
+                            focusNextInputableWord(words, idx)
+                            return
+                          }
                           if (e.key === 'Backspace' && isHintShown) {
                             e.preventDefault()
                             setWordHintIndex(null)
@@ -328,13 +360,7 @@ export function DictationArea({
                           }
                           if (e.key === ' ') {
                             e.preventDefault()
-                            let nextIndex = idx + 1
-                            while (nextIndex < words.length && isPunctuationOnlyToken(words[nextIndex])) {
-                              nextIndex++
-                            }
-                            if (nextIndex < words.length) {
-                              wordInputRefs.current[nextIndex]?.focus()
-                            }
+                            focusNextInputableWord(words, idx)
                             return
                           }
                           if (e.key === 'Tab') {
@@ -395,7 +421,11 @@ export function DictationArea({
                         }}
                         aria-label={`Word ${idx + 1}`}
                         autoComplete="off"
+                        autoCapitalize="none"
+                        autoCorrect="off"
                         spellCheck={false}
+                        inputMode="text"
+                        enterKeyHint="next"
                       />
                       {idx < words.length - 1 ? '\u00A0' : null}
                     </span>
@@ -408,7 +438,7 @@ export function DictationArea({
                     type="button"
                     onClick={onToggleTranslation}
                     title={`Translate this sentence (${displayKey(keybinds.translate)})`}
-                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${translationVisible
+                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 max-md:min-h-[44px] max-md:px-4 max-md:text-sm text-xs font-semibold transition-all ${translationVisible
                       ? 'border-cyan-400 bg-cyan-950/80 text-cyan-200 shadow-glow-cyan'
                       : 'border-cyan-500/30 bg-abyss-800/90 text-slate-300 hover:text-cyan-300 hover:border-cyan-400/50'
                       }`}
@@ -419,7 +449,7 @@ export function DictationArea({
                     value={translateLang}
                     onChange={(e) => onChangeTranslateLang(e.target.value)}
                     title="Translation language"
-                    className="rounded-xl border border-cyan-500/30 bg-abyss-800/90 px-3 py-1.5 text-xs text-cyan-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                    className="rounded-xl border border-cyan-500/30 bg-abyss-800/90 px-3 py-1.5 max-md:min-h-[44px] text-xs text-cyan-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
                   >
                     {translateLanguages.map((l) => (
                       <option key={l.code} value={l.code} className="bg-abyss-850 text-slate-100">{l.label}</option>

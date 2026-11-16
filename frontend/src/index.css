@@ -16,6 +16,15 @@ html {
   font-size: 80%;
 }
 
+/* Phones keep the browser's 16px root: at 12.8px text and tap targets were
+   too small to read or hit on an iPhone. */
+@media (max-width: 767px) {
+  html {
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
 @keyframes importProgress {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
@@ -349,6 +358,7 @@ body {
   display: flex;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   font-family: var(--font-ui);
   background-color: rgb(var(--abyss-900));
   background-image: var(--body-image);
@@ -477,4 +487,60 @@ body {
   background: transparent;
   position: relative;
   z-index: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile (iPhone 11+) helpers. Kept outside @layer so they beat
+   Tailwind utilities where they need to (input font size).           */
+/* ------------------------------------------------------------------ */
+
+/* App frame height: the visible area above the on-screen keyboard
+   (--vvh, set by useVisualViewportHeight), falling back to dvh/vh. */
+.h-app {
+  height: 100vh;
+  height: 100dvh;
+  height: var(--vvh, 100dvh);
+}
+
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+.pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+
+@media (max-width: 767px) {
+  /* iOS Safari zooms into any field whose text is under 16px. */
+  input:not([type='range']):not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    /* !important: utility classes like text-xs (0,1,0) would otherwise win
+       over bare select/textarea selectors. */
+    font-size: max(16px, 1em) !important;
+  }
+
+  /* Fixed backgrounds are ignored or janky on iOS. */
+  body {
+    background-attachment: scroll;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Minimum 44px touch target on phones (Apple HIG). */
+  .tap {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* While typing, the bottom tab bar and floating history button would sit
+     right above the keyboard — hide them until the field loses focus. */
+  .app-root:has(input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):focus, textarea:focus) .hide-while-typing {
+    display: none;
+  }
+}
+
+/* Touch-only devices (no hover, coarse pointer): hide UI that needs a
+   physical keyboard, e.g. shortcut capture. */
+@media (hover: none) and (pointer: coarse) {
+  .hide-on-touch {
+    display: none !important;
+  }
 }

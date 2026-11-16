@@ -36,6 +36,7 @@ function computeWpm(correctChars: number, typingMs: number): number | null {
  */
 export function WorkspaceSidebar({
   mobileSidebarOpen,
+  onCloseMobile,
   sidebarCollapsed,
   onLessonSelect,
   onOpenImport,
@@ -44,6 +45,8 @@ export function WorkspaceSidebar({
   pushNotification,
 }: {
   mobileSidebarOpen: boolean
+  /** Closes the phone drawer (backdrop tap / close button). */
+  onCloseMobile: () => void
   sidebarCollapsed: boolean
   onLessonSelect: (lesson: Lesson) => void
   onOpenImport: () => void
@@ -66,6 +69,20 @@ export function WorkspaceSidebar({
 
   const [lessonMenuOpen, setLessonMenuOpen] = useState<number | null>(null)
   const [playlistMenuOpen, setPlaylistMenuOpen] = useState(false)
+
+  // Close either menu on a tap/click outside it. pointerdown (not click) so it
+  // also fires on iOS when the tap lands on a non-clickable area.
+  useEffect(() => {
+    if (lessonMenuOpen === null && !playlistMenuOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      if ((e.target as Element | null)?.closest?.('[data-sidebar-menu]')) return
+      setLessonMenuOpen(null)
+      setPlaylistMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [lessonMenuOpen, playlistMenuOpen])
+
   // undefined = not fetched yet; null = fetched, no session on record.
   const [lessonStats, setLessonStats] = useState<Record<number, LessonSessionRecord | null>>({})
   // null = not loaded yet. Refreshed on lesson switch, since practice adds tricky words.
@@ -241,11 +258,33 @@ export function WorkspaceSidebar({
   }
 
   return (
+    <>
+    {/* Phone: dim the page behind the drawer; tapping it closes the drawer. */}
+    {mobileSidebarOpen && (
+      <div
+        className="md:hidden fixed inset-0 z-40 bg-abyss-950/60 backdrop-blur-[2px]"
+        onClick={onCloseMobile}
+        aria-hidden
+      />
+    )}
     <aside
       id="workspace-lessons-sidebar"
-      className={`w-full md:w-80 shrink-0 max-md:max-h-[min(55vh,440px)] md:max-h-none bg-abyss-900/95 md:bg-abyss-900/80 backdrop-blur-md border-cyan-500/20 border-b md:border-b-0 md:border-r flex flex-col min-h-0 ${!mobileSidebarOpen ? 'max-md:hidden' : ''
+      className={`md:w-80 shrink-0 md:max-h-none bg-abyss-900/95 md:bg-abyss-900/80 backdrop-blur-md border-cyan-500/20 md:border-r flex flex-col min-h-0 max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-[min(22rem,88vw)] max-md:border-r max-md:shadow-2xl max-md:pt-safe max-md:pb-safe max-md:pl-safe ${!mobileSidebarOpen ? 'max-md:hidden' : ''
         } ${sidebarCollapsed ? 'md:hidden' : ''}`}
     >
+      <div className="md:hidden flex items-center justify-between px-3.5 pt-2">
+        <span className="text-sm font-semibold text-slate-200">Lessons</span>
+        <button
+          type="button"
+          onClick={onCloseMobile}
+          aria-label="Close lessons"
+          className="tap flex items-center justify-center rounded-lg text-slate-400 active:bg-abyss-800"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
       <div className="p-3.5 border-b border-cyan-500/20">
         <div className="flex items-center gap-1.5">
           <div className="relative flex-1 min-w-0">
@@ -266,14 +305,14 @@ export function WorkspaceSidebar({
               </svg>
             </div>
           </div>
-          <div className="relative shrink-0">
+          <div className="relative shrink-0" data-sidebar-menu>
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 setPlaylistMenuOpen(!playlistMenuOpen)
               }}
-              className="p-2 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors"
+              className="tap md:min-w-0 md:min-h-0 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:bg-abyss-800 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors"
               aria-label="Playlist menu"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -282,7 +321,7 @@ export function WorkspaceSidebar({
             </button>
             {playlistMenuOpen && (
               <div
-                className="absolute right-0 top-full mt-1 z-20 py-1 bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-left min-w-[160px]"
+                className="absolute right-0 top-full mt-1 z-20 max-md:[&_button]:py-3 py-1 bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-left min-w-[160px]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
@@ -376,7 +415,8 @@ export function WorkspaceSidebar({
                   e.stopPropagation()
                   setLessonMenuOpen(lessonMenuOpen === lesson.id ? null : lesson.id)
                 }}
-                className={`absolute top-2 right-2 p-1 rounded-lg opacity-70 hover:opacity-100 transition-opacity ${selectedLesson?.id === lesson.id ? 'text-cyan-300 hover:bg-abyss-700' : 'text-slate-400 hover:bg-abyss-700'
+                data-sidebar-menu
+                className={`absolute top-1 right-1 md:top-2 md:right-2 max-md:w-11 max-md:h-11 flex items-center justify-center p-1 rounded-lg opacity-70 hover:opacity-100 transition-opacity ${selectedLesson?.id === lesson.id ? 'text-cyan-300 hover:bg-abyss-700' : 'text-slate-400 hover:bg-abyss-700'
                   }`}
                 aria-label="Lesson menu"
               >
@@ -386,7 +426,8 @@ export function WorkspaceSidebar({
               </button>
               {lessonMenuOpen === lesson.id && (
                 <div
-                  className="absolute right-2 top-10 z-20 py-1 bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-left min-w-[200px]"
+                  data-sidebar-menu
+                  className="absolute right-2 top-11 z-20 max-md:[&>button]:py-3 py-1 bg-abyss-850/95 backdrop-blur-md border border-cyan-500/30 rounded-xl shadow-glass-glow text-left min-w-[200px]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
@@ -434,7 +475,7 @@ export function WorkspaceSidebar({
                   )}
                 </div>
               )}
-              <div className="space-y-1.5 pr-6">
+              <div className="space-y-1.5 pr-8 md:pr-6">
                 <div className="flex items-start justify-between gap-2">
                   <h3
                     className={`text-sm font-semibold leading-snug line-clamp-2 text-left ${selectedLesson?.id === lesson.id ? 'text-cyan-100' : 'text-slate-100'
@@ -484,5 +525,6 @@ export function WorkspaceSidebar({
         </button>
       </div>
     </aside>
+    </>
   )
 }
