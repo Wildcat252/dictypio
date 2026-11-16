@@ -1,6 +1,20 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
-import { estimatedVoiceLatency, isNetworkVoice, recordVoiceLatency } from '../../voices'
+import {
+  estimatedVoiceLatency,
+  isNetworkVoice,
+  recordVoiceLatency,
+  resolveVoice,
+  type AppVoice,
+} from '../../voices'
+import {
+  CloudUtterance,
+  cancelCloud,
+  makeUtterance,
+  prefetchClip,
+  speakCloud,
+  type AnyUtterance,
+} from '../../tts'
 import {
   MIN_VOICE_POOL,
   orderPoolForSentence,
@@ -48,7 +62,7 @@ const SPOKEN_PUNCTUATION: Record<string, string> = {
  * used only by speech are owned here.
  */
 export function useTtsPlayback(params: {
-  availableVoices: SpeechSynthesisVoice[]
+  availableVoices: AppVoice[]
   intervalTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
   isWaitingForPauseIntervalRef: MutableRefObject<boolean>
   repeatCountRef: MutableRefObject<number>
@@ -132,6 +146,7 @@ export function useTtsPlayback(params: {
       // Mark cancellation as intentional so utterance.onerror doesn't set isPlaying=false
       ttsCancelledIntentionallyRef.current = true
       synth.cancel()
+      cancelCloud()
       ttsCancelPendingRef.current = true
       if (ttsSpeakTimeoutRef.current) {
         clearTimeout(ttsSpeakTimeoutRef.current)
@@ -164,10 +179,8 @@ export function useTtsPlayback(params: {
     // A pool of one is indistinguishable from single-voice playback, so anything
     // short of MIN_VOICE_POOL resolvable voices quietly falls back to the old
     // behaviour: the browser may simply no longer offer the saved voices.
-    const singleVoice: SpeechSynthesisVoice | null =
-      ttsVoiceName && availableVoices.length
-        ? availableVoices.find((v) => v.name === ttsVoiceName) || null
-        : null
+    // An unset or unavailable voice falls back to the server's default Google voice.
+    const singleVoice: AppVoice | null = resolveVoice(ttsVoiceName, availableVoices)
 
     const rawPool = ttsMultiVoice ? resolveVoicePool(ttsVoiceNames, availableVoices) : []
     // With neither switch on there is nothing to rotate against, so a pool would
@@ -185,7 +198,7 @@ export function useTtsPlayback(params: {
     // reading starts, and the word repeat walks on from there. Reading
     // repeatCountRef here is all the sentence rotation needs — onSentenceFinished
     // bumps the counter and re-triggers the effect, so this runs again per repeat.
-    const voiceFor = (wordStep: number): SpeechSynthesisVoice | null => {
+    const voiceFor = (wordStep: number): AppVoice | null => {
       if (!multiVoiceActive) return singleVoice
       const sentenceStep = ttsVoicePerSentenceRepeat ? repeatCountRef.current : 0
       return voiceForRepeat(
@@ -260,11 +273,25 @@ export function useTtsPlayback(params: {
     // The primer is skipped for cloud voices: their delay is a network round-trip,
     // not engine warm-up, so priming buys nothing and costs a second round-trip
     // (doubling the very latency it is meant to hide).
-    const speakUtterance = (utterance: SpeechSynthesisUtterance) => {
+    //
+    // Google voices skip all of this: they play a fetched clip, which has no
+    // warm-up and needs no cancel deferral. Switching between the two engines
+    // (a mixed voice pool) stops whichever one was speaking.
+    const speakUtterance = (utterance: AnyUtterance) => {
       if (ttsSpeakTimeoutRef.current) {
         clearTimeout(ttsSpeakTimeoutRef.current)
         ttsSpeakTimeoutRef.current = null
       }
+      if (utterance instanceof CloudUtterance) {
+        if (synth.speaking || synth.pending) {
+          ttsCancelledIntentionallyRef.current = true
+          synth.cancel()
+          ttsCancelPendingRef.current = true
+        }
+        speakCloud(utterance)
+        return
+      }
+      cancelCloud()
       const primeAndSpeak = () => {
         if (!isNetworkVoice(utterance.voice)) {
           const primer = new SpeechSynthesisUtterance('.')
@@ -439,9 +466,9 @@ export function useTtsPlayback(params: {
       }
 
       // Utterances abandoned by Skip: their late onend must not schedule anything
-      const abandonedUtterances = new WeakSet<SpeechSynthesisUtterance>()
+      const abandonedUtterances = new WeakSet<AnyUtterance>()
       let currentSegIdx = -1
-      let currentUtterance: SpeechSynthesisUtterance | null = null
+      let currentUtterance: AnyUtterance | null = null
 
       // How many times each unit is spoken before moving on (1 = say it once).
       // The unit is the whole group, so a multi-word group has its entire phrase —
@@ -462,8 +489,9 @@ export function useTtsPlayback(params: {
       // Takes the voice that actually spoke: with several voices in play their
       // round-trips differ, and compensating every gap by one voice's latency
       // would skew the pause after all the others.
-      const compensatedGap = (gapMs: number, voice: SpeechSynthesisVoice | null) => {
-        if (!isNetworkVoice(voice)) return gapMs
+      // Google voices are prefetched files, so they have no round-trip to fold in.
+      const compensatedGap = (gapMs: number, voice: AppVoice | null) => {
+        if (!isNetworkVoice(voice?.browserVoice)) return gapMs
         const latency = estimatedVoiceLatency(voice?.name)
         // Always keep a real pause, so words never run together even if the
         // round-trip is longer than the gap itself.
@@ -476,22 +504,37 @@ export function useTtsPlayback(params: {
           return
         }
         const segment = segments[segIdx]
-        const utterance = new SpeechSynthesisUtterance(segment.text)
-        utterance.rate = playbackSpeed
         // `pass` restarts at 1 for every group, so it cannot drive the rotation on
         // its own. Group ids run 0,1,2… across the sentence, so this counts the
         // readings since the sentence began: the rotation carries on into the next
         // word instead of resetting, and because it is derived rather than
         // accumulated, Skip/Prev cannot knock it out of step.
         const segmentVoice = voiceFor(groupIdOf[segIdx] * wordRepeats + (pass - 1))
-        if (segmentVoice) utterance.voice = segmentVoice
+        const utterance = makeUtterance(segment.text, segmentVoice, playbackSpeed)
         currentSegIdx = segIdx
         currentUtterance = utterance
+
+        // Load the Google clips that can come next while this one plays, so the
+        // gap the learner hears is the configured one, not gap + download.
+        const groupIdNow = groupIdOf[segIdx]
+        const endsGroup = segIdx + 1 >= segments.length || groupIdOf[segIdx + 1] !== groupIdNow
+        if (endsGroup && pass < wordRepeats) {
+          const first = groupFirstSeg.get(groupIdNow) ?? segIdx
+          prefetchClip(segments[first].text, voiceFor(groupIdNow * wordRepeats + pass))
+        }
+        if (segIdx + 1 < segments.length) {
+          const nextPass = endsGroup ? 1 : pass
+          prefetchClip(
+            segments[segIdx + 1].text,
+            voiceFor(groupIdOf[segIdx + 1] * wordRepeats + (nextPass - 1))
+          )
+        }
 
         // Time from speak() to first audio, fed back into the gap compensation above.
         let spokenAt = 0
         utterance.onstart = () => {
           if (abandonedUtterances.has(utterance) || !segmentVoice || !spokenAt) return
+          if (utterance instanceof CloudUtterance) return
           recordVoiceLatency(segmentVoice.name, performance.now() - spokenAt)
         }
 
@@ -529,7 +572,7 @@ export function useTtsPlayback(params: {
           }
         }
 
-        utterance.onerror = (e) => {
+        utterance.onerror = (e: Event) => {
           // Ignore 'interrupted' and 'canceled' errors from intentional synth.cancel()
           if (abandonedUtterances.has(utterance)) return
           if (ttsCancelledIntentionallyRef.current) return
@@ -562,6 +605,7 @@ export function useTtsPlayback(params: {
         } else {
           ttsCancelledIntentionallyRef.current = true
           synth.cancel()
+          cancelCloud()
           onSentenceFinished()
         }
       }
@@ -600,15 +644,13 @@ export function useTtsPlayback(params: {
     } else {
       // --- Whole-sentence mode (original) ---
       const speak = () => {
-        const utterance = new SpeechSynthesisUtterance(currentSentence.sentence_text)
-        utterance.rate = playbackSpeed
-        if (selectedVoice) utterance.voice = selectedVoice
+        const utterance = makeUtterance(currentSentence.sentence_text, selectedVoice, playbackSpeed)
 
         utterance.onend = () => {
           onSentenceFinished()
         }
 
-        utterance.onerror = (e) => {
+        utterance.onerror = (e: Event) => {
           // Ignore 'interrupted' and 'canceled' errors from intentional synth.cancel()
           if (ttsCancelledIntentionallyRef.current) return
           if (e instanceof SpeechSynthesisErrorEvent && (e.error === 'interrupted' || e.error === 'canceled')) return
@@ -616,6 +658,27 @@ export function useTtsPlayback(params: {
         }
 
         speakUtterance(utterance)
+
+        // Load what is likely to play next: this sentence again in the next
+        // voice of the rotation, and the following sentence.
+        if (multiVoiceActive && ttsVoicePerSentenceRepeat) {
+          prefetchClip(
+            currentSentence.sentence_text,
+            voiceForRepeat(voicePool, repeatCountRef.current + 1)
+          )
+        }
+        const nextSentence = sentences[currentSentenceIndex + 1]
+        if (nextSentence) {
+          prefetchClip(
+            nextSentence.sentence_text,
+            multiVoiceActive
+              ? voiceForRepeat(
+                  orderPoolForSentence(rawPool, ttsVoiceOrder, String(nextSentence.id)),
+                  0
+                )
+              : singleVoice
+          )
+        }
       }
 
       if (!isWaitingForPauseIntervalRef.current) {
@@ -629,6 +692,7 @@ export function useTtsPlayback(params: {
       // Mark as intentional so the cancelled utterance's onerror doesn't kill playback
       ttsCancelledIntentionallyRef.current = true
       synth.cancel()
+      cancelCloud()
       ttsCancelPendingRef.current = true
       if (ttsSpeakTimeoutRef.current) {
         clearTimeout(ttsSpeakTimeoutRef.current)

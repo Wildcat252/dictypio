@@ -12,7 +12,8 @@ import {
 } from '../api'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { PRACTICE_STATE_KEY } from '../accountStorage'
-import { isNetworkVoice, usePremiumVoices } from '../voices'
+import { isNetworkVoice, resolveVoice, useAvailableVoices, type AppVoice } from '../voices'
+import { CloudUtterance, cancelCloud, cancelSpeech, makeUtterance, prefetchClip, speakCloud } from '../tts'
 import {
   MIN_VOICE_POOL,
   orderPoolForSentence,
@@ -25,6 +26,8 @@ import { AddWordsSidebar } from './practice/AddWordsSidebar'
 import { DrillCard } from './practice/DrillCard'
 
 const PAGE_SIZE = 30
+/** Pause between Google clips read back-to-back (spelling a word out). */
+const CLOUD_PART_GAP_MS = 150
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 const STATE_KEY = PRACTICE_STATE_KEY
 
@@ -91,7 +94,7 @@ export default function Practice() {
     ignoreCase,
     ignorePunctuation,
   } = useWorkspace()
-  const availableVoices = usePremiumVoices()
+  const availableVoices = useAvailableVoices()
   const [audio] = useState(loadAudioSettings)
   // Read once on mount so leaving and returning restores where you left off
   const [restored] = useState(loadPracticeState)
@@ -142,6 +145,8 @@ export default function Practice() {
   // Practice has no sentence-repeat loop for rotation to ride on, so 'repeat'
   // mode advances one voice per playback instead of per repeat.
   const voiceRotationRef = useRef(0)
+  // Bumped per speakParts call, so a queued Google clip of an older call stays silent.
+  const cloudSeqRef = useRef(0)
   const chimedRef = useRef(false)
 
   useEffect(() => {
@@ -219,9 +224,7 @@ export default function Practice() {
       const texts = parts.filter(Boolean)
       if (texts.length === 0) return
       const synth = window.speechSynthesis
-      const singleVoice = ttsVoiceName
-        ? availableVoices.find((v) => v.name === ttsVoiceName) || null
-        : null
+      const singleVoice = resolveVoice(ttsVoiceName, availableVoices)
       const speechRate = rate ?? playbackSpeed
 
       // Same fallback rule as the workspace: fewer than MIN_VOICE_POOL voices
@@ -235,7 +238,7 @@ export default function Practice() {
         : []
 
       // Voice per spoken part.
-      let voices: (SpeechSynthesisVoice | null)[]
+      let voices: (AppVoice | null)[]
       if (!multiVoiceActive) {
         voices = texts.map(() => singleVoice)
       } else if (texts.length > 1) {
@@ -253,25 +256,46 @@ export default function Practice() {
         speakTimeoutRef.current = null
       }
 
+      // All parts share one voice (see above), so its source decides the engine.
+      const firstVoice = voices[0] ?? singleVoice
+      const seq = ++cloudSeqRef.current
+
+      if (firstVoice?.source === 'google') {
+        // Google clips play one after another, with a short gap like the
+        // browser engine leaves between queued utterances. All are requested
+        // up front so spelling does not wait on each letter's download.
+        if (synth.speaking || synth.pending) synth.cancel()
+        texts.forEach((text, i) => prefetchClip(text, voices[i] ?? singleVoice))
+        const playAt = (i: number) => {
+          if (seq !== cloudSeqRef.current) return
+          const u = makeUtterance(texts[i], voices[i] ?? singleVoice, speechRate)
+          if (!(u instanceof CloudUtterance)) return
+          u.onend = () => {
+            if (i + 1 < texts.length) {
+              speakTimeoutRef.current = setTimeout(() => playAt(i + 1), CLOUD_PART_GAP_MS)
+            }
+          }
+          speakCloud(u)
+        }
+        playAt(0)
+        return
+      }
+      cancelCloud()
+
       const primeAndSpeak = () => {
         // The primer warms up the voice that speaks first, which is not
         // necessarily ttsVoiceName once a pool is in play.
-        const firstVoice = voices[0] ?? singleVoice
         // Cloud voices are delayed by a network round-trip rather than engine
         // warm-up, so the primer only buys a second round-trip. See voices.ts.
-        if (!isNetworkVoice(firstVoice)) {
+        if (!isNetworkVoice(firstVoice?.browserVoice)) {
           const primer = new SpeechSynthesisUtterance('.')
           primer.volume = 0
           primer.rate = speechRate
-          if (firstVoice) primer.voice = firstVoice
+          if (firstVoice?.browserVoice) primer.voice = firstVoice.browserVoice
           synth.speak(primer)
         }
         texts.forEach((text, i) => {
-          const utterance = new SpeechSynthesisUtterance(text)
-          utterance.rate = speechRate
-          const voice = voices[i] ?? singleVoice
-          if (voice) utterance.voice = voice
-          synth.speak(utterance)
+          synth.speak(makeUtterance(text, voices[i] ?? singleVoice, speechRate) as SpeechSynthesisUtterance)
         })
       }
 
@@ -383,7 +407,7 @@ export default function Practice() {
   useEffect(() => {
     return () => {
       if (speakTimeoutRef.current) clearTimeout(speakTimeoutRef.current)
-      window.speechSynthesis.cancel()
+      cancelSpeech()
     }
   }, [])
 

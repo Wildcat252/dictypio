@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text, ForeignKey, DateTime, Boolean, inspect
+from sqlalchemy import create_engine, Column, Integer, String, Float, Text, ForeignKey, DateTime, Boolean, UniqueConstraint, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -97,6 +97,23 @@ class UserConfig(Base):
 
     # Unique per user: (user_id, key)
     user = relationship("User", back_populates="configs")
+
+
+class TtsUsage(Base):
+    """Characters sent to Google Text-to-Speech, counted to stay in the free tier.
+
+    One row per (scope, period): scope "tier:chirp3hd" with a "YYYY-MM" period
+    for the shared monthly limit, scope "user:<id>" with a "YYYY-MM-DD" period
+    for the per-user daily one. Kept in the database so every Cloud Run
+    instance sees the same count.
+    """
+    __tablename__ = "tts_usage"
+    __table_args__ = (UniqueConstraint("scope", "period", name="uq_tts_usage_scope_period"),)
+
+    id = Column(Integer, primary_key=True)
+    scope = Column(String, nullable=False)
+    period = Column(String, nullable=False)
+    chars = Column(Integer, nullable=False, default=0)
 
 
 class LearningProgress(Base):

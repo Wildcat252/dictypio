@@ -11,7 +11,8 @@ import {
 import { useWorkspace, type Lesson } from '../contexts/WorkspaceContext'
 import { loadKeybindings, displayKey } from '../keybindings'
 import { loadAudioSettings, playCelebrationChime } from '../audio'
-import { usePremiumVoices } from '../voices'
+import { useAvailableVoices } from '../voices'
+import { cancelSpeech } from '../tts'
 import { useTtsPlayback } from './workspace/useTtsPlayback'
 import { isTrickyLesson, trickySentenceVideoId } from './workspace/trickyLesson'
 import { useWorkspaceShortcuts } from './workspace/useWorkspaceShortcuts'
@@ -77,7 +78,7 @@ export default function Workspace() {
   const sentenceIndexFromPlaybackRef = useRef(false)
 
   // TTS voices
-  const availableVoices = usePremiumVoices()
+  const availableVoices = useAvailableVoices()
 
   // Speech-synthesis playback engine (word-by-word, grouping, repeat, pauses)
   const {
@@ -311,7 +312,7 @@ export default function Workspace() {
 
     // Before switching lessons, hard-reset audio/TTS so Play cannot reuse the previous lesson's state.
     if (selectedLesson?.youtube_url?.startsWith('text://')) {
-      window.speechSynthesis.cancel()
+      cancelSpeech()
       setCurrentTime(0)
     } else if (audioRef.current) {
       audioRef.current.pause()
@@ -350,7 +351,7 @@ export default function Workspace() {
           setCurrentSentenceIndex(targetIndex)
           setCurrentTime(targetSentence.start_time)
           if (lesson.youtube_url?.startsWith('text://')) {
-            window.speechSynthesis.cancel()
+            cancelSpeech()
           } else if (audioRef.current) {
             // Seek to resume point but stay paused; user must hit Play manually.
             audioRef.current.pause()
@@ -374,7 +375,7 @@ export default function Workspace() {
     setIsPlaying(false)
     repeatCountRef.current = 0
     if (lesson.youtube_url?.startsWith('text://')) {
-      window.speechSynthesis.cancel()
+      cancelSpeech()
     } else if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.currentTime = 0

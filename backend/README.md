@@ -75,3 +75,25 @@ uvicorn with `--env-file .env`. Restart the backend after changing them.
 The app sends the target code it stores (`vi`, `zh-CN`, `ja`, ...), which Google
 accepts as-is. A bare `zh` is mapped to `zh-CN` by `_GOOGLE_LANG_OVERRIDES` in
 `routers/ai_coach.py`.
+
+## Text-to-Speech
+
+Text lessons and Practice can read aloud with Google Cloud Text-to-Speech voices
+(Chirp 3 HD and Neural2), so every browser and phone hears the same voices.
+
+- **`GOOGLE_TTS_ENABLED=1`** turns it on. Auth is Application Default
+  Credentials: on Cloud Run the service's own service account (enable the
+  Text-to-Speech API in the project, no key needed); locally
+  `gcloud auth application-default login` plus `GOOGLE_CLOUD_PROJECT=<project-id>`.
+- **Off** (the default, and always in the desktop app): `/api/tts/status` says
+  `enabled: false` and the frontend reads with the browser's voices.
+
+Endpoints: `GET /api/tts/status` (monthly usage per voice family),
+`GET /api/tts/voices`, `POST /api/tts {text, voice}` → `audio/mpeg`.
+
+To stay in the free tier, characters sent to Google are counted in the
+`tts_usage` table per voice family per month (`GOOGLE_TTS_MONTHLY_CHARS_CHIRP3HD`,
+`GOOGLE_TTS_MONTHLY_CHARS_NEURAL2`, default 900000 each) and per user per day
+(`GOOGLE_TTS_DAILY_CHARS_PER_USER`, default 30000, 0 = off). Past a limit the
+request answers `429` and the frontend falls back to browser voices. The server
+caches no audio; the browser keeps each clip in IndexedDB.

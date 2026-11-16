@@ -15,7 +15,17 @@ import {
   type AudioSettings,
   type Waveform,
 } from '../../audio'
-import { isNetworkVoice, voiceLabel } from '../../voices'
+import { useEffect, useState } from 'react'
+import {
+  TIER_LABELS,
+  defaultVoice,
+  fetchTtsStatus,
+  voiceGroup,
+  voiceLabel,
+  type AppVoice,
+  type GoogleTier,
+  type TtsStatus,
+} from '../../voices'
 import { InfoTip, OptionTitle } from './InfoTip'
 import {
   MAX_VOICE_POOL,
@@ -31,7 +41,7 @@ interface AudioSectionProps {
   updateAudio: (patch: Partial<AudioSettings>) => void
   ttsVoiceName: string
   setTtsVoiceName: (v: string) => void
-  availableVoices: SpeechSynthesisVoice[]
+  availableVoices: AppVoice[]
   ttsMultiVoice: boolean
   setTtsMultiVoice: (v: boolean) => void
   ttsVoiceNames: string[]
@@ -63,7 +73,21 @@ export function AudioSection({
   ttsVoiceOrder,
   setTtsVoiceOrder,
 }: AudioSectionProps) {
-  const selectedVoice = availableVoices.find((v) => v.name === ttsVoiceName) ?? null
+  // Voices grouped for the pickers: Google Chirp 3 HD, Google Neural2, Edge Natural.
+  const groups: [string, AppVoice[]][] = []
+  for (const v of availableVoices) {
+    const name = voiceGroup(v)
+    const group = groups.find(([g]) => g === name)
+    if (group) group[1].push(v)
+    else groups.push([name, [v]])
+  }
+  const fallback = defaultVoice(availableVoices)
+
+  // How much of Google's free tier this month has used, shown under the picker.
+  const [ttsStatus, setTtsStatus] = useState<TtsStatus | null>(null)
+  useEffect(() => {
+    fetchTtsStatus().then(setTtsStatus).catch(() => setTtsStatus(null))
+  }, [])
 
   // What playback will actually use: names saved on another machine may name
   // voices this browser does not have.
@@ -73,7 +97,6 @@ export function AudioSection({
     (name) => !availableVoices.some((v) => v.name === name)
   )
   const poolIsFull = ttsVoiceNames.length >= MAX_VOICE_POOL
-  const poolHasCloudVoice = resolvedPool.some(isNetworkVoice)
   // A pool with nothing to rotate against would pin every sentence to one voice.
   const noRotationPicked =
     ttsMultiVoice && !ttsVoicePerSentenceRepeat && !ttsVoicePerWordRepeat
@@ -84,8 +107,6 @@ export function AudioSection({
       `Pick at least ${MIN_VOICE_POOL} voices. Until then playback uses the single dictation voice above.`,
     missingVoices.length > 0 &&
       `Saved but not offered by this browser, so they are skipped: ${missingVoices.join(', ')}.`,
-    poolHasCloudVoice &&
-      'A cloud voice is in the pool. Every handover waits on its own network round-trip, which is most noticeable when splitting a sentence.',
   ].filter((p): p is string => Boolean(p))
   const poolWarning =
     poolProblems.length > 0 ? poolProblems.map((p) => <p key={p}>{p}</p>) : undefined
@@ -119,12 +140,7 @@ export function AudioSection({
               <div className="rounded-lg border border-cyan-500/20 p-4">
                 <OptionTitle
                   title="Dictation voice"
-                  hint="Voice used to read text lessons aloud."
-                  warning={
-                    isNetworkVoice(selectedVoice) && !ttsMultiVoice
-                      ? 'This voice is synthesized online, so each phrase waits on a network round-trip before it plays. It sounds better but starts slower — for word-by-word practice a local voice is noticeably more responsive.'
-                      : undefined
-                  }
+                  hint="Voice used to read text lessons aloud. Google voices sound the same on every device; Edge Natural voices appear only in Microsoft Edge."
                   className="mb-3"
                 />
                 <select
@@ -132,13 +148,41 @@ export function AudioSection({
                   onChange={(e) => setTtsVoiceName(e.target.value)}
                   className="w-full border border-cyan-500/30 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                 >
-                  <option value="">Default</option>
-                  {availableVoices.map((v) => (
-                    <option key={v.name} value={v.name} title={v.name}>
-                      {voiceLabel(v)}
-                    </option>
+                  <option value="">Default{fallback ? ` (${voiceLabel(fallback)})` : ''}</option>
+                  {groups.map(([group, voices]) => (
+                    <optgroup key={group} label={group}>
+                      {voices.map((v) => (
+                        <option key={v.name} value={v.name} title={v.name}>
+                          {voiceLabel(v)}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
+                {ttsStatus?.enabled && ttsStatus.usage && (
+                  <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                    <span>Google free tier this month:</span>
+                    {(Object.keys(ttsStatus.usage) as GoogleTier[]).map((tier) => {
+                      const { used, limit } = ttsStatus.usage![tier]
+                      const full = used >= limit
+                      return (
+                        <span key={tier} className={full ? 'text-amber-300' : undefined}>
+                          {TIER_LABELS[tier].replace('Google ', '')}{' '}
+                          <span className="tabular-nums">
+                            {used.toLocaleString()} / {limit.toLocaleString()}
+                          </span>
+                          {full && ' (used up, reading with browser voices)'}
+                        </span>
+                      )
+                    })}
+                    <InfoTip label="About the Google free tier">
+                      Characters sent to Google this month, counted for everyone using this
+                      server. Each sentence is fetched once per browser and replayed from its
+                      cache after that. Past the limit, playback switches to browser voices
+                      until the month rolls over.
+                    </InfoTip>
+                  </p>
+                )}
 
                 {/* Multi-voice */}
                 <div className="mt-5 pt-4 border-t border-cyan-500/20">
@@ -183,7 +227,14 @@ export function AudioSection({
                           </button>
                         </div>
                         <div className="max-h-48 overflow-y-auto rounded-lg border border-cyan-500/20 divide-y divide-cyan-500/10">
-                          {availableVoices.map((v) => {
+                          {groups.flatMap(([group, voices]) => [
+                            <p
+                              key={`group:${group}`}
+                              className="sticky top-0 bg-abyss-800/95 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+                            >
+                              {group}
+                            </p>,
+                            ...voices.map((v) => {
                             const picked = ttsVoiceNames.includes(v.name)
                             const locked = !picked && poolIsFull
                             return (
@@ -206,7 +257,8 @@ export function AudioSection({
                                 <span className="text-slate-200">{voiceLabel(v)}</span>
                               </label>
                             )
-                          })}
+                            }),
+                          ])}
                         </div>
                       </div>
 
