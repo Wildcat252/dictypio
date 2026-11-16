@@ -416,7 +416,8 @@ export function DictationArea({
                             : ''
                           }`}
                         style={{
-                          maxWidth: `${Math.max(2, word.length * 1.2)}ch`,
+                          maxWidth: `${Math.max(3.4, word.length * 1.2 + 1)}ch`,
+                          minWidth: `${Math.max(3.4, word.length * 1.2 + 1)}ch`,
                           fontSize: 'clamp(1.15rem, 4.5vw, 2.35rem)',
                         }}
                         aria-label={`Word ${idx + 1}`}
