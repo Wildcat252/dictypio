@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import { displayKey, type Keybindings } from '../../keybindings'
@@ -186,6 +186,24 @@ export function PlayerPanel({
   const isTextLesson = Boolean(selectedLesson?.youtube_url?.startsWith('text://'))
   const totalDuration = selectedLesson?.duration || 0
   const sentenceCount = sentences.length
+
+  // Lock-screen / Control Center "Now Playing" card: give it a proper
+  // full-bleed square artwork instead of letting iOS guess from the page.
+  const lessonTitle = selectedLesson?.title
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    if (typeof MediaMetadata === 'undefined') return
+    const origin = window.location.origin
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: lessonTitle || 'Dictypio',
+      artist: 'Dictypio',
+      album: 'English Listening & Dictation',
+      artwork: [
+        { src: `${origin}/apple-touch-icon.png`, sizes: '180x180', type: 'image/png' },
+        { src: `${origin}/icon-512.png`, sizes: '512x512', type: 'image/png' },
+      ],
+    })
+  }, [lessonTitle])
 
   return (
     <div className="w-full max-w-4xl mx-auto shrink-0 bg-abyss-900/90 backdrop-blur-md rounded-2xl border border-cyan-500/25 p-3 md:p-4 shadow-glass-glow">
