@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, HttpUrl, field_validator
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db, Video, Sentence, User, PlaylistVideo, LearningProgress
 from auth import get_current_user
-from services.audio_files import remove_unreferenced_audio
+from services.audio_files import ensure_seekable_audio, remove_unreferenced_audio
 from services.youtube_processor import YouTubeProcessor
 from services.qdrant_client import delete_sentence_vectors_for_video, ingest_sentences_for_video
 import re
@@ -263,11 +264,15 @@ async def get_video_audio(
     if not video.audio_file_path or not os.path.exists(video.audio_file_path):
         raise HTTPException(status_code=404, detail="Audio file not found")
 
+    # Lessons from before the M4A switch get their MP3 converted the first time
+    # they are opened; FFmpeg takes a few seconds, so keep it off the event loop.
+    audio_path = await run_in_threadpool(ensure_seekable_audio, db, video.audio_file_path)
+
     return _serve_audio_with_range(
-        video.audio_file_path,
+        audio_path,
         request,
-        media_type=_audio_media_type_for_path(video.audio_file_path),
-        filename=os.path.basename(video.audio_file_path),
+        media_type=_audio_media_type_for_path(audio_path),
+        filename=os.path.basename(audio_path),
     )
 
 

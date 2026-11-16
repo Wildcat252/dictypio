@@ -3,6 +3,7 @@ import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import type { Keybindings } from '../../keybindings'
 import { cancelSpeech } from '../../tts'
 import { isTouchOnly } from '../../hooks/useViewport'
+import type { SeekTo } from './useAudioPlayback'
 
 /**
  * Global keyboard shortcuts for the Workspace (rebindable in Settings).
@@ -20,6 +21,7 @@ export function useWorkspaceShortcuts(params: {
   repeatCountRef: MutableRefObject<number>
   programmaticSeekRef: MutableRefObject<boolean>
   userInitiatedSentenceChangeRef: MutableRefObject<boolean>
+  seekTo: SeekTo
   resetTtsWordQueue: () => void
   skipWord: () => void
   prevWord: () => void
@@ -35,6 +37,7 @@ export function useWorkspaceShortcuts(params: {
     repeatCountRef,
     programmaticSeekRef,
     userInitiatedSentenceChangeRef,
+    seekTo,
     resetTtsWordQueue,
     skipWord: ttsSkipWord,
     prevWord: ttsPrevWord,
@@ -98,9 +101,8 @@ export function useWorkspaceShortcuts(params: {
           resetTtsWordQueue()
           if (selectedLesson?.youtube_url?.startsWith('text://')) {
             setCurrentTime(sentences[prevIndex].start_time)
-          } else if (audioRef.current && sentences[prevIndex]) {
-            audioRef.current.currentTime = sentences[prevIndex].start_time
-            setCurrentTime(sentences[prevIndex].start_time)
+          } else if (sentences[prevIndex]) {
+            seekTo(sentences[prevIndex].start_time)
           }
         }
         return
@@ -123,9 +125,8 @@ export function useWorkspaceShortcuts(params: {
         setCurrentTime(nextSentence.start_time)
         if (selectedLesson?.youtube_url?.startsWith('text://')) {
           setCurrentTime(nextSentence.start_time)
-        } else if (audioRef.current) {
-          audioRef.current.currentTime = nextSentence.start_time
-          audioRef.current.play().catch(() => { })
+        } else {
+          seekTo(nextSentence.start_time, { play: true })
         }
         setIsPlaying(true)
         return
@@ -140,10 +141,8 @@ export function useWorkspaceShortcuts(params: {
           setIsPlaying(false)
           setTimeout(() => setIsPlaying(true), 10)
         } else if (audioRef.current) {
-          audioRef.current.currentTime = currentSentence.start_time
-          setCurrentTime(currentSentence.start_time)
           programmaticSeekRef.current = true
-          audioRef.current.play().catch(() => { })
+          seekTo(currentSentence.start_time, { play: true })
           setIsPlaying(true)
         }
         return

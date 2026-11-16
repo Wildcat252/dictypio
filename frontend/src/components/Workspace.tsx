@@ -339,7 +339,7 @@ export default function Workspace() {
           } else if (audioRef.current) {
             // Seek to resume point but stay paused; user must hit Play manually.
             audioRef.current.pause()
-            audioRef.current.currentTime = targetSentence.start_time
+            seekTo(targetSentence.start_time)
           }
           setIsPlaying(false)
           resumed = true
@@ -362,7 +362,7 @@ export default function Workspace() {
       cancelSpeech()
     } else if (audioRef.current) {
       audioRef.current.pause()
-      audioRef.current.currentTime = 0
+      seekTo(0)
     }
     if (intervalTimeoutRef.current) {
       clearTimeout(intervalTimeoutRef.current)
@@ -371,7 +371,7 @@ export default function Workspace() {
   }
 
   // Audio-element playback for non-text lessons (rate, advance, seek, play/pause)
-  useAudioPlayback({
+  const { seekTo } = useAudioPlayback({
     audioRef,
     intervalTimeoutRef,
     isWaitingForPauseIntervalRef,
@@ -457,6 +457,7 @@ export default function Workspace() {
     repeatCountRef,
     programmaticSeekRef,
     userInitiatedSentenceChangeRef,
+    seekTo,
     resetTtsWordQueue,
     skipWord: ttsSkipWord,
     prevWord: ttsPrevWord,
@@ -596,9 +597,8 @@ export default function Workspace() {
     setCurrentTime(targetSentence.start_time)
     if (selectedLesson?.youtube_url?.startsWith('text://')) {
       // Browser SpeechSynthesis will pick it up on isPlaying = true
-    } else if (audioRef.current) {
-      audioRef.current.currentTime = targetSentence.start_time
-      audioRef.current.play().catch(() => { })
+    } else {
+      seekTo(targetSentence.start_time, { play: true })
     }
     setIsPlaying(true)
   }
@@ -702,6 +702,7 @@ export default function Workspace() {
           <PlayerPanel
             audioRef={audioRef}
             audioBlobUrl={audioBlobUrl}
+            seekTo={seekTo}
             currentSentence={currentSentence}
             intervalTimeoutRef={intervalTimeoutRef}
             isWaitingForPauseIntervalRef={isWaitingForPauseIntervalRef}

@@ -5,6 +5,7 @@ import { useWorkspace, type Sentence } from '../../contexts/WorkspaceContext'
 import { displayKey, type Keybindings } from '../../keybindings'
 import { AI_COACH_ENABLED } from '../../features'
 import { cancelSpeech } from '../../tts'
+import type { SeekTo } from './useAudioPlayback'
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 // How many times each word is spoken in word-by-word mode
@@ -123,6 +124,8 @@ function formatTime(seconds: number) {
 interface PlayerPanelProps {
   audioRef: MutableRefObject<HTMLAudioElement | null>
   audioBlobUrl: string | null
+  /** Moves the audio playhead; every seek goes through it */
+  seekTo: SeekTo
   currentSentence: Sentence | null
   /** Refs shared with the TTS engine / audio-playback effects */
   intervalTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
@@ -146,6 +149,7 @@ interface PlayerPanelProps {
 export function PlayerPanel({
   audioRef,
   audioBlobUrl,
+  seekTo,
   currentSentence,
   intervalTimeoutRef,
   isWaitingForPauseIntervalRef,
@@ -247,6 +251,7 @@ export function PlayerPanel({
         <audio
           ref={audioRef}
           src={audioBlobUrl ?? undefined}
+          preload="auto"
           onLoadedMetadata={() => {
             if (audioRef.current != null && currentTime >= 0) {
               audioRef.current.currentTime = currentTime
@@ -275,9 +280,8 @@ export function PlayerPanel({
                 resetTtsWordQueue()
                 if (isTextLesson) {
                   setCurrentTime(sentences[prevIndex].start_time)
-                } else if (audioRef.current && sentences[prevIndex]) {
-                  audioRef.current.currentTime = sentences[prevIndex].start_time
-                  setCurrentTime(sentences[prevIndex].start_time)
+                } else if (sentences[prevIndex]) {
+                  seekTo(sentences[prevIndex].start_time)
                 }
               }
             }}
@@ -328,10 +332,8 @@ export function PlayerPanel({
                 setIsPlaying(false)
                 setTimeout(() => setIsPlaying(true), 10)
               } else if (audioRef.current) {
-                audioRef.current.currentTime = currentSentence.start_time
-                setCurrentTime(currentSentence.start_time)
                 programmaticSeekRef.current = true
-                audioRef.current.play().catch(() => { })
+                seekTo(currentSentence.start_time, { play: true })
                 setIsPlaying(true)
               }
             }}
@@ -362,9 +364,8 @@ export function PlayerPanel({
               setCurrentTime(nextSentence.start_time)
               if (isTextLesson) {
                 setCurrentTime(nextSentence.start_time)
-              } else if (audioRef.current) {
-                audioRef.current.currentTime = nextSentence.start_time
-                audioRef.current.play().catch(() => { })
+              } else {
+                seekTo(nextSentence.start_time, { play: true })
               }
               setIsPlaying(true)
             }}
