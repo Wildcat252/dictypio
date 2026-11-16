@@ -8,7 +8,6 @@ import { cancelSpeech } from '../../tts'
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 // How many times each word is spoken in word-by-word mode
-const WORD_REPEAT_OPTIONS = [1, 2, 3, 4, 5]
 
 /**
  * A small select-style dropdown.
@@ -174,17 +173,9 @@ export function PlayerPanel({
     setPlaybackSpeed,
     ttsWordByWord,
     setTtsWordByWord,
-    ttsWordInterval,
-    setTtsWordInterval,
-    ttsLettersPerGap,
-    setTtsLettersPerGap,
-    ttsWordRepeat,
-    setTtsWordRepeat,
     videoSessionScores,
   } = useWorkspace()
 
-  // Phones: Word Gap / Letters/Gap / Repeat stay folded until asked for.
-  const [showWbwOptions, setShowWbwOptions] = useState(false)
   const isTextLesson = Boolean(selectedLesson?.youtube_url?.startsWith('text://'))
   const totalDuration = selectedLesson?.duration || 0
   const sentenceCount = sentences.length
@@ -438,6 +429,7 @@ export function PlayerPanel({
           <button
             type="button"
             aria-pressed={ttsWordByWord}
+            title="Word gap, letters per gap and repeat: Settings › Playback & Grading"
             className={`max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-semibold cursor-pointer border transition-all ${ttsWordByWord
               ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-cyan-400 shadow-glow-cyan'
               : 'bg-abyss-800/90 text-slate-300 border-cyan-500/30 hover:border-cyan-400/50 hover:bg-abyss-750'
@@ -453,7 +445,7 @@ export function PlayerPanel({
         )}
         {isTextLesson && ttsWordByWord && (
           <>
-          {/* Phones: prev/skip word as compact icons, the tuning fields behind a toggle */}
+          {/* Phones: prev/skip word as compact icons */}
           <button
             type="button"
             onClick={() => ttsPrevWord()}
@@ -470,86 +462,7 @@ export function PlayerPanel({
           >
             ⏭
           </button>
-          <button
-            type="button"
-            onClick={() => setShowWbwOptions((v) => !v)}
-            aria-expanded={showWbwOptions}
-            aria-label="Word-by-word options"
-            className={`md:hidden w-7 h-7 shrink-0 flex items-center justify-center rounded-xl border transition-colors ${showWbwOptions ? 'border-cyan-400 bg-cyan-950/80 text-cyan-200' : 'border-cyan-500/30 bg-abyss-800/90 text-slate-300'}`}
-          >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
-              <circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" />
-            </svg>
-          </button>
           </>
-        )}
-        {isTextLesson && ttsWordByWord && (
-          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
-            <span className="text-cyan-300 font-medium">Word Gap:</span>
-            <input
-              key={ttsWordInterval}
-              type="number"
-              defaultValue={ttsWordInterval}
-              min={0}
-              max={10}
-              step={0.05}
-              title="Seconds between spoken words (0–10)"
-              onKeyDown={(e) => {
-                e.stopPropagation()
-                if (e.key === 'Enter') e.currentTarget.blur()
-              }}
-              onBlur={(e) => {
-                const v = parseFloat(e.currentTarget.value)
-                if (Number.isFinite(v)) {
-                  setTtsWordInterval(Math.min(10, Math.max(0, v)))
-                } else {
-                  e.currentTarget.value = String(ttsWordInterval)
-                }
-              }}
-              inputMode="decimal"
-              className="w-14 max-md:w-16 bg-abyss-950 border border-cyan-500/40 rounded-lg px-1.5 py-0.5 text-xs text-cyan-200 text-right focus:outline-none focus:ring-1 focus:ring-cyan-400"
-            />
-            <span>s</span>
-          </div>
-        )}
-        {isTextLesson && ttsWordByWord && (
-          <div className={`${showWbwOptions ? '' : 'max-md:hidden'} max-md:min-h-[28px] max-md:px-1.5 max-md:py-0.5 max-md:gap-1 max-md:text-[11px] max-md:shrink-0 bg-abyss-800/90 border border-cyan-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-300`}>
-            <span className="text-cyan-300 font-medium">Letters/Gap:</span>
-            <input
-              key={ttsLettersPerGap}
-              type="number"
-              defaultValue={ttsLettersPerGap}
-              min={1}
-              max={120}
-              step={1}
-              title="Speak about this many letters before pausing (1–120). Words are never split — a word that would exceed the budget starts the next group."
-              onKeyDown={(e) => {
-                e.stopPropagation()
-                if (e.key === 'Enter') e.currentTarget.blur()
-              }}
-              onBlur={(e) => {
-                const v = parseInt(e.currentTarget.value, 10)
-                if (Number.isFinite(v)) {
-                  setTtsLettersPerGap(Math.min(120, Math.max(1, v)))
-                } else {
-                  e.currentTarget.value = String(ttsLettersPerGap)
-                }
-              }}
-              inputMode="numeric"
-              className="w-12 max-md:w-16 bg-abyss-950 border border-cyan-500/40 rounded-lg px-1.5 py-0.5 text-xs text-cyan-200 text-right focus:outline-none focus:ring-1 focus:ring-cyan-400"
-            />
-          </div>
-        )}
-        {isTextLesson && ttsWordByWord && (
-          <div className={showWbwOptions ? '' : 'max-md:hidden'}>
-          <OptionMenu
-            label="Repeat"
-            value={ttsWordRepeat}
-            options={WORD_REPEAT_OPTIONS}
-            onSelect={setTtsWordRepeat}
-          />
-          </div>
         )}
         {isTextLesson && ttsWordByWord && (
           <button
