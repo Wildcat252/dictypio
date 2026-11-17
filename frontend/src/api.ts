@@ -29,6 +29,47 @@ export function setAuthToken(token: string | null) {
   }
 }
 
+/**
+ * Wakes the server and resolves once it answers. A sleeping host (Cloud Run
+ * scaled to zero) takes a while to start, and until it does every request
+ * fails or hangs, so the app waits here instead of showing a lesson it cannot
+ * yet drive. Shared, so every caller waits on the same polling loop. Gives up
+ * after MAX_WAKE_WAIT_MS and resolves false: the app then carries on as it
+ * would with the server down rather than hanging forever.
+ */
+const MAX_WAKE_WAIT_MS = 120_000
+const WAKE_RETRY_DELAYS_MS = [400, 800, 1500, 2500]
+let serverReady = false
+let serverWake: Promise<boolean> | null = null
+
+export function isServerReady(): boolean {
+  return serverReady
+}
+
+export function waitForServer(): Promise<boolean> {
+  if (serverReady) return Promise.resolve(true)
+  serverWake ??= (async () => {
+    const startedAt = Date.now()
+    for (let attempt = 0; Date.now() - startedAt < MAX_WAKE_WAIT_MS; attempt++) {
+      try {
+        const res = await api.get('/api/health', { timeout: 8000 })
+        // A host that is still starting can answer with a placeholder page.
+        if (res.data?.status === 'healthy') {
+          serverReady = true
+          return true
+        }
+      } catch {
+        // not up yet
+      }
+      const delay = WAKE_RETRY_DELAYS_MS[Math.min(attempt, WAKE_RETRY_DELAYS_MS.length - 1)]
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+    serverWake = null // allow a later caller to try again
+    return false
+  })()
+  return serverWake
+}
+
 /** Fired when the server rejects our session, so AuthContext can send the user to sign in. */
 export const AUTH_LOGOUT_EVENT = 'auth:logout'
 
