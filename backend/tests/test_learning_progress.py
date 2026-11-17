@@ -197,6 +197,26 @@ class PracticeWordsTest(LearningProgressTest):
         self.assertEqual(rows[0]["sentence"], SENTENCES[1])
         self.assertEqual(rows[0]["sentence_id"], self.sentence_ids[1])
 
+    def tricky(self):
+        return self.client.get("/api/user/tricky-sentences", headers=bearer(self.token)).json()
+
+    def test_unfinished_revisit_keeps_the_tricky_sentence(self):
+        self.seed()
+        r = self.save(1, {"attempts": 1, "words": ["Jumps"], "correct_words": ["Jumps"],
+                          "repeat_hint_words": [], "completed": False})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual([row["word"] for row in self.tricky()], ["lazy"])
+
+    def test_finishing_without_peeking_clears_the_tricky_sentence(self):
+        self.seed()
+        self.save(1, {"attempts": 1, "repeat_hint_words": [], "completed": True})
+        self.assertEqual(self.tricky(), [])
+
+    def test_finishing_with_peeking_keeps_the_tricky_sentence(self):
+        self.seed()
+        self.save(1, {"attempts": 1, "repeat_hint_words": ["lazy"], "completed": True})
+        self.assertEqual([row["word"] for row in self.tricky()], ["lazy"])
+
     def test_bin_and_recover(self):
         self.seed()
         self.client.post("/api/user/practice/words/bin", json={"word": "lazy"}, headers=bearer(self.token))

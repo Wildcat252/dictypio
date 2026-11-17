@@ -20,6 +20,22 @@ class ProgressEntry(BaseModel):
     data: dict[str, Any]  # e.g. {"score": 1, "completed": true, "attempts": 2}
 
 
+def _load_blob(raw: Optional[str]) -> Dict[str, Any]:
+    try:
+        blob = json.loads(raw or "{}")
+    except (ValueError, TypeError):
+        return {}
+    return blob if isinstance(blob, dict) else {}
+
+
+def _hint_word_list(value: Any) -> List[str]:
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    return [str(w) for w in value if w]
+
+
 class ProgressResponse(BaseModel):
     video_id: int
     sentence_id: int | None
@@ -79,7 +95,16 @@ async def upsert_progress(
         .first()
     )
 
-    data_json = json.dumps(body.data)
+    data = dict(body.data)
+    if existing and not data.get("completed"):
+        # A word stays tricky until its sentence is finished without peeking
+        # twice; a half-typed revisit must not wipe the mark.
+        kept = _hint_word_list(_load_blob(existing.data).get("repeat_hint_words"))
+        if kept:
+            new = _hint_word_list(data.get("repeat_hint_words"))
+            data["repeat_hint_words"] = new + [w for w in kept if w not in new]
+
+    data_json = json.dumps(data)
     target: LearningProgress
     if existing:
         existing.data = data_json
