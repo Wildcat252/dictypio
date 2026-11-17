@@ -627,6 +627,12 @@ export default function Workspace() {
     if (!currentSentence || !selectedLesson) return
     const words = currentSentence.sentence_text.split(/\s+/).filter(Boolean)
     if (!words.length) return
+    // Merely opening a sentence must not overwrite its saved progress (that
+    // wiped its tricky words); only save once something was typed or hinted.
+    const touched =
+      Object.values(wordInputs ?? {}).some((v) => (v ?? '').trim() !== '') ||
+      Object.values(wordHintCounts ?? {}).some((n) => (n ?? 0) > 0)
+    if (!touched) return
 
     const normalize = (w: string) => {
       let s = w
