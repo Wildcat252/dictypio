@@ -7,6 +7,7 @@ from support import PASSWORD, TMP_DIR, AppTestCase, bearer, dispose_engine  # se
 from database import SessionLocal, Video
 from routers import youtube as youtube_router
 from services import qdrant_client
+from services.audio_files import MAX_AUDIO_LESSONS_PER_USER
 from services.youtube_processor import YouTubeProcessor
 
 tearDownModule = dispose_engine
@@ -137,6 +138,50 @@ class SharedVideoTest(AppTestCase):
         self.assertEqual(claimed.status_code, 200, claimed.text)
         self.assertEqual(claimed.json()["video_id"], legacy_id)
         self.assertNotEqual(self.import_video(b).json()["video_id"], legacy_id)
+
+
+class AudioLimitTest(SharedVideoTest):
+    """Each account may keep MAX_AUDIO_LESSONS_PER_USER lessons with audio."""
+
+    def fill(self, token, count, **fields):
+        user_id = self.me(token).json()["id"]
+        with SessionLocal() as db:
+            for i in range(count):
+                db.add(Video(user_id=user_id, youtube_url=f"https://www.youtube.com/watch?v=fill{i:07d}",
+                             title=f"Filler {i}", duration=1.0,
+                             **({"audio_file_path": f"/tmp/gone-{user_id}-{i}.m4a"} | fields)))
+            db.commit()
+
+    def test_import_is_refused_at_the_limit_and_allowed_below_it(self):
+        token = self.signup()
+        self.fill(token, MAX_AUDIO_LESSONS_PER_USER - 1)
+        ok = self.import_video(token)
+        self.assertEqual(ok.status_code, 200, ok.text)  # the 10th lesson
+
+        refused = self.client.post(
+            "/api/youtube/process",
+            json={"url": "https://www.youtube.com/watch?v=another1234"}, headers=bearer(token))
+        self.assertEqual(refused.status_code, 400, refused.text)
+        self.assertIn("Delete one", refused.json()["detail"])
+
+        # Opening a lesson that already exists is not a new import.
+        self.assertEqual(self.import_video(token).status_code, 200)
+
+    def test_deleting_a_lesson_frees_a_slot(self):
+        token = self.signup()
+        self.fill(token, MAX_AUDIO_LESSONS_PER_USER)
+        self.assertEqual(self.import_video(token).status_code, 400)
+        first = self.lessons(token)[0]["id"]
+        self.assertEqual(self.delete_lesson(token, first).status_code, 200)
+        self.assertEqual(self.import_video(token).status_code, 200)
+
+    def test_text_lessons_and_other_accounts_do_not_count(self):
+        a, b = self.signup(), self.signup("b@example.com")
+        self.fill(a, MAX_AUDIO_LESSONS_PER_USER - 1)
+        self.fill(a, 5, audio_file_path=None)  # text lessons hold no audio
+        self.assertEqual(self.import_video(a).status_code, 200)
+        self.fill(b, MAX_AUDIO_LESSONS_PER_USER - 1)
+        self.assertEqual(self.import_video(b).status_code, 200)
 
 
 class BlockedByYouTubeTest(AppTestCase):

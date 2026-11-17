@@ -8,7 +8,7 @@ from typing import List, Dict, Optional, Tuple
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from database import Video, Sentence, LearningProgress
-from services.audio_files import remove_unreferenced_audio
+from services.audio_files import MAX_AUDIO_LESSONS_PER_USER, count_audio_lessons, remove_unreferenced_audio
 from services.youtube_segmentation import SentenceSegmenterMixin
 from services.youtube_subtitles import SubtitleParserMixin
 import os
@@ -156,12 +156,12 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
 
     def _cleanup_temp_audio(self, video_id: str) -> None:
         prefix = f'{video_id}_temp'
-        if not os.path.isdir(self.audio_dir):
+        if not os.path.isdir(self.download_dir):
             return
-        for name in os.listdir(self.audio_dir):
+        for name in os.listdir(self.download_dir):
             if name.startswith(prefix):
                 try:
-                    os.remove(os.path.join(self.audio_dir, name))
+                    os.remove(os.path.join(self.download_dir, name))
                 except OSError:
                     pass
 
@@ -184,16 +184,18 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
         """
         temp_prefix = f'{video_id}_temp'
         base_slug = f'{video_id}_{safe_title}'
-        temp_pattern = os.path.join(self.audio_dir, f'{temp_prefix}.%(ext)s')
+        # yt-dlp works in the local download dir; only the finished file goes to
+        # audio_dir, which may be a mounted bucket that is slow for partial writes.
+        temp_pattern = os.path.join(self.download_dir, f'{temp_prefix}.%(ext)s')
 
         def pick_temp_file(*suffixes: str) -> Optional[str]:
-            for name in os.listdir(self.audio_dir):
+            for name in os.listdir(self.download_dir):
                 if not name.startswith(temp_prefix):
                     continue
                 lower = name.lower()
                 for suf in suffixes:
                     if lower.endswith(suf):
-                        return os.path.join(self.audio_dir, name)
+                        return os.path.join(self.download_dir, name)
             return None
 
         def finalize(ext: str, src_path: str) -> str:
@@ -236,7 +238,7 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
 
     def _download_native_audio(self, youtube_url, video_id, cookie_file, pick_temp_file, finalize) -> Optional[str]:
         """In-process download of the audio exactly as YouTube has it, with no FFmpeg step."""
-        temp_pattern = os.path.join(self.audio_dir, f'{video_id}_temp.%(ext)s')
+        temp_pattern = os.path.join(self.download_dir, f'{video_id}_temp.%(ext)s')
         self._cleanup_temp_audio(video_id)
         opts_native = {
             'quiet': True,
@@ -351,7 +353,7 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
         try:
             # CLI works in dev (real Python). Packaged PyInstaller needs in-process yt-dlp.
             try:
-                temp_output = os.path.join(self.audio_dir, f'{video_id}_temp.%(ext)s')
+                temp_output = os.path.join(self.download_dir, f'{video_id}_temp.%(ext)s')
                 # YouTube's M4A is already AAC, so FFmpeg only repackages it instead of
                 # re-encoding: much faster than the MP3 conversion this replaces.
                 # Without FFmpeg the file is kept as downloaded, in one attempt.
@@ -372,9 +374,9 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                 if result.returncode == 0:
                     wanted = ('.m4a',) if repackage else self._AUDIO_EXTENSIONS
                     for ext in wanted:
-                        for file in os.listdir(self.audio_dir):
+                        for file in os.listdir(self.download_dir):
                             if file.startswith(f'{video_id}_temp') and file.endswith(ext):
-                                shutil.move(os.path.join(self.audio_dir, file), base_path + ext)
+                                shutil.move(os.path.join(self.download_dir, file), base_path + ext)
                                 return base_path + ext
                 elif result.stderr:
                     print(f"Warning: Audio CLI failed: {result.stderr[:800]}")
@@ -465,9 +467,17 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
             .order_by(Video.user_id.is_(None), Video.id)
             .first()
         )
+        was_deleted = (
+            existing_video is not None and getattr(existing_video, "deleted_at", None) is not None
+        )
+        if existing_video is None or was_deleted:
+            # About to download new audio (an already imported lesson skips this).
+            if count_audio_lessons(db, user_id) >= MAX_AUDIO_LESSONS_PER_USER:
+                raise ValueError(
+                    f"You can keep up to {MAX_AUDIO_LESSONS_PER_USER} lessons with audio. "
+                    "Delete one to import another."
+                )
         if existing_video:
-            was_deleted = getattr(existing_video, "deleted_at", None) is not None
-
             if was_deleted:
                 existing_video.deleted_at = None
 

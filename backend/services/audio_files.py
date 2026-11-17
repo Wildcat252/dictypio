@@ -6,12 +6,30 @@ the same video point at one file. It may only be removed once no lesson uses it.
 import os
 import shutil
 import subprocess
+import tempfile
 import threading
 from typing import Dict, Iterable, Optional
 
 from sqlalchemy.orm import Session
 
 from database import Video
+
+# Audio sits on a persistent disk that costs money, so each account may keep
+# only this many lessons with audio. Override with the env var of the same name.
+MAX_AUDIO_LESSONS_PER_USER = int(os.getenv("MAX_AUDIO_LESSONS_PER_USER", "10"))
+
+
+def count_audio_lessons(db: Session, user_id: int) -> int:
+    """Lessons of this user that currently hold an audio file (deleted ones don't)."""
+    return (
+        db.query(Video.id)
+        .filter(
+            Video.user_id == user_id,
+            Video.deleted_at.is_(None),
+            Video.audio_file_path.isnot(None),
+        )
+        .count()
+    )
 
 _convert_locks: Dict[str, threading.Lock] = {}
 _convert_locks_guard = threading.Lock()
@@ -38,7 +56,10 @@ def ensure_seekable_audio(db: Session, path: Optional[str]) -> Optional[str]:
         if not os.path.isfile(path):
             # Another request converted it while this one waited.
             return target if os.path.isfile(target) else path
-        partial = path[:-4] + ".converting.m4a"
+        # Convert on local disk; the audio dir may be a mounted bucket, which is
+        # slow for partial writes. Only the finished file is moved there.
+        fd, partial = tempfile.mkstemp(prefix="converting-", suffix=".m4a")
+        os.close(fd)
         try:
             result = subprocess.run(
                 [ffmpeg, "-y", "-v", "error", "-i", path, "-vn",
@@ -47,9 +68,9 @@ def ensure_seekable_audio(db: Session, path: Optional[str]) -> Optional[str]:
                 text=True,
                 timeout=600,
             )
-            if result.returncode != 0 or not os.path.isfile(partial):
+            if result.returncode != 0 or not os.path.getsize(partial):
                 raise RuntimeError(result.stderr[-400:])
-            os.replace(partial, target)
+            shutil.move(partial, target)
         except Exception as e:
             print(f"Warning: could not convert {os.path.basename(path)} to M4A: {e}")
             if os.path.isfile(partial):
