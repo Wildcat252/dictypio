@@ -23,10 +23,10 @@ import {
 } from '../../voiceRotation'
 
 // Scales the word-by-word TTS gap exponentially by word length so longer words
-// give more time to type: 0.5x under 3 letters (quick words need less time),
-// 1x (2^0) at 3-6 letters (the baseline Word Gap setting), 4x (2^2) at 10,
-// 8x (2^3) at 15, doubling every 5 letters after that, with the exponent
-// interpolated smoothly between anchors.
+// give more time to type: 0.4x up to 3 letters (quick words need less time),
+// 1x at 4-6 letters (the baseline Word Gap setting), 6.25x (2.5^2) at 10,
+// 15.6x (2.5^3) at 15, multiplying by 2.5 every 5 letters after that, with
+// the exponent interpolated smoothly between anchors.
 function wordGapMultiplier(word: string): number {
   const length = word.replace(/[^\w]/g, '').length
   if (length <= 3) return 0.4
@@ -370,12 +370,18 @@ export function useTtsPlayback(params: {
       }
       const segments: TtsSegment[] = []
       words.forEach((token, tokenIdx) => {
-        const wordPart = token.replace(/[,.?!]/g, '').trim()
-        const punctNames = (token.match(/[,.?!]/g) ?? [])
+        // Only punctuation closing the token is read by name: the dot in
+        // "3.5" or "U.S." and the comma in "1,000" belong to the word.
+        const trailing = token.match(/[,.?!]+$/)?.[0] ?? ''
+        const body = token.slice(0, token.length - trailing.length).trim()
+        // Dashes, quotes and brackets standing alone are decoration: there is
+        // nothing to say or type, so they are not sent to the voice.
+        const wordPart = /^[-–—…"'“”‘’()[\]{}*_~]+$/.test(body) ? '' : body
+        const punctNames = Array.from(trailing)
           .filter((ch) => speakComma || ch !== ',')
           .map((ch) => SPOKEN_PUNCTUATION[ch])
         // With "comma" not spoken, a comma becomes a silent pause instead.
-        const commaPauseMs = !speakComma && token.includes(',') ? commaPause * 1000 : 0
+        const commaPauseMs = !speakComma && trailing.includes(',') ? commaPause * 1000 : 0
         // Whatever the token earns is paid once, after its last segment.
         const tokenGap = wordPart ? wordGapMultiplier(wordPart) : PUNCT_GAP_MULTIPLIER
         if (wordPart) {

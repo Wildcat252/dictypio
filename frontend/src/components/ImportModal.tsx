@@ -179,6 +179,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                   <input
                     id="text-title"
                     type="text"
+                    maxLength={200}
                     value={textTitle}
                     onChange={(e) => setTextTitle(e.target.value)}
                     placeholder="Enter a title for this lesson..."
@@ -192,6 +193,7 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
                   <textarea
                     id="text-content"
                     rows={4}
+                    maxLength={20000}
                     value={textContent}
                     onChange={(e) => setTextContent(e.target.value)}
                     placeholder="Paste the paragraph text to practice..."

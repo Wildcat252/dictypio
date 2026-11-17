@@ -324,6 +324,69 @@ class CustomTextRequest(BaseModel):
     text: str
 
 
+MAX_CUSTOM_TITLE_CHARS = 200
+MAX_CUSTOM_TEXT_CHARS = 20_000
+# A sentence is typed from memory and sent to Text-to-Speech in one request
+# (which takes 1500 characters at most), so anything longer is cut further.
+MAX_CUSTOM_SENTENCE_CHARS = 300
+
+
+def _split_long_chunk(words: List[str]) -> List[List[str]]:
+    """Cut a sentence longer than MAX_CUSTOM_SENTENCE_CHARS, at a comma where there is one."""
+    limit = MAX_CUSTOM_SENTENCE_CHARS
+    pieces: List[str] = []
+    for word in words:
+        # A single "word" past the limit (a URL, a line with no spaces).
+        pieces.extend(word[i:i + limit] for i in range(0, len(word), limit))
+
+    chunks: List[List[str]] = []
+    current: List[str] = []
+    length = 0
+    after_comma = 0  # where to cut `current` so it ends at its last comma
+    for word in pieces:
+        if current and length + 1 + len(word) > limit:
+            cut = after_comma or len(current)
+            chunks.append(current[:cut])
+            current = current[cut:]
+            length = len(" ".join(current))
+            after_comma = 0
+            if current and length + 1 + len(word) > limit:
+                chunks.append(current)
+                current, length = [], 0
+        current.append(word)
+        length += len(word) + (1 if len(current) > 1 else 0)
+        if word.endswith(","):
+            after_comma = len(current)
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def split_custom_text(raw_text: str) -> List[str]:
+    """Pasted text as sentences to dictate.
+
+    A sentence ends at a line break, at ``;`` or ``:``, and at ``.`` ``!`` ``?``
+    unless the dot belongs to an abbreviation ("Mr. Smith", "e.g. this").
+    Commas do not split: they stay inside the sentence so word-by-word dictation
+    can speak them and require typing them.
+    """
+    # Only class-level tables are read, so no processor (and no audio folder) is needed.
+    is_sentence_end = YouTubeProcessor._is_sentence_end
+    sentences: List[str] = []
+    for line in raw_text.splitlines():
+        words = line.split()
+        chunk: List[str] = []
+        for i, word in enumerate(words):
+            chunk.append(word)
+            next_word = words[i + 1] if i + 1 < len(words) else None
+            if word[-1] in ";:" or is_sentence_end(YouTubeProcessor, word, next_word):
+                sentences.extend(" ".join(c) for c in _split_long_chunk(chunk))
+                chunk = []
+        if chunk:
+            sentences.extend(" ".join(c) for c in _split_long_chunk(chunk))
+    return sentences
+
+
 class ProcessTextResponse(BaseModel):
     video_id: int
     title: str
@@ -349,13 +412,12 @@ async def process_custom_text(
         if not raw_text:
             raise ValueError("Text content cannot be empty")
 
-        # Basic sentence splitting by punctuation followed by space.
-        # Splits by period, exclamation mark, question mark, semicolon, or
-        # colon, keeping the punctuation (lookbehind keeps it attached).
-        # Commas do NOT split: they stay inside the chunk so word-by-word
-        # dictation can speak and require typing them.
-        sentence_texts = re.split(r'(?<=[.!?;:])\s+', raw_text)
-        sentence_texts = [s.strip() for s in sentence_texts if s.strip()]
+        if len(raw_text) > MAX_CUSTOM_TEXT_CHARS:
+            raise ValueError(f"Text is longer than {MAX_CUSTOM_TEXT_CHARS} characters")
+        if len(request.title.strip()) > MAX_CUSTOM_TITLE_CHARS:
+            raise ValueError(f"Title is longer than {MAX_CUSTOM_TITLE_CHARS} characters")
+
+        sentence_texts = split_custom_text(raw_text)
 
         if not sentence_texts:
             raise ValueError("Could not segment the text into any sentences")
