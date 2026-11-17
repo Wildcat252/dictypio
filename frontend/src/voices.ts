@@ -208,7 +208,7 @@ export function resolveVoice(name: string, voices: readonly AppVoice[]): AppVoic
  * Another Google voice to stand in for `voice` when its family's quota is used
  * up: one from a family not in `exhausted`, same language if possible.
  */
-export function alternateGoogleVoice(voice: AppVoice, exhausted: ReadonlySet<GoogleTier>): AppVoice | null {
+export function alternateGoogleVoice(voice: AppVoice, exhausted: { has(tier: GoogleTier): boolean }): AppVoice | null {
   const usable = googleVoices.filter((v) => v.tier && v.tier !== voice.tier && !exhausted.has(v.tier))
   return usable.find((v) => v.lang === voice.lang) ?? usable[0] ?? null
 }

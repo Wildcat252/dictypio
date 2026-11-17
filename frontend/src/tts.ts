@@ -62,7 +62,16 @@ function notify(notice: TtsNotice) {
 
 // Voice families whose quota ran out this page load: read with browser voices
 // straight away instead of asking the server again for every word.
-const exhausted = new Set<GoogleTier>()
+// The period is kept so later notices name the limit that was actually hit.
+const exhausted = new Map<GoogleTier, 'month' | 'day'>()
+const ALL_TIERS: GoogleTier[] = ['chirp3hd', 'neural2']
+
+function markExhausted(tier: GoogleTier, period: 'month' | 'day') {
+  // The daily allowance is per user across every family, so the other family
+  // is used up too: asking it would only earn a second 429.
+  const tiers = period === 'day' ? ALL_TIERS : [tier]
+  for (const t of tiers) if (!exhausted.has(t)) exhausted.set(t, period)
+}
 
 class QuotaError extends Error {
   constructor(
@@ -235,7 +244,8 @@ export function getClip(text: string, voice: AppVoice): Promise<Blob> {
       remember(key, stored)
       return stored
     }
-    if (voice.tier && exhausted.has(voice.tier)) throw new QuotaError(voice.tier, 'month')
+    const usedUp = voice.tier ? exhausted.get(voice.tier) : undefined
+    if (voice.tier && usedUp) throw new QuotaError(voice.tier, usedUp)
     const blob = await fetchClip(text, voice)
     remember(key, blob)
     void dbPut(key, blob)
@@ -251,7 +261,7 @@ export function prefetchClip(text: string, voice: AppVoice | null | undefined): 
   if (!text.trim() || voice?.source !== 'google') return
   if (voice.tier && exhausted.has(voice.tier)) return
   getClip(text, voice).catch((err) => {
-    if (err instanceof QuotaError) exhausted.add(err.tier)
+    if (err instanceof QuotaError) markExhausted(err.tier, err.period)
   })
 }
 
@@ -368,7 +378,7 @@ export function speakCloud(u: CloudUtterance): void {
     .catch((err: unknown) => {
       if (token !== playToken) return
       if (err instanceof QuotaError) {
-        exhausted.add(err.tier)
+        markExhausted(err.tier, err.period)
         // Another Google family may still have quota: same voices everywhere
         // beats the browser's, so try that before falling back.
         const alt = alternateGoogleVoice(u.voice, exhausted)

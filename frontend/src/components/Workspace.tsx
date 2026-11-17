@@ -294,6 +294,17 @@ export default function Workspace() {
     }
     sessionStartedAtRef.current = getLocalDateTimeString()
 
+    // Nothing of the previous lesson's playback may carry over, whether the new
+    // one resumes from history or starts at the top: the word-by-word position,
+    // the repeat counter and a pause-interval timer still waiting to fire.
+    resetTtsWordQueue()
+    repeatCountRef.current = 0
+    if (intervalTimeoutRef.current) {
+      clearTimeout(intervalTimeoutRef.current)
+      intervalTimeoutRef.current = null
+    }
+    isWaitingForPauseIntervalRef.current = false
+
     // Before switching lessons, hard-reset audio/TTS so Play cannot reuse the previous lesson's state.
     if (selectedLesson?.youtube_url?.startsWith('text://')) {
       cancelSpeech()
@@ -592,6 +603,13 @@ export default function Workspace() {
     })
 
     // Restore sentence index and audio position
+    resetTtsWordQueue()
+    repeatCountRef.current = 0
+    if (intervalTimeoutRef.current) {
+      clearTimeout(intervalTimeoutRef.current)
+      intervalTimeoutRef.current = null
+    }
+    isWaitingForPauseIntervalRef.current = false
     userInitiatedSentenceChangeRef.current = true
     setCurrentSentenceIndex(targetIndex)
     setCurrentTime(targetSentence.start_time)
