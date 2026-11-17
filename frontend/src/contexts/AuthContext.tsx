@@ -9,6 +9,8 @@ interface AuthContextValue {
   user: AuthUser | null
   /** True until we know whether accounts are enabled and whether the stored session is valid. */
   loading: boolean
+  /** True when `loading` has gone on long enough that the server is probably waking up. */
+  serverWaking: boolean
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string) => Promise<void>
   /** Ends the session and reloads onto the sign-in page, optionally with a message to show there. */
@@ -27,11 +29,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authEnabled, setAuthEnabled] = useState(false)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [serverWaking, setServerWaking] = useState(false)
 
   useEffect(() => {
     let cancelled = false
+    // Only worth telling the user about when it is not instant.
+    const wakingTimer = setTimeout(() => {
+      if (!cancelled) setServerWaking(true)
+    }, 1500)
     ;(async () => {
       try {
+        // A sleeping server fails every call until it is up; asking it for the
+        // account config now would read as "signed out" and open the app
+        // half-connected from its saved copy.
+        await api.waitForServer()
+        if (cancelled) return
         const { auth_enabled } = await api.fetchAuthConfig()
         if (cancelled) return
         setAuthEnabled(auth_enabled)
@@ -43,11 +55,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Config unreachable or session rejected: stay signed out. If the server
         // does require sign-in, its first 401 raises AUTH_LOGOUT_EVENT below.
       } finally {
-        if (!cancelled) setLoading(false)
+        clearTimeout(wakingTimer)
+        if (!cancelled) {
+          setLoading(false)
+          setServerWaking(false)
+        }
       }
     })()
     return () => {
       cancelled = true
+      clearTimeout(wakingTimer)
     }
   }, [])
 
@@ -101,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authEnabled,
       user,
       loading,
+      serverWaking,
       login,
       register,
       logout,
@@ -108,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateUser: setUser,
       refreshUser,
     }),
-    [authEnabled, user, loading, login, register, logout, setSession, refreshUser]
+    [authEnabled, user, loading, serverWaking, login, register, logout, setSession, refreshUser]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

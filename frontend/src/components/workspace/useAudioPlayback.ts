@@ -22,6 +22,8 @@ export function sentenceStopTime(sentences: Sentence[], index: number, totalDura
 }
 
 interface UseAudioPlaybackParams {
+  /** False while the lesson's audio has not been fetched yet: nothing may play */
+  audioReady: boolean
   audioRef: MutableRefObject<HTMLAudioElement | null>
   intervalTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
   isWaitingForPauseIntervalRef: MutableRefObject<boolean>
@@ -42,6 +44,7 @@ interface UseAudioPlaybackParams {
  * useTtsPlayback and are skipped here.
  */
 export function useAudioPlayback({
+  audioReady,
   audioRef,
   intervalTimeoutRef,
   isWaitingForPauseIntervalRef,
@@ -286,7 +289,7 @@ export function useAudioPlayback({
     const audio = audioRef.current
     if (!audio || !sentences.length) return
 
-    if (isPlaying) {
+    if (isPlaying && audioReady) {
       if (intervalTimeoutRef.current) {
         clearTimeout(intervalTimeoutRef.current)
         intervalTimeoutRef.current = null
@@ -313,7 +316,7 @@ export function useAudioPlayback({
     } else {
       audio.pause()
     }
-  }, [isPlaying, currentSentenceIndex, sentences, selectedLesson])
+  }, [isPlaying, audioReady, currentSentenceIndex, sentences, selectedLesson])
 
   return { seekTo }
 }

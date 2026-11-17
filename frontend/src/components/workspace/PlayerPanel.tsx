@@ -124,6 +124,8 @@ function formatTime(seconds: number) {
 interface PlayerPanelProps {
   audioRef: MutableRefObject<HTMLAudioElement | null>
   audioBlobUrl: string | null
+  /** False while the lesson's audio is still being fetched from the server */
+  audioReady: boolean
   /** Moves the audio playhead; every seek goes through it */
   seekTo: SeekTo
   currentSentence: Sentence | null
@@ -149,6 +151,7 @@ interface PlayerPanelProps {
 export function PlayerPanel({
   audioRef,
   audioBlobUrl,
+  audioReady,
   seekTo,
   currentSentence,
   intervalTimeoutRef,
@@ -244,6 +247,11 @@ export function PlayerPanel({
         <h1 className="text-base md:text-xl font-bold bg-gradient-to-r from-slate-100 via-cyan-100 to-teal-200 bg-clip-text text-transparent text-center max-md:line-clamp-1 md:line-clamp-2 tracking-wide">
           {selectedLesson?.title || 'Select a lesson'}
         </h1>
+        {!audioReady && (
+          <p role="status" className="mt-1 text-xs text-cyan-300/80 animate-pulse">
+            Connecting to server… Play will be ready in a moment.
+          </p>
+        )}
       </div>
 
       {/* Audio Element (hidden) */}
@@ -295,7 +303,7 @@ export function PlayerPanel({
           </button>
           <button
             onClick={() => {
-              if (!selectedLesson || !sentences.length) return
+              if (!selectedLesson || !sentences.length || !audioReady) return
               setIsPlaying(!isPlaying)
               // When the user hits Play, move the cursor to the first input-able word (skip punctuation-only tokens).
               if (currentSentence) {
@@ -306,9 +314,9 @@ export function PlayerPanel({
                 }
               }
             }}
-            disabled={!selectedLesson || !sentences.length}
+            disabled={!selectedLesson || !sentences.length || !audioReady}
             className="max-md:w-9 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
-            title={isPlaying ? 'Pause' : 'Play'}
+            title={!audioReady ? 'Connecting to server…' : isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
               <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">

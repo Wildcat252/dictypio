@@ -3,6 +3,7 @@ import { AppHeader, MobileTabBar } from './AppHeader'
 import { straightenPunctuation } from '../lib/smartPunctuation'
 import {
   api,
+  waitForServer,
   upsertCurrentLessonSession,
   saveLessonSession,
   translateText,
@@ -26,6 +27,10 @@ import { DictationArea } from './workspace/DictationArea'
 import { PlayerPanel } from './workspace/PlayerPanel'
 import ImportModal from './ImportModal'
 import LessonHistory from './LessonHistory'
+
+// Audio is fetched from a server that may be mid wake-up: retry before giving up.
+const AUDIO_FETCH_ATTEMPTS = 4
+const AUDIO_FETCH_RETRY_MS = 1500
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 
@@ -59,6 +64,7 @@ export default function Workspace() {
     sentencesVideoId,
     currentSentenceIndex,
     setCurrentSentenceIndex,
+    isPlaying,
     setIsPlaying,
     setCurrentTime,
     ignorePunctuation,
@@ -243,15 +249,27 @@ export default function Workspace() {
       return
     }
     let cancelled = false
-    api.get(`/api/youtube/videos/${selectedLesson.video_id}/audio`, { responseType: 'blob' })
-      .then((res) => {
-        if (cancelled) return
-        if (audioBlobUrlRef.current) URL.revokeObjectURL(audioBlobUrlRef.current)
-        const url = URL.createObjectURL(res.data as Blob)
-        audioBlobUrlRef.current = url
-        setAudioBlobUrl(url)
-      })
-      .catch(() => !cancelled && setAudioBlobUrl(null))
+    // The server may still be waking up (a failed or slow first call), so try a
+    // few times before giving up; Play stays disabled until the audio is here.
+    ;(async () => {
+      for (let attempt = 0; attempt < AUDIO_FETCH_ATTEMPTS && !cancelled; attempt++) {
+        try {
+          await waitForServer()
+          if (cancelled) return
+          const res = await api.get(`/api/youtube/videos/${selectedLesson.video_id}/audio`, { responseType: 'blob' })
+          if (cancelled) return
+          if (audioBlobUrlRef.current) URL.revokeObjectURL(audioBlobUrlRef.current)
+          const url = URL.createObjectURL(res.data as Blob)
+          audioBlobUrlRef.current = url
+          setAudioBlobUrl(url)
+          return
+        } catch {
+          if (cancelled) return
+          await new Promise((resolve) => setTimeout(resolve, AUDIO_FETCH_RETRY_MS * (attempt + 1)))
+        }
+      }
+      if (!cancelled) setAudioBlobUrl(null)
+    })()
     return () => {
       cancelled = true
       if (audioBlobUrlRef.current) {
@@ -382,7 +400,20 @@ export default function Workspace() {
   }
 
   // Audio-element playback for non-text lessons (rate, advance, seek, play/pause)
+  // The saved copy of the last lesson shows up instantly, but its audio only
+  // arrives once the server answers. Until then nothing may start playing:
+  // play() on an element with no source is remembered and fires the moment the
+  // source lands, with none of the sentence-by-sentence control around it.
+  const audioReady =
+    Boolean(selectedLesson?.youtube_url?.startsWith('text://')) ||
+    !selectedLesson?.audio_file_path ||
+    audioBlobUrl !== null
+  useEffect(() => {
+    if (!audioReady && isPlaying) setIsPlaying(false)
+  }, [audioReady, isPlaying, setIsPlaying])
+
   const { seekTo } = useAudioPlayback({
+    audioReady,
     audioRef,
     intervalTimeoutRef,
     isWaitingForPauseIntervalRef,
@@ -726,6 +757,7 @@ export default function Workspace() {
           <PlayerPanel
             audioRef={audioRef}
             audioBlobUrl={audioBlobUrl}
+            audioReady={audioReady}
             seekTo={seekTo}
             currentSentence={currentSentence}
             intervalTimeoutRef={intervalTimeoutRef}
