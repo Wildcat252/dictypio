@@ -1,18 +1,13 @@
 #!/usr/bin/env node
 /**
- * Dev orchestrator: embedded Qdrant (local path) → uvicorn → Vite → Electron (window only).
- * Cross-platform (Windows, macOS, Linux).
- *
- * Pass --web to skip the Electron window and open the app in the default
- * browser instead (same backend, same database).
+ * Dev orchestrator: embedded Qdrant (local path) → uvicorn → Vite → browser.
+ * Cross-platform (Windows, macOS, Linux). Data lives in .dev-data/.
  */
 import { spawn, execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { createRequire } from 'module'
 
-const require = createRequire(import.meta.url)
 import http from 'http'
 import net from 'net'
 
@@ -105,7 +100,7 @@ function assertPortFree(host, port, label) {
       reject(
         new Error(
           `Port ${port} is already in use (needed for the ${label}). ` +
-            `Is Ear2Finger already running? Close it (or whatever is using port ${port}) and try again.`
+            `Is Dictypio already running? Close it (or whatever is using port ${port}) and try again.`
         )
       )
     })
@@ -134,7 +129,7 @@ function toSqliteUrl(filePath) {
 }
 
 async function main() {
-  const userData = path.join(ROOT, '.electron-dev-userdata')
+  const userData = path.join(ROOT, '.dev-data')
   fs.mkdirSync(userData, { recursive: true })
   const qLocal = path.join(userData, 'qdrant-local')
   fs.mkdirSync(qLocal, { recursive: true })
@@ -179,50 +174,16 @@ async function main() {
 
   await waitPort('127.0.0.1', 3000, 120000)
 
-  if (process.argv.includes('--web')) {
-    // Web-only mode: no Electron window, just open the browser.
-    const url = 'http://127.0.0.1:3000'
-    console.log(`\nWeb mode — Ear2Finger is running at ${url} (Ctrl+C to stop)\n`)
-    const opener =
-      process.platform === 'darwin' ? ['open', [url]] :
-      process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]] :
-      ['xdg-open', [url]]
-    spawn(opener[0], opener[1], { stdio: 'ignore', detached: true }).unref()
+  const url = 'http://127.0.0.1:3000'
+  console.log(`
+Dictypio is running at ${url} (Ctrl+C to stop)
+`)
+  const opener =
+    process.platform === 'darwin' ? ['open', [url]] :
+    process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]] :
+    ['xdg-open', [url]]
+  spawn(opener[0], opener[1], { stdio: 'ignore', detached: true }).unref()
 
-    uvicorn.on('exit', (code) => {
-      if (code !== 0 && code !== null) console.error(`Uvicorn exited with ${code}`)
-      shutdown()
-    })
-    vite.on('exit', shutdown)
-    return
-  }
-
-  /** Real electron.exe / Electron.app binary — avoids Windows cmd + `.bin/electron.cmd` path/quoting bugs. */
-  let electronExe
-  try {
-    electronExe = require('electron')
-  } catch {
-    electronExe = null
-  }
-  if (typeof electronExe !== 'string' || !fs.existsSync(electronExe)) {
-    throw new Error('Electron not found. From the repo root run: npm install')
-  }
-  const electronArgs =
-    process.platform === 'linux' ? ['--no-sandbox', '--disable-setuid-sandbox', '.'] : ['.']
-  const el = spawn(electronExe, electronArgs, {
-    cwd: ROOT,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      ELECTRON_DEV: '1',
-      ELECTRON_SKIP_QDRANT: '1',
-      ELECTRON_DEV_URL: 'http://127.0.0.1:3000',
-    },
-    shell: false,
-  })
-  children.push(el)
-
-  el.on('exit', shutdown)
   uvicorn.on('exit', (code) => {
     if (code !== 0 && code !== null) console.error(`Uvicorn exited with ${code}`)
     shutdown()

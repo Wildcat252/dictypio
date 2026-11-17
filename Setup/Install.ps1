@@ -1,13 +1,13 @@
 <#
-    Ear2Finger - Windows installer
+    Dictypio - Windows installer
     -------------------------------
-    Installs everything needed to run the web app (npm run web:dev):
+    Installs everything needed to run the web app (npm run dev):
       - Node.js LTS (user-scoped via winget, if missing)
       - Root + frontend npm dependencies (+ esbuild native binary)
       - Python virtual environment under backend\ + requirements.txt
 
     Usage (from the project root):
-        powershell -ExecutionPolicy Bypass -File .\Install.ps1
+        powershell -ExecutionPolicy Bypass -File .\Setup\Install.ps1
 
     Optional:
         -Run    Start the web app when the install finishes.
@@ -19,7 +19,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+# This script lives in Setup/; the project root is one level up.
+$root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $root
 
 function Write-Step($msg) { Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
@@ -59,14 +60,9 @@ foreach ($c in @('python', 'py')) {
     if (Get-Command $c -ErrorAction SilentlyContinue) { $pythonCmd = $c; break }
 }
 if (-not $pythonCmd) {
-    throw "Python 3.8+ not found. Install it from https://www.python.org/downloads/ (check 'Add to PATH') and re-run."
+    throw "Python 3.10+ not found. Install it from https://www.python.org/downloads/ (check 'Add to PATH') and re-run."
 }
 Write-Ok "Python $(& $pythonCmd --version 2>&1)"
-
-# --- Root npm install -----------------------------------------------------
-Write-Step "Installing root dependencies"
-npm install
-Write-Ok "root node_modules ready"
 
 # --- Frontend npm install + esbuild native binary -------------------------
 Write-Step "Installing frontend dependencies"
@@ -93,10 +89,10 @@ Pop-Location
 Write-Ok "backend venv ready"
 
 Write-Host "`nInstall complete." -ForegroundColor Green
-Write-Host "Start the web app with:  npm run web:dev   (opens http://127.0.0.1:3000)"
+Write-Host "Start the web app with:  npm run dev   (opens http://127.0.0.1:3000)"
 Write-Host "Note: FFmpeg is required for YouTube MP3 import (https://ffmpeg.org/download.html)."
 
 if ($Run) {
     Write-Step "Starting web app (Ctrl+C to stop)"
-    npm run web:dev
+    npm run dev
 }

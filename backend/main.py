@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +9,6 @@ from routers import (
     account,
     auth as auth_router,
     health,
-    dictation,
     youtube,
     playlists,
     user_config,
@@ -20,27 +20,25 @@ from routers import (
 )
 from database import init_db
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    yield
+
+
 app = FastAPI(
-    title="Ear2Finger API",
+    title="Dictypio API",
     description="API for English listening and dictation practice",
-    version="1.0.2"
+    version="1.0.2",
+    lifespan=lifespan,
 )
 
-# Initialize database on startup
-@app.on_event("startup")
-async def startup_event():
-    init_db()
-
-# Configure CORS (Electron + Vite dev + packaged local server)
+# Configure CORS (Vite dev server)
 _DEFAULT_CORS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:8765",
-    "http://127.0.0.1:8765",
-    "http://localhost:18712",
-    "http://127.0.0.1:18712",
 ]
 _extra = os.getenv("CORS_EXTRA_ORIGINS", "")
 if _extra.strip():
@@ -58,7 +56,6 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(auth_router.router, prefix="/api", tags=["auth"])
 app.include_router(account.router, prefix="/api", tags=["account"])
-app.include_router(dictation.router, prefix="/api", tags=["dictation"])
 app.include_router(youtube.router, prefix="/api", tags=["youtube"])
 app.include_router(playlists.router, prefix="/api", tags=["playlists"])
 app.include_router(user_config.router, prefix="/api", tags=["user"])
@@ -68,7 +65,7 @@ app.include_router(ai_keys.router, prefix="/api", tags=["user"])
 app.include_router(ai_coach.router, prefix="/api", tags=["ai-coach"])
 app.include_router(tts.router, prefix="/api", tags=["tts"])
 
-_STATIC_DIR = os.getenv("ELECTRON_STATIC_DIR", "").strip()
+_STATIC_DIR = os.getenv("STATIC_DIR", "").strip()
 
 
 @app.get("/")
@@ -77,13 +74,13 @@ async def root():
         index_path = os.path.join(_STATIC_DIR, "index.html")
         if os.path.isfile(index_path):
             return FileResponse(index_path)
-    return {"message": "Welcome to Ear2Finger API"}
+    return {"message": "Welcome to Dictypio API"}
 
 
 if _STATIC_DIR and os.path.isdir(_STATIC_DIR):
     _assets = os.path.join(_STATIC_DIR, "assets")
     if os.path.isdir(_assets):
-        app.mount("/assets", StaticFiles(directory=_assets), name="electron_assets")
+        app.mount("/assets", StaticFiles(directory=_assets), name="assets")
 
     @app.get("/{spa_path:path}")
     async def spa_fallback(spa_path: str):

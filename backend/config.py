@@ -2,7 +2,7 @@
 import os
 
 # Qdrant vector store
-# Embedded (desktop): set QDRANT_LOCAL_PATH to a writable directory — uses in-process Qdrant (no server binary).
+# Embedded: set QDRANT_LOCAL_PATH to a writable directory — uses in-process Qdrant (no server binary).
 # Server / Docker: QDRANT_URL=http://localhost:6333, QDRANT_API_KEY optional.
 QDRANT_LOCAL_PATH = os.getenv("QDRANT_LOCAL_PATH", "").strip() or None
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")

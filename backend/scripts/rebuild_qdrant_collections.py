@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete Ear2Finger Qdrant collections and recreate them at QDRANT_VECTOR_SIZE (default 768).
+"""Delete Dictypio Qdrant collections and recreate them at QDRANT_VECTOR_SIZE (default 768).
 
 Loads ``backend/.env`` when present (variables already set in the shell are not
 overridden). Embedded Qdrant requires ``QDRANT_LOCAL_PATH`` in that file or in
@@ -8,9 +8,9 @@ http://localhost:6333), which fails if no server is listening.
 
   cd backend && source venv/bin/activate && python scripts/rebuild_qdrant_collections.py
 
-If you use ``npm run electron:dev`` and never set ``QDRANT_LOCAL_PATH`` in ``.env``:
+If you use ``npm run dev`` and never set ``QDRANT_LOCAL_PATH`` in ``.env``:
 
-  python scripts/rebuild_qdrant_collections.py --electron-dev-path
+  python scripts/rebuild_qdrant_collections.py --dev-path
 
 One-shot override of vector size (must match Gemini embedding output_dimensionality):
 
@@ -65,20 +65,20 @@ def main() -> None:
         help="Set QDRANT_VECTOR_SIZE for this run only (default from env: 768)",
     )
     parser.add_argument(
-        "--electron-dev-path",
+        "--dev-path",
         action="store_true",
-        help="Set QDRANT_LOCAL_PATH to <repo>/.electron-dev-userdata/qdrant-local (npm run electron:dev)",
+        help="Set QDRANT_LOCAL_PATH to <repo>/.dev-data/qdrant-local (npm run dev)",
     )
     args = parser.parse_args()
     if args.vector_size is not None:
         os.environ["QDRANT_VECTOR_SIZE"] = str(args.vector_size)
 
-    if args.electron_dev_path:
+    if args.dev_path:
         repo_root = os.path.dirname(BACKEND_ROOT)
-        dev_q = os.path.join(repo_root, ".electron-dev-userdata", "qdrant-local")
+        dev_q = os.path.join(repo_root, ".dev-data", "qdrant-local")
         if not os.path.isdir(dev_q):
             print(
-                f"error: --electron-dev-path but directory does not exist: {dev_q}",
+                f"error: --dev-path but directory does not exist: {dev_q}",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -93,7 +93,7 @@ def main() -> None:
         print(
             "Note: QDRANT_LOCAL_PATH is unset; using QDRANT_URL="
             f"{QDRANT_URL!r}. For embedded Qdrant, set QDRANT_LOCAL_PATH in backend/.env "
-            "to the same directory the API uses (Electron: under app userData).",
+            "to the same directory the API uses (npm run dev: .dev-data/qdrant-local).",
             file=sys.stderr,
         )
 

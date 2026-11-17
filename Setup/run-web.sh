@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 #
-# Launch Ear2Finger in the browser only — no Electron window.
-# Same backend and database as the desktop app.
+# Launch Dictypio in the browser (backend + Vite dev server).
 #
-# Usage:  ./run-web.sh        (from a terminal, macOS or Linux)
+# Usage:  Setup/run-web.sh        (from a terminal, macOS or Linux)
 # Stop:   Ctrl+C
 #
 # First-time setup (creates the venv, installs deps) is done by the
@@ -12,14 +11,15 @@
 
 set -euo pipefail
 
-# Resolve this script's own directory so it works from anywhere.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# This script lives in Setup/; resolve the project root (one level up) so it
+# works from anywhere.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
 fail() { echo "" >&2; echo "ERROR: $1" >&2; exit 1; }
 
 echo "========================================="
-echo "   Ear2Finger — web only"
+echo "   Dictypio — web only"
 echo "========================================="
 
 # Locate the backend Python: Windows-style Scripts dir first, then Unix.
@@ -61,4 +61,4 @@ echo ""
 echo "Starting servers — your browser will open at http://127.0.0.1:3000"
 echo "Press Ctrl+C to stop."
 echo ""
-exec npm run web:dev
+exec npm run dev

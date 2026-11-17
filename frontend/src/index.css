@@ -1,4 +1,4 @@
-/* Self-hosted so the packaged Electron app keeps its typography offline. */
+/* Self-hosted so typography does not depend on a font CDN. */
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/lora';

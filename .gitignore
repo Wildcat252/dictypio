@@ -36,8 +36,6 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-# Repo-owned spec for Electron backend CI / packaging (must stay tracked).
-!backend/electron_backend.spec
 
 # Installer logs
 pip-log.txt
@@ -217,20 +215,13 @@ __marimo__/
 
 # Node.js / Frontend
 node_modules/
-.electron-dev-userdata/
+.dev-data/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 .pnpm-debug.log*
-
-# Electron
-electron/vendor/
-release/
-
-# PyInstaller / backend build outputs
-backend/build/
 
 # Frontend build outputs
 frontend/dist/
@@ -243,6 +234,7 @@ Thumbs.db
 
 # Local Qdrant dev data
 .dev-qdrant/
+/storage/
 
 # TypeScript/Vite build outputs
 frontend/*.tsbuildinfo

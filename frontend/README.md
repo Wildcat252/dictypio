@@ -1,6 +1,6 @@
-# Ear2Finger Frontend
+# Dictypio Frontend
 
-React + TypeScript + Tailwind CSS frontend for the Ear2Finger application.
+React + TypeScript + Tailwind CSS frontend for the Dictypio application.
 
 ## Quick Start
 
