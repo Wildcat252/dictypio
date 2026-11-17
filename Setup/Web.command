@@ -2,7 +2,7 @@
 
 # macOS double-click launcher — thin wrapper around run-web.sh so both entry
 # points share one implementation. Launches Ear2Finger in the browser only
-# (no Electron window), same backend and database as the desktop app.
+# (backend + Vite dev server).
 
 # ${0:A:h} resolves to this script's own directory regardless of where it runs.
 PROJECT_DIR="${0:A:h}"

@@ -20,7 +20,7 @@ function useMediaQuery(query: string): boolean {
   return matches
 }
 
-/** True at the md breakpoint and up (the desktop / Electron layout). */
+/** True at the md breakpoint and up (the desktop layout). */
 export function useIsDesktop(): boolean {
   return useMediaQuery(DESKTOP_QUERY)
 }

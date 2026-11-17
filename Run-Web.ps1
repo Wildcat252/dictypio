@@ -2,7 +2,7 @@
     Ear2Finger - run the web app
     ----------------------------
     Starts the FastAPI backend (port 8000) and Vite frontend (port 3000)
-    via `npm run web:dev`, then serves at http://127.0.0.1:3000.
+    via `npm run dev`, then serves at http://127.0.0.1:3000.
 
     Usage (from the project root):
         powershell -ExecutionPolicy Bypass -File .\Run-Web.ps1
@@ -36,7 +36,7 @@ if (-not $nodeDir) {
 $env:Path = "$nodeDir;$env:Path"
 
 # --- Sanity checks --------------------------------------------------------
-if (-not (Test-Path "$root\node_modules")) {
+if (-not (Test-Path "$root\frontend\node_modules")) {
     throw "Dependencies missing. Run Install.ps1 (or Install.cmd) first."
 }
 if (-not (Test-Path "$root\backend\venv\Scripts\python.exe")) {
@@ -48,4 +48,4 @@ Write-Host "  Frontend: http://127.0.0.1:3000" -ForegroundColor Green
 Write-Host "  Backend:  http://127.0.0.1:8000" -ForegroundColor Green
 Write-Host "  Press Ctrl+C to stop.`n"
 
-npm run web:dev
+npm run dev

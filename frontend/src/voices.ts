@@ -263,7 +263,7 @@ export function estimatedVoiceLatency(voiceName: string | undefined | null): num
 
 // Chrome silently stops synthesis roughly 15 seconds into a single utterance.
 // Nudging it with pause()/resume() on a timer keeps long sentences audible.
-// Harmless on Safari/Electron, which don't have the bug.
+// Harmless on Safari, which don't have the bug.
 export function startSpeechKeepAlive(): () => void {
   if (typeof window === 'undefined' || !window.speechSynthesis) return () => {}
   const synth = window.speechSynthesis

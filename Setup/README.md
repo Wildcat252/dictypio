@@ -4,12 +4,11 @@ Turn any YouTube video — or any block of text — into an **English listening 
 
 Everything runs locally: a FastAPI backend, a SQLite database, and your own audio files on your own disk. An optional **AI coach** reads your practice history and tells you what to work on next.
 
-Ships three ways from the same codebase:
+Runs two ways from the same codebase:
 
 | | How to run it | Good for |
 |---|---|---|
-| **Desktop app** | `npm run electron:dev`, or an installer from `npm run electron:pack` | Everyday use — no Python required for end users |
-| **Web app** | `npm run web:dev` (or `./run-web.sh`) | Same backend and database, in your browser |
+| **Web app** | `npm run dev` (or `./run-web.sh`) | Backend + frontend together, in your browser |
 | **Backend only** | `uvicorn main:app --reload` | API work, `/docs`, integrations |
 
 ---
@@ -38,7 +37,7 @@ Ships three ways from the same codebase:
 
 ## Quick start
 
-**macOS, no terminal:** double-click **`Start.command`** the first time (it creates the backend virtualenv and installs all dependencies), then **`Run.command`** for every launch after that. **`Web.command`** opens the browser version instead of the desktop window.
+**macOS, no terminal:** double-click **`Start.command`** the first time (it creates the backend virtualenv and installs all dependencies), then **`Web.command`** for every launch after that.
 
 **Everywhere else:**
 
@@ -48,15 +47,14 @@ python -m venv backend/venv
 source backend/venv/bin/activate       # Windows: backend\venv\Scripts\activate
 pip install -r backend/requirements.txt
 
-# 2. Frontend + Electron deps
-npm install
+# 2. Frontend deps
 npm install --prefix frontend
 
-# 3. Run — desktop window, or `npm run web:dev` for the browser
-npm run electron:dev
+# 3. Run (opens the browser)
+npm run dev
 ```
 
-Both dev modes start Uvicorn on port **8000** and Vite on port **3000**.
+This starts Uvicorn on port **8000** and Vite on port **3000**. Dev data (SQLite, Qdrant, audio) lives in `.dev-data/`.
 
 **Prerequisites:** Python 3.8+, Node.js 18+, and **FFmpeg** for MP3 extraction (`brew install ffmpeg`, `sudo apt-get install ffmpeg`, or the [FFmpeg site](https://ffmpeg.org/download.html) on Windows).
 
@@ -117,7 +115,7 @@ It uses only your own stats and sentences; embeddings live in your own Qdrant in
 
 **To enable it you need:**
 
-1. A reachable **Qdrant** — embedded local path (the default for the desktop app), a local server, or Qdrant Cloud.
+1. A reachable **Qdrant** — embedded local path (the default for `npm run dev`), a local server, or Qdrant Cloud.
 2. A **Gemini API key**, saved per user in **Settings → AI API-key**. The same key powers both chat and embeddings.
 3. Enough practice history for stats and vectors to exist.
 
@@ -138,25 +136,6 @@ Chrome-specific things worth knowing:
 - If nothing is audible, check the tab isn't muted and that the site may play sound in Chrome's site settings.
 
 Two Chrome quirks are already worked around in the code ([`frontend/src/voices.ts`](frontend/src/voices.ts)): its voice list is empty until `voiceschanged` fires, and it silently stops synthesis about 15 seconds into an utterance unless nudged with `pause()`/`resume()`.
-
----
-
-## Desktop builds (Electron)
-
-The Electron shell starts a **PyInstaller-bundled** FastAPI backend — end users install no Python — and uses **embedded Qdrant** via `qdrant-client` local storage (`QDRANT_LOCAL_PATH`). All application data (SQLite, Qdrant files, downloads, audio) lives under Electron's per-user `userData` directory.
-
-```bash
-npm run electron:dev      # dev: Uvicorn + Vite + Electron against the dev server
-npm run electron:pack     # installers/portable builds into release/
-```
-
-`electron:pack` runs `electron:build:backend` (PyInstaller freezes `run_electron_backend.py` into `backend/build/pyinstaller-dist/`, onedir), builds the frontend, then runs `electron-builder`. Building installers needs the `backend/venv` from [Quick start](#quick-start) — PyInstaller is installed into it. No separate C toolchain or `patchelf` is needed for a typical wheel-based freeze.
-
-**Linux sandbox:** Chromium's setuid `chrome-sandbox` isn't usable from a normal install, so the dev launcher passes `--no-sandbox`, `main.cjs` sets the same switches at runtime, and `electron:pack` adds `linux.executableArgs` so AppImage/.deb start with it before JS loads. Older AppImages: run as `./Ear2Finger-*.AppImage --no-sandbox`.
-
-**Linux `.deb` installs but nothing opens:** run the binary from a terminal (`dpkg -L ear2finger | grep /bin/`) so stderr is visible. Builds write `startup.log` and `uvicorn.log` under `~/.config/ear2finger/` (plus `qdrant.log` with external Qdrant).
-
-**External Qdrant HTTP server** (legacy/debugging): set `ELECTRON_EXTERNAL_QDRANT=1`, and Electron expects a Qdrant API on `http://127.0.0.1:6333` — from Docker, or from `npm run electron:vendor`, which downloads the [official binary](https://github.com/qdrant/qdrant/releases) into `electron/vendor/qdrant/`.
 
 ---
 
@@ -239,10 +218,9 @@ Ear2Finger/
 │       ├── LessonHistory.tsx       # Past sessions, "Ask coach"
 │       └── ImportModal.tsx · YouTubeProcessor.tsx
 │
-├── electron/main.cjs               # Desktop shell
-├── scripts/                        # Dev orchestration, PyInstaller, Qdrant vendor
-├── Start.command · Run.command · Web.command · run-web.sh
-└── package.json                    # Electron + electron-builder config
+├── scripts/dev.mjs                 # Dev orchestration (backend + Vite + browser)
+├── Start.command · Web.command · run-web.sh
+└── package.json                    # `npm run dev` only
 ```
 
 **Data model** (`backend/database.py`): `User`, `UserConfig`, `Playlist`, `PlaylistVideo`, `Video`, `Sentence`, `LessonSession`, `LearningProgress`, `PracticeWordState`.

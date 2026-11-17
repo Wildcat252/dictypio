@@ -22,12 +22,12 @@ COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 # curl_cffi lets yt-dlp impersonate a browser. YouTube asks for that on subtitle
 # downloads, and from a datacenter IP they come back empty without it. Server
-# only: the desktop app runs from home IPs and doesn't need the extra weight.
+# only: local dev runs from a home IP and doesn't need the extra weight.
 RUN pip install --no-cache-dir "yt-dlp[curl-cffi]==$(pip show yt-dlp | sed -n 's/^Version: //p')"
 COPY backend/ backend/
 COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
-ENV ELECTRON_STATIC_DIR=/app/frontend/dist \
+ENV STATIC_DIR=/app/frontend/dist \
     EAR2FINGER_DOWNLOAD_DIR=/tmp/downloads \
     EAR2FINGER_AUDIO_DIR=/tmp/audio \
     PYTHONUNBUFFERED=1

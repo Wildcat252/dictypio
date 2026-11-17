@@ -31,16 +31,12 @@ app = FastAPI(
 async def startup_event():
     init_db()
 
-# Configure CORS (Electron + Vite dev + packaged local server)
+# Configure CORS (Vite dev server)
 _DEFAULT_CORS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:8765",
-    "http://127.0.0.1:8765",
-    "http://localhost:18712",
-    "http://127.0.0.1:18712",
 ]
 _extra = os.getenv("CORS_EXTRA_ORIGINS", "")
 if _extra.strip():
@@ -68,7 +64,7 @@ app.include_router(ai_keys.router, prefix="/api", tags=["user"])
 app.include_router(ai_coach.router, prefix="/api", tags=["ai-coach"])
 app.include_router(tts.router, prefix="/api", tags=["tts"])
 
-_STATIC_DIR = os.getenv("ELECTRON_STATIC_DIR", "").strip()
+_STATIC_DIR = os.getenv("STATIC_DIR", "").strip()
 
 
 @app.get("/")
@@ -83,7 +79,7 @@ async def root():
 if _STATIC_DIR and os.path.isdir(_STATIC_DIR):
     _assets = os.path.join(_STATIC_DIR, "assets")
     if os.path.isdir(_assets):
-        app.mount("/assets", StaticFiles(directory=_assets), name="electron_assets")
+        app.mount("/assets", StaticFiles(directory=_assets), name="assets")
 
     @app.get("/{spa_path:path}")
     async def spa_fallback(spa_path: str):

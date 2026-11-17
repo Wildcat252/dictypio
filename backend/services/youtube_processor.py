@@ -145,7 +145,7 @@ class YouTubeProcessor:
     _NOISE_TOKENS = frozenset({'-', '–', '—'})
 
     def __init__(self, download_dir: str = None, audio_dir: str = None):
-        # Use absolute paths relative to backend directory (or Electron userData via env)
+        # Use absolute paths relative to backend directory (or overridden via env)
         backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.download_dir = (
             download_dir
@@ -436,8 +436,7 @@ class YouTubeProcessor:
         except Exception as e:
             print(f"Warning: Failed to download subtitles via command-line: {str(e)}")
 
-        # PyInstaller/Electron: `sys.executable` is the frozen backend, not Python, so
-        # `run_electron_backend.exe -m yt_dlp` fails without raising — only the API path works.
+        # Fall back to the yt-dlp API when the command-line path produced nothing.
         if not subtitles_data:
             try:
                 subtitles_data = self._extract_subtitles_via_api(ydl, info)

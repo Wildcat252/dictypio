@@ -34,7 +34,7 @@ export default defineConfig({
   },
   server: {
     // Bind IPv4 explicitly: Windows often serves "localhost" on ::1 only, while
-    // scripts/electron-dev.mjs and Electron use 127.0.0.1 — mismatched stacks time out.
+    // scripts/dev.mjs uses 127.0.0.1 — mismatched stacks time out.
     host: '127.0.0.1',
     port: 3000,
     proxy: {

@@ -1,7 +1,7 @@
 <#
     Ear2Finger - Windows installer
     -------------------------------
-    Installs everything needed to run the web app (npm run web:dev):
+    Installs everything needed to run the web app (npm run dev):
       - Node.js LTS (user-scoped via winget, if missing)
       - Root + frontend npm dependencies (+ esbuild native binary)
       - Python virtual environment under backend\ + requirements.txt
@@ -63,11 +63,6 @@ if (-not $pythonCmd) {
 }
 Write-Ok "Python $(& $pythonCmd --version 2>&1)"
 
-# --- Root npm install -----------------------------------------------------
-Write-Step "Installing root dependencies"
-npm install
-Write-Ok "root node_modules ready"
-
 # --- Frontend npm install + esbuild native binary -------------------------
 Write-Step "Installing frontend dependencies"
 Push-Location "$root\frontend"
@@ -93,10 +88,10 @@ Pop-Location
 Write-Ok "backend venv ready"
 
 Write-Host "`nInstall complete." -ForegroundColor Green
-Write-Host "Start the web app with:  npm run web:dev   (opens http://127.0.0.1:3000)"
+Write-Host "Start the web app with:  npm run dev   (opens http://127.0.0.1:3000)"
 Write-Host "Note: FFmpeg is required for YouTube MP3 import (https://ffmpeg.org/download.html)."
 
 if ($Run) {
     Write-Step "Starting web app (Ctrl+C to stop)"
-    npm run web:dev
+    npm run dev
 }

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Launch Ear2Finger in the browser only — no Electron window.
-# Same backend and database as the desktop app.
+# Launch Ear2Finger in the browser (backend + Vite dev server).
 #
 # Usage:  ./run-web.sh        (from a terminal, macOS or Linux)
 # Stop:   Ctrl+C
@@ -61,4 +60,4 @@ echo ""
 echo "Starting servers — your browser will open at http://127.0.0.1:3000"
 echo "Press Ctrl+C to stop."
 echo ""
-exec npm run web:dev
+exec npm run dev

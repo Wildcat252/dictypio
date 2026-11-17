@@ -1,7 +1,7 @@
 """Show the most recent sentences that recorded a twice-hinted word."""
 import sqlite3, json, glob, collections
 
-db = glob.glob('.electron-dev-userdata/*.db')[0]
+db = glob.glob('.dev-data/*.db')[0]
 rows = sqlite3.connect(db).execute(
     "SELECT data, updated_at FROM learning_progress "
     "WHERE data IS NOT NULL ORDER BY updated_at DESC LIMIT 40").fetchall()
