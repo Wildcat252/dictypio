@@ -1,4 +1,4 @@
-# Ear2Finger
+# Dictypio
 
 Turn any YouTube video — or any block of text — into an **English listening and dictation exercise**. You hear a sentence, you type it word by word, and the app keeps track of every word that gave you trouble.
 
@@ -8,7 +8,7 @@ Runs two ways from the same codebase:
 
 | | How to run it | Good for |
 |---|---|---|
-| **Web app** | `npm run dev` (or `./run-web.sh`) | Backend + frontend together, in your browser |
+| **Web app** | `npm run dev` (or `Setup/run-web.sh`) | Backend + frontend together, in your browser |
 | **Backend only** | `uvicorn main:app --reload` | API work, `/docs`, integrations |
 
 ---
@@ -19,14 +19,14 @@ Runs two ways from the same codebase:
 
 <div align="center">
   <a href="https://youtu.be/TEuXrHZ0VSE">
-    <img src="https://img.youtube.com/vi/TEuXrHZ0VSE/hqdefault.jpg" alt="Import a YouTube lesson into Ear2Finger" width="1080"/>
+    <img src="https://img.youtube.com/vi/TEuXrHZ0VSE/hqdefault.jpg" alt="Import a YouTube lesson into Dictypio" width="1080"/>
   </a>
   <p><strong><a href="https://youtu.be/TEuXrHZ0VSE">📺 Import a YouTube lesson</a></strong></p>
 </div>
 
 <div align="center">
   <a href="https://youtu.be/5z7yxVxZC1I">
-    <img src="https://img.youtube.com/vi/5z7yxVxZC1I/hqdefault.jpg" alt="Dictation practice in Ear2Finger" width="1080"/>
+    <img src="https://img.youtube.com/vi/5z7yxVxZC1I/hqdefault.jpg" alt="Dictation practice in Dictypio" width="1080"/>
   </a>
   <p><strong><a href="https://youtu.be/5z7yxVxZC1I">📺 Dictation practice</a></strong></p>
 </div>
@@ -37,7 +37,7 @@ Runs two ways from the same codebase:
 
 ## Quick start
 
-**macOS, no terminal:** double-click **`Start.command`** the first time (it creates the backend virtualenv and installs all dependencies), then **`Web.command`** for every launch after that.
+**macOS, no terminal:** double-click **`Setup/Start.command`** the first time (it creates the backend virtualenv and installs all dependencies), then **`Setup/Web.command`** for every launch after that.
 
 **Everywhere else:**
 
@@ -56,7 +56,7 @@ npm run dev
 
 This starts Uvicorn on port **8000** and Vite on port **3000**. Dev data (SQLite, Qdrant, audio) lives in `.dev-data/`.
 
-**Prerequisites:** Python 3.8+, Node.js 18+, and **FFmpeg** for MP3 extraction (`brew install ffmpeg`, `sudo apt-get install ffmpeg`, or the [FFmpeg site](https://ffmpeg.org/download.html) on Windows).
+**Prerequisites:** Python 3.10+, Node.js 18+, and **FFmpeg** for MP3 extraction (`brew install ffmpeg`, `sudo apt-get install ffmpeg`, or the [FFmpeg site](https://ffmpeg.org/download.html) on Windows).
 
 ---
 
@@ -87,12 +87,7 @@ Default shortcuts (all rebindable in **Settings → Keyboard shortcuts**):
 
 ### 3. Drill your tricky words
 
-The **Practice** tab collects the words that actually gave you trouble. A word is "tricky" only when **both** signals are present:
-
-- its **most recent attempt needed 3 or more tries**, *and*
-- it needed **at least one hint**
-
-Requiring both keeps the list short and worth working through — a single slip or a single hint isn't enough to land on it. From there you can drill a word, **bin** it (hidden but recoverable), delete it once learnt, or add your own custom words.
+The **Practice** tab collects the words that actually gave you trouble. A word is "tricky" on one signal only: you revealed its **hint two or more times inside a single sentence**. Fumbling the spelling a few times, or needing one hint, is ordinary and does not land a word on the list. From there you can drill a word, **bin** it (hidden but recoverable), delete it once learnt, or add your own custom words.
 
 ### 4. Check the dashboard
 
@@ -163,7 +158,7 @@ Everything is under `/api`. Interactive docs at `http://localhost:8000/docs` (Sw
 | | |
 |---|---|
 | `GET|POST /user/progress` | Raw per-sentence learning events |
-| `GET /user/stats` | Aggregated totals, distributions, and top tricky words (latest attempt ≥ 3 tries **and** ≥ 1 hint) |
+| `GET /user/stats` | Aggregated totals, distributions, and top tricky words (hint revealed 2+ times on the word within one sentence) |
 | `GET /user/practice/words` | Practice word states — custom, binned, deleted |
 | `POST /user/practice/words/add` · `/bin` · `/recover` | Manage the practice list |
 | `DELETE /user/practice/words/{word}` | Drop a word from the list |
@@ -172,18 +167,16 @@ Everything is under `/api`. Interactive docs at `http://localhost:8000/docs` (Sw
 
 **AI coach** — `POST /ai/coach/feedback`, `POST /ai/coach/recommend-practice`, `POST /ai/translate`
 
-**Legacy** — `GET|POST /dictations`, `GET /dictations/{id}`
-
 ---
 
 ## Architecture
 
-**Backend** — Python 3.8+ · FastAPI · Uvicorn · SQLAlchemy + SQLite · yt-dlp · NLTK · Qdrant · Gemini via LangChain (chat **and** embeddings; no local PyTorch stack)
+**Backend** — Python 3.10+ · FastAPI · Uvicorn · SQLAlchemy + SQLite · yt-dlp · NLTK · Qdrant · Gemini via LangChain (chat **and** embeddings; no local PyTorch stack)
 
 **Frontend** — React 18 · TypeScript · Vite · Tailwind CSS · Axios
 
 ```
-Ear2Finger/
+Dictypio/
 ├── backend/
 │   ├── main.py                     # FastAPI app; routers mounted under /api
 │   ├── database.py                 # SQLAlchemy models (see below)
@@ -192,14 +185,16 @@ Ear2Finger/
 │   │   ├── youtube.py              # Video and text lesson import
 │   │   ├── playlists.py            # Playlist CRUD
 │   │   ├── lesson_sessions.py      # Per-lesson practice sessions
-│   │   ├── learning_progress.py    # Progress events, stats, tricky words
+│   │   ├── learning_progress.py    # Progress events, practice word list
 │   │   ├── ai_coach.py             # Coach feedback, recommendations, translate
 │   │   ├── ai_keys.py              # Per-user API keys
 │   │   ├── user_config.py          # User settings
-│   │   ├── dictation.py            # Legacy
 │   │   └── health.py
 │   └── services/
-│       ├── youtube_processor.py    # yt-dlp, WebVTT parsing, segmentation
+│       ├── youtube_processor.py    # yt-dlp download, lesson import
+│       ├── youtube_subtitles.py    # Subtitle parsing (json3, XML, SRT, WebVTT)
+│       ├── youtube_segmentation.py # Cues → dictation sentences
+│       ├── learning_stats.py       # Stats aggregation, tricky words
 │       ├── qdrant_client.py        # Ingestion + semantic search
 │       └── ai_client_factory.py    # LLM + embedding clients
 │
@@ -219,7 +214,7 @@ Ear2Finger/
 │       └── ImportModal.tsx · YouTubeProcessor.tsx
 │
 ├── scripts/dev.mjs                 # Dev orchestration (backend + Vite + browser)
-├── Start.command · Web.command · run-web.sh
+├── Setup/                          # Launchers: Install.ps1, Run-Web.ps1, Start.command, Web.command, run-web.sh
 └── package.json                    # `npm run dev` only
 ```
 

@@ -234,6 +234,7 @@ Thumbs.db
 
 # Local Qdrant dev data
 .dev-qdrant/
+/storage/
 
 # TypeScript/Vite build outputs
 frontend/*.tsbuildinfo

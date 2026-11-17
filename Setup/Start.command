@@ -1,13 +1,13 @@
 #!/bin/zsh
 
-# First-time setup + launch for Ear2Finger.
+# First-time setup + launch for Dictypio.
 # Installs anything that's missing (backend venv, Python deps, npm packages),
 # then starts the app. After the first successful run, use Web.command for
 # faster launches that skip the setup steps.
 
-# ${0:A:h} resolves to this script's own directory, so the launcher works
-# no matter where the repository is cloned or moved.
-PROJECT_DIR="${0:A:h}"
+# This script lives in Setup/; ${0:A:h:h} is the project root, so the launcher
+# works no matter where the repository is cloned or moved.
+PROJECT_DIR="${0:A:h:h}"
 
 # Double-click launches get a sparse PATH; add common Node/Homebrew paths.
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
@@ -23,7 +23,7 @@ fail() {
 }
 
 echo "========================================="
-echo "   Ear2Finger — first-time setup"
+echo "   Dictypio — first-time setup"
 echo "========================================="
 echo "Project directory: $PROJECT_DIR"
 echo ""
@@ -82,7 +82,7 @@ done
 
 # --- Launch -------------------------------------------------------------------
 echo ""
-echo "Setup complete. Launching Ear2Finger (first start can take ~10-20 seconds)..."
+echo "Setup complete. Launching Dictypio (first start can take ~10-20 seconds)..."
 echo "Next time, double-click Web.command for a faster launch."
 echo ""
 npm run dev
@@ -90,7 +90,7 @@ npm run dev
 # If it crashes or stops, keep the terminal open so the reason is visible.
 echo ""
 echo "========================================="
-echo "   Ear2Finger has closed."
+echo "   Dictypio has closed."
 echo "========================================="
 echo "If it failed to start, scroll up for the error."
 echo ""

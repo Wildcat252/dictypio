@@ -1,6 +1,6 @@
-# Ear2Finger Backend
+# Dictypio Backend
 
-FastAPI backend for the Ear2Finger application.
+FastAPI backend for the Dictypio application.
 
 ## Quick Start
 

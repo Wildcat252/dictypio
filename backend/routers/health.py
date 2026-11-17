@@ -6,4 +6,4 @@ router = APIRouter()
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "Ear2Finger API"}
+    return {"status": "healthy", "service": "Dictypio API"}

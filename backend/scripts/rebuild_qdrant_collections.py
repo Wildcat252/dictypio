@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete Ear2Finger Qdrant collections and recreate them at QDRANT_VECTOR_SIZE (default 768).
+"""Delete Dictypio Qdrant collections and recreate them at QDRANT_VECTOR_SIZE (default 768).
 
 Loads ``backend/.env`` when present (variables already set in the shell are not
 overridden). Embedded Qdrant requires ``QDRANT_LOCAL_PATH`` in that file or in

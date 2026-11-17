@@ -100,7 +100,7 @@ function assertPortFree(host, port, label) {
       reject(
         new Error(
           `Port ${port} is already in use (needed for the ${label}). ` +
-            `Is Ear2Finger already running? Close it (or whatever is using port ${port}) and try again.`
+            `Is Dictypio already running? Close it (or whatever is using port ${port}) and try again.`
         )
       )
     })
