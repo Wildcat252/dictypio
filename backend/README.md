@@ -33,24 +33,24 @@ Copy `.env.example` to `.env` and configure as needed.
 Downloaded lesson audio goes to `EAR2FINGER_AUDIO_DIR`. On Cloud Run `/tmp` is
 the instance's own memory, so the audio has to live in a Cloud Storage bucket
 mounted into the service, or it is lost on every deploy and scale-to-zero.
-One-time setup (replace the names as needed):
+
+The deploy workflow takes care of it: it creates the bucket named in
+`AUDIO_BUCKET` (`.github/workflows/deploy-cloud-run.yml`) if missing, lets the
+service's runtime account use it, mounts it at `/mnt/audio` and points
+`EAR2FINGER_AUDIO_DIR` there.
+
+That needs the deploy account to manage buckets. If the deploy log warns that
+it could not, a project owner grants it once (Console → IAM → github-deployer
+→ Add role "Storage Admin", or in Cloud Shell):
 
 ```sh
-PROJECT=project-3b8da5db-0980-48be-ad7
-BUCKET=$PROJECT-audio
-gcloud storage buckets create gs://$BUCKET --project $PROJECT \
-  --location asia-southeast1 --uniform-bucket-level-access
-# The service account the Cloud Run service runs as (empty = the default compute one):
-SA=$(gcloud run services describe dictypio --project $PROJECT --region asia-southeast1 \
-  --format 'value(spec.template.spec.serviceAccountName)')
-SA=${SA:-$(gcloud projects describe $PROJECT --format 'value(projectNumber)')-compute@developer.gserviceaccount.com}
-gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
-  --member serviceAccount:$SA --role roles/storage.objectAdmin
+gcloud projects add-iam-policy-binding project-3b8da5db-0980-48be-ad7 \
+  --member serviceAccount:github-deployer@project-3b8da5db-0980-48be-ad7.iam.gserviceaccount.com \
+  --role roles/storage.admin
 ```
 
-Then set the GitHub repository variable `AUDIO_BUCKET` to the bucket name
-(Settings → Secrets and variables → Actions → Variables). The deploy workflow
-mounts it at `/mnt/audio` and points `EAR2FINGER_AUDIO_DIR` there.
+and runs the workflow again (Actions → Deploy Cloud Run and Firebase Hosting →
+Run workflow).
 
 Lessons whose audio was lost before that report it when opened; importing the
 same YouTube link again downloads the audio and keeps the lesson's progress.
