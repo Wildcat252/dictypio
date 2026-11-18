@@ -6,6 +6,7 @@ import { displayKey, type Keybindings } from '../../keybindings'
 import { AI_COACH_ENABLED } from '../../features'
 import { cancelSpeech } from '../../tts'
 import type { SeekTo } from './useAudioPlayback'
+import type { AudioError } from './useLessonAudio'
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 // How many times each word is spoken in word-by-word mode
@@ -126,6 +127,9 @@ interface PlayerPanelProps {
   audioBlobUrl: string | null
   /** False while the lesson's audio is still being fetched from the server */
   audioReady: boolean
+  /** Why the audio could not be loaded, once it is clear it will not load */
+  audioError: AudioError | null
+  onRetryAudio: () => void
   /** Moves the audio playhead; every seek goes through it */
   seekTo: SeekTo
   currentSentence: Sentence | null
@@ -152,6 +156,8 @@ export function PlayerPanel({
   audioRef,
   audioBlobUrl,
   audioReady,
+  audioError,
+  onRetryAudio,
   seekTo,
   currentSentence,
   intervalTimeoutRef,
@@ -247,9 +253,23 @@ export function PlayerPanel({
         <h1 className="text-base md:text-xl font-bold bg-gradient-to-r from-slate-100 via-cyan-100 to-teal-200 bg-clip-text text-transparent text-center max-md:line-clamp-1 md:line-clamp-2 tracking-wide">
           {selectedLesson?.title || 'Select a lesson'}
         </h1>
-        {!audioReady && (
+        {!audioReady && audioError && (
+          <p role="alert" className="mt-1 text-xs text-rose-300">
+            {audioError.message}
+            {audioError.kind === 'unreachable' && (
+              <button
+                type="button"
+                onClick={onRetryAudio}
+                className="ml-2 underline underline-offset-2 text-cyan-300 hover:text-cyan-200"
+              >
+                Retry
+              </button>
+            )}
+          </p>
+        )}
+        {!audioReady && !audioError && (
           <p role="status" className="mt-1 text-xs text-cyan-300/80 animate-pulse">
-            Connecting to server… Play will be ready in a moment.
+            Loading audio… Play will be ready in a moment.
           </p>
         )}
       </div>
@@ -316,7 +336,7 @@ export function PlayerPanel({
             }}
             disabled={!selectedLesson || !sentences.length || !audioReady}
             className="max-md:w-9 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
-            title={!audioReady ? 'Connecting to server…' : isPlaying ? 'Pause' : 'Play'}
+            title={!audioReady ? (audioError ? 'Audio unavailable' : 'Loading audio…') : isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
               <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">

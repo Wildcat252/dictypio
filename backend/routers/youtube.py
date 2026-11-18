@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, HttpUrl, field_validator
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Iterator, List, Optional, Tuple
 from database import get_db, Video, Sentence, User, PlaylistVideo, LearningProgress
 from auth import get_current_user
-from services.audio_files import ensure_seekable_audio, remove_unreferenced_audio
+from services.audio_files import ensure_seekable_audio, forget_missing_audio, remove_unreferenced_audio
 from services.youtube_processor import YouTubeProcessor
 from services.qdrant_client import delete_sentence_vectors_for_video, ingest_sentences_for_video
 import re
@@ -83,8 +83,13 @@ async def process_youtube_video(
 ):
     """Process a YouTube video: extract subtitles and segment into sentences"""
     try:
-        result = _get_youtube_processor().process_youtube_video(
-            request.url, db, user_id=current_user.id
+        # yt-dlp runs for minutes; on the event loop it would stall every other
+        # request this instance serves (health, audio, sentences) meanwhile.
+        result = await run_in_threadpool(
+            _get_youtube_processor().process_youtube_video,
+            request.url,
+            db,
+            user_id=current_user.id,
         )
 
         # Kick off background ingestion of sentences into Qdrant.
@@ -120,13 +125,19 @@ YOUTUBE_BLOCKED_MESSAGE = (
 )
 
 
+AUDIO_MISSING_MESSAGE = (
+    "The audio of this lesson is no longer on the server. "
+    "Import the same YouTube link again to restore it; your progress is kept."
+)
+
+
 def is_youtube_block_error(message: str) -> bool:
     lowered = message.lower().replace("’", "'")
     return any(marker in lowered for marker in _YOUTUBE_BLOCK_MARKERS)
 
 
 @router.get("/youtube/videos", response_model=List[VideoResponse])
-async def get_videos(
+def get_videos(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -149,7 +160,7 @@ async def get_videos(
 
 
 @router.get("/youtube/videos/{video_id}", response_model=VideoResponse)
-async def get_video(
+def get_video(
     video_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -172,7 +183,7 @@ async def get_video(
 
 
 @router.get("/youtube/videos/{video_id}/sentences", response_model=List[SentenceResponse])
-async def get_video_sentences(
+def get_video_sentences(
     video_id: int,
     skip: int = 0,
     limit: int = 1000,
@@ -208,44 +219,88 @@ def _audio_media_type_for_path(path: str) -> str:
     return "application/octet-stream"
 
 
+# The most one partial response carries. Cloud Run cuts plain HTTP/1 responses
+# above 32 MiB, so a long lesson is fetched as several ranges of this size; a
+# server may answer a range with less than was asked for (RFC 9110 14.1.2).
+AUDIO_RANGE_CHUNK = 8 * 1024 * 1024
+_READ_BLOCK = 256 * 1024
+_RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
+
+
+class RangeNotSatisfiable(Exception):
+    pass
+
+
+def parse_range(header: Optional[str], size: int) -> Optional[Tuple[int, int]]:
+    """The (start, end) byte range asked for, end inclusive and capped to
+    AUDIO_RANGE_CHUNK; None for the whole file. Raises RangeNotSatisfiable."""
+    if not header:
+        return None
+    match = _RANGE_RE.match(header.strip().lower())
+    if not match:
+        # Several ranges or another unit: allowed to answer with the whole file.
+        return None
+    first, last = match.groups()
+    if not first and not last:
+        raise RangeNotSatisfiable()
+    if not first:
+        # bytes=-N: the last N bytes
+        suffix = int(last)
+        if suffix == 0 or size == 0:
+            raise RangeNotSatisfiable()
+        start, end = max(0, size - suffix), size - 1
+    else:
+        start = int(first)
+        end = int(last) if last else size - 1
+        if start >= size or end < start:
+            raise RangeNotSatisfiable()
+        end = min(end, size - 1)
+    end = min(end, start + AUDIO_RANGE_CHUNK - 1)
+    return start, end
+
+
+def _iter_file(path: str, start: int, length: int) -> Iterator[bytes]:
+    with open(path, "rb") as f:
+        f.seek(start)
+        remaining = length
+        while remaining > 0:
+            data = f.read(min(_READ_BLOCK, remaining))
+            if not data:
+                break
+            remaining -= len(data)
+            yield data
+
+
 def _serve_audio_with_range(path: str, request: Request, media_type: str, filename: str):
     """Serve file with Range support so the browser can seek (currentTime)."""
     size = os.path.getsize(path)
-    range_header = request.headers.get("range")
-    if not range_header or not range_header.strip().lower().startswith("bytes="):
+    try:
+        byte_range = parse_range(request.headers.get("range"), size)
+    except RangeNotSatisfiable:
+        return Response(status_code=416, headers={"Content-Range": f"bytes */{size}"})
+    if byte_range is None:
         return FileResponse(
             path,
             media_type=media_type,
             filename=filename,
             headers={"Accept-Ranges": "bytes"},
         )
-    try:
-        parts = range_header.strip()[6:].split("-")
-        start = int(parts[0]) if parts[0] else 0
-        end = int(parts[1]) if len(parts) > 1 and parts[1] else size - 1
-        if start >= size:
-            return Response(status_code=416, headers={"Content-Range": f"bytes */{size}"})
-        end = min(end, size - 1)
-        length = end - start + 1
-        with open(path, "rb") as f:
-            f.seek(start)
-            body = f.read(length)
-        return Response(
-            status_code=206,
-            content=body,
-            media_type=media_type,
-            headers={
-                "Accept-Ranges": "bytes",
-                "Content-Range": f"bytes {start}-{end}/{size}",
-                "Content-Length": str(length),
-            },
-        )
-    except (ValueError, IndexError):
-        return FileResponse(path, media_type=media_type, filename=filename, headers={"Accept-Ranges": "bytes"})
+    start, end = byte_range
+    length = end - start + 1
+    return StreamingResponse(
+        _iter_file(path, start, length),
+        status_code=206,
+        media_type=media_type,
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Range": f"bytes {start}-{end}/{size}",
+            "Content-Length": str(length),
+        },
+    )
 
 
 @router.get("/youtube/videos/{video_id}/audio")
-async def get_video_audio(
+def get_video_audio(
     video_id: int,
     request: Request,
     db: Session = Depends(get_db),
@@ -262,11 +317,15 @@ async def get_video_audio(
         raise HTTPException(status_code=404, detail="Video not found")
 
     if not video.audio_file_path or not os.path.exists(video.audio_file_path):
-        raise HTTPException(status_code=404, detail="Audio file not found")
+        if video.audio_file_path:
+            # The file is gone (it lived on a disk that was wiped). Stop counting
+            # the lesson as one with audio; importing its link again restores it.
+            forget_missing_audio(db, video.audio_file_path, _get_youtube_processor().audio_dir)
+        raise HTTPException(status_code=404, detail=AUDIO_MISSING_MESSAGE)
 
     # Lessons from before the M4A switch get their MP3 converted the first time
-    # they are opened; FFmpeg takes a few seconds, so keep it off the event loop.
-    audio_path = await run_in_threadpool(ensure_seekable_audio, db, video.audio_file_path)
+    # they are opened (this endpoint is sync, so FastAPI runs it off the event loop).
+    audio_path = ensure_seekable_audio(db, video.audio_file_path)
 
     return _serve_audio_with_range(
         audio_path,
@@ -277,7 +336,7 @@ async def get_video_audio(
 
 
 @router.delete("/youtube/videos/{video_id}")
-async def delete_video(
+def delete_video(
     video_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

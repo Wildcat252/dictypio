@@ -28,6 +28,33 @@ FastAPI backend for the Dictypio application.
 
 Copy `.env.example` to `.env` and configure as needed.
 
+## Lesson audio on Cloud Run
+
+Downloaded lesson audio goes to `EAR2FINGER_AUDIO_DIR`. On Cloud Run `/tmp` is
+the instance's own memory, so the audio has to live in a Cloud Storage bucket
+mounted into the service, or it is lost on every deploy and scale-to-zero.
+One-time setup (replace the names as needed):
+
+```sh
+PROJECT=project-3b8da5db-0980-48be-ad7
+BUCKET=$PROJECT-audio
+gcloud storage buckets create gs://$BUCKET --project $PROJECT \
+  --location asia-southeast1 --uniform-bucket-level-access
+# The service account the Cloud Run service runs as (empty = the default compute one):
+SA=$(gcloud run services describe dictypio --project $PROJECT --region asia-southeast1 \
+  --format 'value(spec.template.spec.serviceAccountName)')
+SA=${SA:-$(gcloud projects describe $PROJECT --format 'value(projectNumber)')-compute@developer.gserviceaccount.com}
+gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
+  --member serviceAccount:$SA --role roles/storage.objectAdmin
+```
+
+Then set the GitHub repository variable `AUDIO_BUCKET` to the bucket name
+(Settings → Secrets and variables → Actions → Variables). The deploy workflow
+mounts it at `/mnt/audio` and points `EAR2FINGER_AUDIO_DIR` there.
+
+Lessons whose audio was lost before that report it when opened; importing the
+same YouTube link again downloads the audio and keeps the lesson's progress.
+
 ## Accounts
 
 Off by default: every request runs as one local `default` user, which is what the

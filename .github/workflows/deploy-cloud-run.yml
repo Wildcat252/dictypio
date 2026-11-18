@@ -36,12 +36,33 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      # Lesson audio must outlive an instance: /tmp on Cloud Run is that
+      # instance's memory, gone after every deploy or scale-to-zero. Once the
+      # bucket exists (see backend/README.md, "Lesson audio on Cloud Run"), set
+      # the repository variable AUDIO_BUCKET to its name and every deploy mounts
+      # it. Without the variable the service keeps whatever it has now.
       - name: Deploy
+        env:
+          AUDIO_BUCKET: ${{ vars.AUDIO_BUCKET }}
         run: |
+          audio_flags=()
+          if [ -n "$AUDIO_BUCKET" ]; then
+            audio_flags=(
+              --execution-environment gen2
+              --add-volume "name=audio,type=cloud-storage,bucket=$AUDIO_BUCKET"
+              --add-volume-mount "volume=audio,mount-path=/mnt/audio"
+              --update-env-vars EAR2FINGER_AUDIO_DIR=/mnt/audio
+            )
+          else
+            echo "::warning::AUDIO_BUCKET is not set: lesson audio is not on a bucket and is lost on every new instance."
+          fi
+          # An import downloads with yt-dlp inside the request; give it room.
           gcloud run deploy "$SERVICE" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
             --source . \
+            --timeout 900 \
+            "${audio_flags[@]}" \
             --quiet
 
   # The frontend on Firebase Hosting (dictypio.web.app). It calls the Cloud Run

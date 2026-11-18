@@ -3,7 +3,6 @@ import { AppHeader, MobileTabBar } from './AppHeader'
 import { straightenPunctuation } from '../lib/smartPunctuation'
 import {
   api,
-  waitForServer,
   upsertCurrentLessonSession,
   saveLessonSession,
   translateText,
@@ -20,6 +19,7 @@ import { isTrickyLesson, trickySentenceVideoId } from './workspace/trickyLesson'
 import { useWorkspaceShortcuts } from './workspace/useWorkspaceShortcuts'
 import { useAudioPlayback } from './workspace/useAudioPlayback'
 import { useLessonData } from './workspace/useLessonData'
+import { useLessonAudio } from './workspace/useLessonAudio'
 import { CoachDrawer, type CoachDrawerHandle } from './workspace/CoachDrawer'
 import { AI_COACH_ENABLED } from '../features'
 import { WorkspaceSidebar } from './workspace/WorkspaceSidebar'
@@ -27,10 +27,6 @@ import { DictationArea } from './workspace/DictationArea'
 import { PlayerPanel } from './workspace/PlayerPanel'
 import ImportModal from './ImportModal'
 import LessonHistory from './LessonHistory'
-
-// Audio is fetched from a server that may be mid wake-up: retry before giving up.
-const AUDIO_FETCH_ATTEMPTS = 4
-const AUDIO_FETCH_RETRY_MS = 1500
 
 const SPEED_OPTIONS = [0.2, 0.4, 0.6, 0.8, 1, 1.2]
 
@@ -62,6 +58,8 @@ export default function Workspace() {
     setSelectedLesson,
     sentences,
     sentencesVideoId,
+    setSentences,
+    setSentencesVideoId,
     currentSentenceIndex,
     setCurrentSentenceIndex,
     isPlaying,
@@ -139,7 +137,6 @@ export default function Workspace() {
   const sessionSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
-  const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null)
   const [translationVisible, setTranslationVisible] = useState(false)
   const [translationLoading, setTranslationLoading] = useState(false)
   const [translationError, setTranslationError] = useState<string | null>(null)
@@ -207,9 +204,11 @@ export default function Workspace() {
   }, [lastInputFeedback])
 
 
-  // Load playlists and lessons on component mount
+  // Load playlists and lessons on component mount, and check the lesson
+  // restored from this device's saved state against the server.
   useEffect(() => {
     fetchPlaylists()
+    revalidateSelectedLesson()
   }, [])
 
   useEffect(() => {
@@ -237,48 +236,8 @@ export default function Workspace() {
   }, [selectedLesson?.video_id, resetVideoSessionScores])
 
 
-  // Fetch audio as blob so the request includes auth header
-  const audioBlobUrlRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (!selectedLesson?.audio_file_path || !selectedLesson?.video_id) {
-      if (audioBlobUrlRef.current) {
-        URL.revokeObjectURL(audioBlobUrlRef.current)
-        audioBlobUrlRef.current = null
-      }
-      setAudioBlobUrl(null)
-      return
-    }
-    let cancelled = false
-    // The server may still be waking up (a failed or slow first call), so try a
-    // few times before giving up; Play stays disabled until the audio is here.
-    ;(async () => {
-      for (let attempt = 0; attempt < AUDIO_FETCH_ATTEMPTS && !cancelled; attempt++) {
-        try {
-          await waitForServer()
-          if (cancelled) return
-          const res = await api.get(`/api/youtube/videos/${selectedLesson.video_id}/audio`, { responseType: 'blob' })
-          if (cancelled) return
-          if (audioBlobUrlRef.current) URL.revokeObjectURL(audioBlobUrlRef.current)
-          const url = URL.createObjectURL(res.data as Blob)
-          audioBlobUrlRef.current = url
-          setAudioBlobUrl(url)
-          return
-        } catch {
-          if (cancelled) return
-          await new Promise((resolve) => setTimeout(resolve, AUDIO_FETCH_RETRY_MS * (attempt + 1)))
-        }
-      }
-      if (!cancelled) setAudioBlobUrl(null)
-    })()
-    return () => {
-      cancelled = true
-      if (audioBlobUrlRef.current) {
-        URL.revokeObjectURL(audioBlobUrlRef.current)
-        audioBlobUrlRef.current = null
-      }
-      setAudioBlobUrl(null)
-    }
-  }, [selectedLesson?.video_id, selectedLesson?.audio_file_path])
+  // The lesson's audio, fetched with the auth header (in ranges, see useLessonAudio).
+  const { audioBlobUrl, audioError, retryAudio, audioReady } = useLessonAudio(selectedLesson)
 
   const {
     notifications,
@@ -287,10 +246,16 @@ export default function Workspace() {
     fetchPlaylists,
     fetchLessons,
     fetchSentences,
+    revalidateSelectedLesson,
     runImportInBackground,
   } = useLessonData()
 
+  // Bumped on every lesson pick: a pick whose answers arrive after a newer
+  // one must not apply its lesson's position and scores to the newer lesson.
+  const lessonSelectSeqRef = useRef(0)
   const handleLessonSelect = async (lesson: Lesson) => {
+    const selectSeq = ++lessonSelectSeqRef.current
+    const isStale = () => lessonSelectSeqRef.current !== selectSeq
     setMobileSidebarOpen(false)
     if (
       selectedLesson &&
@@ -331,19 +296,20 @@ export default function Workspace() {
       audioRef.current.pause()
       audioRef.current.currentTime = 0
     }
-    if (audioBlobUrlRef.current) {
-      URL.revokeObjectURL(audioBlobUrlRef.current)
-      audioBlobUrlRef.current = null
-    }
-    setAudioBlobUrl(null)
-
     setSelectedLesson(lesson)
+    if (lesson.video_id !== sentencesVideoId) {
+      // Not the previous lesson's sentences under this one's title while loading.
+      setSentences([])
+      setSentencesVideoId(null)
+    }
     const nextSentences = await fetchSentences(lesson.video_id)
+    if (isStale()) return
 
     // Try auto-resume from latest session history for this lesson.
     let resumed = false
     try {
       const sessions = isTrickyLesson(lesson) ? [] : await getLessonSessions(lesson.video_id)
+      if (isStale()) return
       const latest = sessions[0]
       if (latest && latest.sentences_practiced > 0 && nextSentences.length > 0) {
         const targetIndex = Math.max(
@@ -377,6 +343,7 @@ export default function Workspace() {
     } catch {
       // keep default behavior if history fetch fails
     }
+    if (isStale()) return
 
     if (resumed) {
       return
@@ -404,10 +371,6 @@ export default function Workspace() {
   // arrives once the server answers. Until then nothing may start playing:
   // play() on an element with no source is remembered and fires the moment the
   // source lands, with none of the sentence-by-sentence control around it.
-  const audioReady =
-    Boolean(selectedLesson?.youtube_url?.startsWith('text://')) ||
-    !selectedLesson?.audio_file_path ||
-    audioBlobUrl !== null
   useEffect(() => {
     if (!audioReady && isPlaying) setIsPlaying(false)
   }, [audioReady, isPlaying, setIsPlaying])
@@ -758,6 +721,8 @@ export default function Workspace() {
             audioRef={audioRef}
             audioBlobUrl={audioBlobUrl}
             audioReady={audioReady}
+            audioError={audioError}
+            onRetryAudio={retryAudio}
             seekTo={seekTo}
             currentSentence={currentSentence}
             intervalTimeoutRef={intervalTimeoutRef}
