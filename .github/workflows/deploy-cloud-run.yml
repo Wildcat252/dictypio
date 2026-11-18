@@ -9,6 +9,9 @@ env:
   PROJECT_ID: project-3b8da5db-0980-48be-ad7
   REGION: asia-southeast1
   SERVICE: dictypio
+  PROJECT_NUMBER: "407335272998"
+  # Lesson audio lives here, mounted into the service (see "Ensure audio bucket").
+  AUDIO_BUCKET: project-3b8da5db-0980-48be-ad7-audio
 
 on:
   workflow_dispatch:
@@ -36,12 +39,62 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Deploy
+      # Lesson audio must outlive an instance: /tmp on Cloud Run is that
+      # instance's memory, gone after every deploy or scale-to-zero. Create the
+      # bucket once and let the service's runtime account use it. Idempotent.
+      # Without the rights for it the deploy still goes ahead, unmounted, and
+      # says what is missing (see backend/README.md).
+      - name: Ensure audio bucket
+        id: bucket
         run: |
+          set -u
+          fail() {
+            echo "::warning::$1 Lesson audio is NOT on a bucket and is lost on every new instance. Grant github-deployer the role Storage Admin (backend/README.md) and run this workflow again."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          if ! gcloud storage buckets describe "gs://$AUDIO_BUCKET" --project "$PROJECT_ID" >/dev/null 2>err.txt; then
+            if grep -qiE "not found|404" err.txt; then
+              gcloud storage buckets create "gs://$AUDIO_BUCKET" --project "$PROJECT_ID" \
+                --location "$REGION" --uniform-bucket-level-access \
+                || fail "Could not create the bucket gs://$AUDIO_BUCKET."
+              echo "Created gs://$AUDIO_BUCKET"
+            else
+              cat err.txt
+              fail "Could not read the bucket gs://$AUDIO_BUCKET."
+            fi
+          else
+            echo "gs://$AUDIO_BUCKET exists"
+          fi
+          sa=$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
+            --format 'value(spec.template.spec.serviceAccountName)' 2>/dev/null || true)
+          sa=${sa:-$PROJECT_NUMBER-compute@developer.gserviceaccount.com}
+          gcloud storage buckets add-iam-policy-binding "gs://$AUDIO_BUCKET" \
+            --member "serviceAccount:$sa" --role roles/storage.objectAdmin >/dev/null \
+            || fail "Could not let $sa use gs://$AUDIO_BUCKET."
+          echo "$sa may use gs://$AUDIO_BUCKET"
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy
+        env:
+          BUCKET_OK: ${{ steps.bucket.outputs.ok }}
+        run: |
+          audio_flags=()
+          if [ "$BUCKET_OK" = "true" ]; then
+            audio_flags=(
+              --execution-environment gen2
+              --add-volume "name=audio,type=cloud-storage,bucket=$AUDIO_BUCKET"
+              --add-volume-mount "volume=audio,mount-path=/mnt/audio"
+              --update-env-vars EAR2FINGER_AUDIO_DIR=/mnt/audio
+            )
+          fi
+          # An import downloads with yt-dlp inside the request; give it room.
           gcloud run deploy "$SERVICE" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
             --source . \
+            --timeout 900 \
+            "${audio_flags[@]}" \
             --quiet
 
   # The frontend on Firebase Hosting (dictypio.web.app). It calls the Cloud Run

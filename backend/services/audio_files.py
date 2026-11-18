@@ -31,6 +31,30 @@ def count_audio_lessons(db: Session, user_id: int) -> int:
         .count()
     )
 
+def audio_file_exists(path: Optional[str]) -> bool:
+    return bool(path) and os.path.isfile(path)
+
+
+def forget_missing_audio(db: Session, path: str, audio_dir: str) -> bool:
+    """Clear ``path`` from every lesson when its file is really gone; True if it did.
+
+    A file under the current audio dir is gone only if that dir is there (a
+    bucket mount that failed must not wipe every lesson's audio). A file
+    anywhere else was left behind by an old setting, such as Cloud Run's /tmp.
+    """
+    if os.path.isfile(path):
+        return False
+    audio_root = os.path.realpath(audio_dir)
+    in_audio_dir = os.path.realpath(path).startswith(audio_root + os.sep)
+    if in_audio_dir and not os.path.isdir(audio_root):
+        return False
+    db.query(Video).filter(Video.audio_file_path == path).update(
+        {Video.audio_file_path: None}, synchronize_session=False
+    )
+    db.commit()
+    return True
+
+
 _convert_locks: Dict[str, threading.Lock] = {}
 _convert_locks_guard = threading.Lock()
 

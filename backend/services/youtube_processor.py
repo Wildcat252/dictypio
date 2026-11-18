@@ -8,7 +8,12 @@ from typing import List, Dict, Optional, Tuple
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from database import Video, Sentence, LearningProgress
-from services.audio_files import MAX_AUDIO_LESSONS_PER_USER, count_audio_lessons, remove_unreferenced_audio
+from services.audio_files import (
+    MAX_AUDIO_LESSONS_PER_USER,
+    audio_file_exists,
+    count_audio_lessons,
+    remove_unreferenced_audio,
+)
 from services.youtube_segmentation import SentenceSegmenterMixin
 from services.youtube_subtitles import SubtitleParserMixin
 import os
@@ -81,6 +86,10 @@ def yt_dlp_common_args(cookie_file: Optional[str] = None) -> List[str]:
     if cookie_file:
         args += ['--cookies', cookie_file]
     return args
+
+
+class AudioDownloadError(Exception):
+    """Every way of downloading a video's audio failed."""
 
 
 class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
@@ -176,7 +185,12 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
             return shutil.which('ffmpeg') is not None
 
     def _download_audio_via_python_ydl(
-        self, youtube_url: str, video_id: str, safe_title: str, cookie_file: Optional[str] = None
+        self,
+        youtube_url: str,
+        video_id: str,
+        safe_title: str,
+        cookie_file: Optional[str] = None,
+        errors: Optional[List[str]] = None,
     ) -> Optional[str]:
         """
         Download audio using in-process yt_dlp (required when PyInstaller breaks ``-m yt_dlp``).
@@ -208,7 +222,9 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
         self._cleanup_temp_audio(video_id)
 
         if not self._has_ffmpeg():
-            return self._download_native_audio(youtube_url, video_id, cookie_file, pick_temp_file, finalize)
+            return self._download_native_audio(
+                youtube_url, video_id, cookie_file, pick_temp_file, finalize, errors
+            )
 
         opts_m4a = {
             'quiet': True,
@@ -229,14 +245,20 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                 ydl_dl.download([youtube_url])
         except Exception as e:
             print(f"Warning: in-process yt-dlp M4A extract failed: {e}")
+            if errors is not None:
+                errors.append(str(e))
         else:
             p = pick_temp_file('.m4a')
             if p:
                 return finalize('.m4a', p)
 
-        return self._download_native_audio(youtube_url, video_id, cookie_file, pick_temp_file, finalize)
+        return self._download_native_audio(
+            youtube_url, video_id, cookie_file, pick_temp_file, finalize, errors
+        )
 
-    def _download_native_audio(self, youtube_url, video_id, cookie_file, pick_temp_file, finalize) -> Optional[str]:
+    def _download_native_audio(
+        self, youtube_url, video_id, cookie_file, pick_temp_file, finalize, errors=None
+    ) -> Optional[str]:
         """In-process download of the audio exactly as YouTube has it, with no FFmpeg step."""
         temp_pattern = os.path.join(self.download_dir, f'{video_id}_temp.%(ext)s')
         self._cleanup_temp_audio(video_id)
@@ -253,6 +275,8 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                 ydl_dl.download([youtube_url])
         except Exception as e:
             print(f"Warning: in-process yt-dlp native audio download failed: {e}")
+            if errors is not None:
+                errors.append(str(e))
             return None
 
         for suf in self._AUDIO_EXTENSIONS:
@@ -341,8 +365,26 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                 print(f"Warning: Failed to download subtitles via the API: {str(e)}")
         return subtitles_data
 
-    def _download_audio(self, youtube_url: str, video_id: str, safe_title: str) -> Optional[str]:
-        """Download the lesson audio and return its path, or None if that failed."""
+    def _download_audio(self, youtube_url: str, video_id: str, safe_title: str) -> str:
+        """Download the lesson audio and return its path.
+
+        Raises AudioDownloadError when every attempt failed: a lesson without
+        audio cannot be practised, so it must not be saved as if it worked.
+        """
+        errors: List[str] = []
+        path = self._try_download_audio(youtube_url, video_id, safe_title, errors)
+        if path:
+            return path
+        # A failed attempt leaves partial files in the download dir, which on
+        # Cloud Run is memory.
+        self._cleanup_temp_audio(video_id)
+        detail = errors[-1] if errors else "no audio file was produced"
+        raise AudioDownloadError(f"Could not download the audio: {detail[-400:]}")
+
+    def _try_download_audio(
+        self, youtube_url: str, video_id: str, safe_title: str, errors: List[str]
+    ) -> Optional[str]:
+        """One pass over the download methods; the path, or None with ``errors`` filled in."""
         base_path = os.path.join(self.audio_dir, f"{video_id}_{safe_title}")
         for ext in self._AUDIO_EXTENSIONS:
             if os.path.exists(base_path + ext):
@@ -380,15 +422,18 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                                 return base_path + ext
                 elif result.stderr:
                     print(f"Warning: Audio CLI failed: {result.stderr[:800]}")
+                    errors.append(result.stderr.strip()[-800:])
             except subprocess.TimeoutExpired:
                 print("Warning: Audio download timed out")
+                errors.append("the audio download timed out")
             except FileNotFoundError:
                 print("Warning: yt-dlp CLI not available for audio.")
             except Exception as e:
                 print(f"Warning: Audio CLI error: {e}")
+                errors.append(str(e))
 
             return self._download_audio_via_python_ydl(
-                youtube_url, video_id, safe_title, cookie_file
+                youtube_url, video_id, safe_title, cookie_file, errors
             )
         finally:
             if cookie_file:
@@ -396,6 +441,30 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                     os.remove(cookie_file)
                 except OSError:
                     pass
+
+    @staticmethod
+    def _safe_title(video_title: str) -> str:
+        """The title as it goes into the audio file name."""
+        safe_title = "".join(c for c in video_title if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        return safe_title[:100]
+
+    def download_lesson_audio(self, youtube_url: str) -> str:
+        """Fetch only the audio of a video, for a lesson whose file was lost.
+
+        Raises like ``_download_audio``; the lesson's sentences are kept as they are.
+        """
+        opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'noplaylist': True,
+            **yt_dlp_common_options(),
+        }
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(youtube_url, download=False)
+        video_id = info.get('id', 'unknown')
+        return self._download_audio(
+            youtube_url, video_id, self._safe_title(info.get('title', 'Unknown'))
+        )
 
     def extract_video_info(self, youtube_url: str, video_id: str = None) -> Dict:
         """Extract video information, subtitles, and download the audio using yt-dlp"""
@@ -413,9 +482,7 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                 video_id = video_id or info.get('id', 'unknown')
                 video_title = info.get('title', 'Unknown')
 
-                # Sanitize filename
-                safe_title = "".join(c for c in video_title if c.isalnum() or c in (' ', '-', '_')).rstrip()
-                safe_title = safe_title[:100]  # Limit length
+                safe_title = self._safe_title(video_title)
 
                 # Subtitles and audio are separate downloads; neither waits for the other.
                 with ThreadPoolExecutor(max_workers=2) as pool:
@@ -485,6 +552,19 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                 existing_video.user_id = user_id
 
             if not was_deleted:
+                message = 'Video already processed'
+                if not audio_file_exists(existing_video.audio_file_path):
+                    # Its audio was lost (it lived on a disk that no longer has
+                    # it): fetch the audio again and keep sentences and progress.
+                    existing_video.audio_file_path = None
+                    db.flush()
+                    if count_audio_lessons(db, user_id) >= MAX_AUDIO_LESSONS_PER_USER:
+                        raise ValueError(
+                            f"You can keep up to {MAX_AUDIO_LESSONS_PER_USER} lessons with audio. "
+                            "Delete one to restore the audio of this one."
+                        )
+                    existing_video.audio_file_path = self.download_lesson_audio(youtube_url)
+                    message = 'Audio restored'
                 db.commit()
                 sentences = (
                     db.query(Sentence)
@@ -497,7 +577,7 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                     'title': existing_video.title,
                     'duration': existing_video.duration,
                     'sentence_count': len(sentences),
-                    'message': 'Video already processed',
+                    'message': message,
                 }
 
             # Soft-deleted lesson restored: re-fetch from YouTube and replace sentences/audio.
@@ -512,8 +592,6 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                 synchronize_session=False
             )
             db.flush()
-            # Another account's copy of this lesson may still play the same file.
-            remove_unreferenced_audio(db, [old_audio])
 
             video_info = self.extract_video_info(youtube_url)
 
@@ -546,6 +624,10 @@ class YouTubeProcessor(SubtitleParserMixin, SentenceSegmenterMixin):
                 )
 
             db.commit()
+            # Only now: had the download failed, the rollback would have kept a
+            # lesson pointing at a file already deleted. Another account's copy
+            # of this lesson, or the new download itself, may still use it.
+            remove_unreferenced_audio(db, [old_audio])
 
             from services.qdrant_client import delete_sentence_vectors_for_video
 

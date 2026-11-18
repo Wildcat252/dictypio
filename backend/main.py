@@ -50,6 +50,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Lesson audio is fetched in ranges; the page needs the total size.
+    expose_headers=["Content-Range", "Content-Length"],
 )
 
 # Include routers

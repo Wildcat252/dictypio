@@ -44,9 +44,15 @@ class SharedVideoTest(AppTestCase):
                 "audio_file_path": str(self.audio),
             }
 
+        def fake_audio_only(_processor, _url):
+            self.audio.write_bytes(b"not really audio")
+            self.downloads += 1
+            return str(self.audio)
+
         processor = YouTubeProcessor(download_dir=str(TMP_DIR / "dl"), audio_dir=str(TMP_DIR))
         self._replace(youtube_router, "_processor", processor)
         self._replace(YouTubeProcessor, "extract_video_info", fake_extract)
+        self._replace(YouTubeProcessor, "download_lesson_audio", fake_audio_only)
         # No vector store in these tests.
         self._replace(youtube_router, "ingest_sentences_for_video", lambda **kw: None)
         self._replace(youtube_router, "delete_sentence_vectors_for_video", lambda video_id: None)

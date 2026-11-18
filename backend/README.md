@@ -28,6 +28,33 @@ FastAPI backend for the Dictypio application.
 
 Copy `.env.example` to `.env` and configure as needed.
 
+## Lesson audio on Cloud Run
+
+Downloaded lesson audio goes to `EAR2FINGER_AUDIO_DIR`. On Cloud Run `/tmp` is
+the instance's own memory, so the audio has to live in a Cloud Storage bucket
+mounted into the service, or it is lost on every deploy and scale-to-zero.
+
+The deploy workflow takes care of it: it creates the bucket named in
+`AUDIO_BUCKET` (`.github/workflows/deploy-cloud-run.yml`) if missing, lets the
+service's runtime account use it, mounts it at `/mnt/audio` and points
+`EAR2FINGER_AUDIO_DIR` there.
+
+That needs the deploy account to manage buckets. If the deploy log warns that
+it could not, a project owner grants it once (Console → IAM → github-deployer
+→ Add role "Storage Admin", or in Cloud Shell):
+
+```sh
+gcloud projects add-iam-policy-binding project-3b8da5db-0980-48be-ad7 \
+  --member serviceAccount:github-deployer@project-3b8da5db-0980-48be-ad7.iam.gserviceaccount.com \
+  --role roles/storage.admin
+```
+
+and runs the workflow again (Actions → Deploy Cloud Run and Firebase Hosting →
+Run workflow).
+
+Lessons whose audio was lost before that report it when opened; importing the
+same YouTube link again downloads the audio and keeps the lesson's progress.
+
 ## Accounts
 
 Off by default: every request runs as one local `default` user, which is what the

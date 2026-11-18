@@ -78,6 +78,11 @@ export function useAudioPlayback({
   // this waits for the audio, checks where it landed, and sends it again if
   // that is not where it was told to go. A newer seek cancels an older one.
   const seekGenerationRef = useRef(0)
+  // Read when a seek lands: Next, Replay and their shortcuts all seek with
+  // play, and must not start an element still holding no (or the last
+  // lesson's) audio.
+  const audioReadyRef = useRef(audioReady)
+  audioReadyRef.current = audioReady
   const seekTo = useCallback<SeekTo>((time, options) => {
     const audio = audioRef.current
     setCurrentTime(time)
@@ -105,7 +110,7 @@ export function useAudioPlayback({
       audio.currentTime = time
       // Still inside the tap or key press that asked for it, which phones
       // require before they let audio start.
-      if (options?.play) audio.play().catch(() => { })
+      if (options?.play && audioReadyRef.current) audio.play().catch(() => { })
     }
 
     if (audio.readyState < 1) {
