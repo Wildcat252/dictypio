@@ -110,7 +110,9 @@ export default function ImportModal({ isOpen, onClose, onImport, defaultPlaylist
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4 pt-safe">
+    // Phones: cover exactly the visible area (above the keyboard), so the
+    // sheet sits on top of the keyboard instead of behind it.
+    <div className="fixed inset-x-0 top-[var(--vvt,0px)] h-[var(--vvh,100dvh)] md:inset-0 md:h-auto bg-black/70 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4 pt-safe">
       <div className="bg-abyss-900/95 backdrop-blur-xl rounded-2xl border border-cyan-500/30 shadow-[0_0_60px_rgb(var(--abyss-950)/0.55),0_0_25px_rgb(var(--ocean-cyan)/calc(0.2*var(--glow-alpha)))] max-w-md w-full max-h-[calc(var(--vvh,100dvh)*0.9)] md:max-h-[90vh] overflow-y-auto text-slate-100 max-md:rounded-b-none max-md:border-b-0 pb-safe">
         <div className="p-5 md:p-6">
           {/* Header */}
