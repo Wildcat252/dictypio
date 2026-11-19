@@ -24,6 +24,8 @@ export function sentenceStopTime(sentences: Sentence[], index: number, totalDura
 interface UseAudioPlaybackParams {
   /** False while the lesson's audio has not been fetched yet: nothing may play */
   audioReady: boolean
+  /** The source on the <audio> element; each new one makes the browser reload it */
+  audioBlobUrl: string | null
   audioRef: MutableRefObject<HTMLAudioElement | null>
   intervalTimeoutRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
   isWaitingForPauseIntervalRef: MutableRefObject<boolean>
@@ -45,6 +47,7 @@ interface UseAudioPlaybackParams {
  */
 export function useAudioPlayback({
   audioReady,
+  audioBlobUrl,
   audioRef,
   intervalTimeoutRef,
   isWaitingForPauseIntervalRef,
@@ -64,6 +67,7 @@ export function useAudioPlayback({
     setCurrentSentenceIndex,
     isPlaying,
     setIsPlaying,
+    currentTime,
     setCurrentTime,
     playbackSpeed,
     pauseInterval,
@@ -90,7 +94,7 @@ export function useAudioPlayback({
     const generation = ++seekGenerationRef.current
     const isCurrent = () => generation === seekGenerationRef.current && audioRef.current === audio
 
-    const apply = (retriesLeft: number) => {
+    const apply = (retriesLeft: number, mayPlay = true) => {
       if (!isCurrent()) return
       let settled = false
       const onSettled = () => {
@@ -110,24 +114,57 @@ export function useAudioPlayback({
       audio.currentTime = time
       // Still inside the tap or key press that asked for it, which phones
       // require before they let audio start.
-      if (options?.play && audioReadyRef.current) audio.play().catch(() => { })
+      if (mayPlay && options?.play && audioReadyRef.current) audio.play().catch(() => { })
     }
 
     if (audio.readyState < 1) {
-      // No metadata yet: the seek would be dropped. Do it once the audio is known.
-      audio.addEventListener('loadedmetadata', () => apply(1), { once: true })
+      // No metadata yet. Setting currentTime now makes it the position playback
+      // starts from once the media loads (HTML "default playback start
+      // position"); Safari on iPhone loads nothing before play(), and play()
+      // must happen now, inside the tap, or iOS refuses it. Once the audio is
+      // known, the seek is checked and sent again if it did not hold.
+      try {
+        audio.currentTime = time
+      } catch {
+        // some browsers throw before metadata; the check below still seeks
+      }
+      if (options?.play && audioReadyRef.current) audio.play().catch(() => { })
+      audio.addEventListener('loadedmetadata', () => apply(1, false), { once: true })
       return
     }
     apply(1)
   }, [audioRef, setCurrentTime])
 
-  // Update audio playback speed when speed changes
+  // Speed: set on the element and as its default, which (unlike playbackRate)
+  // survives the reload every new source triggers. Without it a lesson came
+  // back from Settings or a reload at 1x while the menu still said 0.6x.
   useEffect(() => {
     if (selectedLesson?.youtube_url?.startsWith('text://')) return
-    if (audioRef.current) {
-      audioRef.current.playbackRate = playbackSpeed
+    const audio = audioRef.current
+    if (!audio) return
+    const apply = () => {
+      audio.defaultPlaybackRate = playbackSpeed
+      audio.playbackRate = playbackSpeed
     }
-  }, [playbackSpeed, selectedLesson])
+    apply()
+    audio.addEventListener('loadedmetadata', apply)
+    return () => audio.removeEventListener('loadedmetadata', apply)
+  }, [playbackSpeed, selectedLesson, audioBlobUrl])
+
+  // A new source (the lesson's audio arriving, also after coming back from
+  // another page) loads from 0: put the playhead back on the sentence shown,
+  // where it was if that is inside the sentence, else at its start.
+  const latestRef = useRef({ sentences, currentSentenceIndex, currentTime, duration: selectedLesson?.duration ?? 0 })
+  latestRef.current = { sentences, currentSentenceIndex, currentTime, duration: selectedLesson?.duration ?? 0 }
+  useEffect(() => {
+    if (!audioBlobUrl) return
+    const { sentences: list, currentSentenceIndex: index, currentTime: saved, duration } = latestRef.current
+    const sentence = list[index]
+    if (!sentence) return
+    const stop = sentenceStopTime(list, index, duration)
+    const inside = saved >= sentence.start_time && (stop <= 0 || saved < stop - 0.05)
+    seekTo(inside ? saved : sentence.start_time)
+  }, [audioBlobUrl, seekTo])
 
   // Handle time updates: keep progress bar (currentTime) in sync with audio playback
   useEffect(() => {
@@ -302,7 +339,7 @@ export function useAudioPlayback({
       isWaitingForPauseIntervalRef.current = false
       if (programmaticSeekRef.current) {
         programmaticSeekRef.current = false
-        audio.play()
+        audio.play().catch(() => { })
         return
       }
       const currentSentence = sentences[currentSentenceIndex]
@@ -311,7 +348,12 @@ export function useAudioPlayback({
         // current sentence, before it or after it, start the sentence over.
         const stopTime = sentenceStopTime(sentences, currentSentenceIndex, selectedLesson?.duration ?? 0)
         const t = audio.currentTime
-        const outside = t < currentSentence.start_time - 0.05 || (stopTime > 0 && t >= stopTime - 0.05)
+        // Without metadata the element reports 0 whatever was asked of it:
+        // seek, so playback cannot start from the top of the lesson.
+        const outside =
+          audio.readyState < 1 ||
+          t < currentSentence.start_time - 0.05 ||
+          (stopTime > 0 && t >= stopTime - 0.05)
         if (outside) {
           seekTo(currentSentence.start_time, { play: true })
         } else {

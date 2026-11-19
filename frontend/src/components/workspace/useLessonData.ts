@@ -33,6 +33,8 @@ export function useLessonData() {
 
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isImportInProgress, setIsImportInProgress] = useState(false)
+  /** The playlist whose lessons have been fetched at least once (none yet: null). */
+  const [lessonsLoadedFor, setLessonsLoadedFor] = useState<number | null>(null)
 
   const selectedPlaylistIdRef = useRef(selectedPlaylistId)
   selectedPlaylistIdRef.current = selectedPlaylistId
@@ -103,6 +105,7 @@ export function useLessonData() {
         is_favorite: false
       }))
       setLessons(videos)
+      setLessonsLoadedFor(playlistId)
       if (videos.length > 0 && !selectedLessonRef.current) {
         setSelectedLesson(videos[0])
       }
@@ -237,6 +240,8 @@ export function useLessonData() {
   return {
     notifications,
     isImportInProgress,
+    /** The selected playlist's lessons are loaded (so "no lessons" is real, not pending). */
+    lessonsLoaded: lessonsLoadedFor !== null && lessonsLoadedFor === selectedPlaylistId,
     pushNotification,
     fetchPlaylists,
     fetchLessons,

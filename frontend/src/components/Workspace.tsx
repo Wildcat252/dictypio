@@ -56,6 +56,7 @@ export default function Workspace() {
     selectedPlaylistId,
     selectedLesson,
     setSelectedLesson,
+    lessons,
     sentences,
     sentencesVideoId,
     setSentences,
@@ -242,6 +243,7 @@ export default function Workspace() {
   const {
     notifications,
     isImportInProgress,
+    lessonsLoaded,
     pushNotification,
     fetchPlaylists,
     fetchLessons,
@@ -375,8 +377,11 @@ export default function Workspace() {
     if (!audioReady && isPlaying) setIsPlaying(false)
   }, [audioReady, isPlaying, setIsPlaying])
 
+  const showStart = !selectedLesson && lessonsLoaded && lessons.length === 0
+
   const { seekTo } = useAudioPlayback({
     audioReady,
+    audioBlobUrl,
     audioRef,
     intervalTimeoutRef,
     isWaitingForPauseIntervalRef,
@@ -717,6 +722,25 @@ export default function Workspace() {
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col overflow-hidden bg-abyss-950/40 p-3 md:p-4 gap-3 md:gap-4">
+          {showStart ? (
+            // A new account has one empty playlist: say where to begin.
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-4">
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                disabled={isImportInProgress}
+                className="px-12 py-5 rounded-2xl text-xl font-bold text-white bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+              >
+                {isImportInProgress ? 'Importing…' : 'Start'}
+              </button>
+              <p className="max-w-sm text-sm text-slate-300">
+                {isImportInProgress
+                  ? 'Your first lesson is being prepared. It appears here when it is ready.'
+                  : 'Paste a YouTube link or a piece of text to make your first dictation lesson.'}
+              </p>
+            </div>
+          ) : (
+          <>
           <PlayerPanel
             audioRef={audioRef}
             audioBlobUrl={audioBlobUrl}
@@ -760,6 +784,8 @@ export default function Workspace() {
             translation={translation}
             onToggleTranslation={toggleTranslation}
           />
+          </>
+          )}
         </main>
       </div>
 

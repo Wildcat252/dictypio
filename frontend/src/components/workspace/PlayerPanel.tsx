@@ -280,11 +280,6 @@ export function PlayerPanel({
           ref={audioRef}
           src={audioBlobUrl ?? undefined}
           preload="auto"
-          onLoadedMetadata={() => {
-            if (audioRef.current != null && currentTime >= 0) {
-              audioRef.current.currentTime = currentTime
-            }
-          }}
           onEnded={() => {
             setIsPlaying(false)
           }}
@@ -295,9 +290,14 @@ export function PlayerPanel({
         />
       )}
 
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4 mb-1.5 md:mb-4">
+      {/* Phones lay the player out in two rows: progress and the score dots on
+          top, the (large) transport buttons and speed below. The wrappers turn
+          into `contents` there, so their children are ordered as one flex row
+          that wraps; the desktop layout is unchanged. */}
+      <div className="max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-2 max-md:gap-y-2.5">
+      <div className="max-md:contents flex flex-col gap-2 md:flex-row md:items-center md:gap-4 mb-1.5 md:mb-4">
         {/* Media Player */}
-        <div className="flex-1 flex flex-nowrap items-center justify-start gap-1.5 md:gap-2.5 min-w-0 w-full">
+        <div className="max-md:contents flex-1 flex flex-nowrap items-center justify-start gap-1.5 md:gap-2.5 min-w-0 w-full">
           <button
             onClick={() => {
               if (currentSentenceIndex > 0) {
@@ -314,10 +314,10 @@ export function PlayerPanel({
               }
             }}
             disabled={currentSentenceIndex === 0}
-            className="max-md:w-7 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-11 max-md:h-11 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Previous sentence"
           >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-6 h-6 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
             </svg>
           </button>
@@ -335,15 +335,15 @@ export function PlayerPanel({
               }
             }}
             disabled={!selectedLesson || !sentences.length || !audioReady}
-            className="max-md:w-9 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
+            className="max-md:w-14 max-md:h-11 shrink-0 flex items-center justify-center p-1 md:p-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white shadow-glow-cyan transition-all transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
             title={!audioReady ? (audioError ? 'Audio unavailable' : 'Loading audio…') : isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-6 h-6 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             ) : (
-              <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-6 h-6 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
               </svg>
             )}
@@ -366,10 +366,10 @@ export function PlayerPanel({
               }
             }}
             disabled={!selectedLesson || !sentences.length}
-            className="max-md:w-7 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-11 max-md:h-11 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Replay current sentence"
           >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-6 h-6 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311V15a.75.75 0 01-1.5 0v-3.5a.75.75 0 01.75-.75H8.5a.75.75 0 010 1.5H7.058l.162.162a4 4 0 006.693-1.793.75.75 0 011.399.555zM4.688 8.576a5.5 5.5 0 019.201-2.466l.312.311V5a.75.75 0 011.5 0v3.5a.75.75 0 01-.75.75H11.5a.75.75 0 010-1.5h1.442l-.162-.162a4 4 0 00-6.693 1.793.75.75 0 11-1.399-.555z" clipRule="evenodd" />
             </svg>
           </button>
@@ -398,14 +398,14 @@ export function PlayerPanel({
               setIsPlaying(true)
             }}
             disabled={currentSentenceIndex >= sentences.length - 1}
-            className="max-md:w-7 max-md:h-7 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="max-md:w-11 max-md:h-11 shrink-0 flex items-center justify-center p-1 md:p-2 rounded-lg md:rounded-xl text-slate-300 hover:text-cyan-300 hover:bg-abyss-800 border border-cyan-500/20 hover:border-cyan-400/50 shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             title="Next sentence"
           >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-6 h-6 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0011 6v2.798l-5.445-3.63z" />
             </svg>
           </button>
-          <div className="flex-1 flex items-center gap-1.5 md:gap-3 min-w-0">
+          <div className="flex-1 flex items-center gap-1.5 md:gap-3 min-w-0 max-md:order-[-3]">
             <div
               className="flex-1 min-w-0 h-1.5 md:h-2.5 rounded-full overflow-hidden relative pointer-events-none bg-abyss-950 border border-cyan-500/20"
               aria-hidden
@@ -446,8 +446,11 @@ export function PlayerPanel({
         </div>
       </div>
 
+      {/* Phones: end of the first row */}
+      <div className="hidden max-md:block max-md:basis-full max-md:h-0 max-md:order-[-1]" aria-hidden />
+
       {/* Controls */}
-      <div className="flex max-md:flex-nowrap md:flex-wrap items-center gap-1 md:gap-2.5">
+      <div className="max-md:contents flex max-md:flex-nowrap md:flex-wrap items-center gap-1 md:gap-2.5">
         <OptionMenu
           label="Speed"
           value={playbackSpeed}
@@ -513,7 +516,7 @@ export function PlayerPanel({
             Skip ⏭
           </button>
         )}
-        <div className="flex max-md:flex-nowrap md:flex-wrap items-center gap-1 md:gap-2.5 ml-auto justify-end shrink-0">
+        <div className="flex max-md:flex-nowrap md:flex-wrap items-center gap-1 md:gap-2.5 ml-auto justify-end shrink-0 max-md:order-[-2]">
           <div className="flex items-center gap-1.5 bg-abyss-950/70 border border-emerald-500/30 rounded-md md:rounded-lg px-1 md:px-2.5 py-0.5 md:py-1 gap-1 md:gap-1.5" title="Correct keystrokes" aria-label={`Correct keystrokes: ${videoSessionScores.correctChars}`}>
             <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 bg-emerald-400 rounded-full shadow-glow-emerald" />
             <span className="text-[11px] md:text-xs font-mono font-semibold text-emerald-300">{videoSessionScores.correctChars}</span>
@@ -536,6 +539,7 @@ export function PlayerPanel({
             </button>
           )}
         </div>
+      </div>
       </div>
     </div>
   )
