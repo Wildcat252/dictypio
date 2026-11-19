@@ -87,8 +87,14 @@ export function useAudioPlayback({
   // lesson's) audio.
   const audioReadyRef = useRef(audioReady)
   audioReadyRef.current = audioReady
+  // Where the playhead was last told to go: what a fresh source must reach.
+  const lastSeekTargetRef = useRef(0)
+  // Set when a new source is attached, cleared once its first playback has
+  // been checked against lastSeekTargetRef (see the effect below).
+  const verifyOnPlayRef = useRef(false)
   const seekTo = useCallback<SeekTo>((time, options) => {
     const audio = audioRef.current
+    lastSeekTargetRef.current = time
     setCurrentTime(time)
     if (!audio) return
     const generation = ++seekGenerationRef.current
@@ -164,7 +170,30 @@ export function useAudioPlayback({
     const stop = sentenceStopTime(list, index, duration)
     const inside = saved >= sentence.start_time && (stop <= 0 || saved < stop - 0.05)
     seekTo(inside ? saved : sentence.start_time)
+    verifyOnPlayRef.current = true
   }, [audioBlobUrl, seekTo])
+
+  // Safari on iPhone drops or resets a seek made on audio that has not played
+  // yet (currentTime reads right until playback starts, then it begins at 0).
+  // So the first time a new source really runs, check where it is and, if it
+  // is not where the last seek sent it, send it again.
+  useEffect(() => {
+    if (selectedLesson?.youtube_url?.startsWith('text://')) return
+    const audio = audioRef.current
+    if (!audio) return
+    const check = () => {
+      if (!verifyOnPlayRef.current || audio.paused) return
+      verifyOnPlayRef.current = false
+      const target = lastSeekTargetRef.current
+      if (Math.abs(audio.currentTime - target) > 1) seekTo(target)
+    }
+    audio.addEventListener('playing', check)
+    audio.addEventListener('timeupdate', check)
+    return () => {
+      audio.removeEventListener('playing', check)
+      audio.removeEventListener('timeupdate', check)
+    }
+  }, [selectedLesson, audioBlobUrl, seekTo])
 
   // Handle time updates: keep progress bar (currentTime) in sync with audio playback
   useEffect(() => {

@@ -77,7 +77,7 @@ function OptionMenu({
         aria-expanded={open}
         aria-label={`${label}: ${value}${suffix}`}
         onClick={() => setOpen((v) => !v)}
-        className="m-chip max-md:shrink-0 bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
+        className="m-chip max-md:shrink-0 max-md:h-11 max-md:min-w-14 max-md:justify-center max-md:text-sm bg-abyss-800/90 hover:bg-abyss-750 border border-cyan-500/30 text-cyan-200 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium cursor-pointer shadow-sm transition-all hover:border-cyan-400/60"
       >
         <span><span className="max-md:hidden">{label}: </span>{value}{suffix}</span>
         <svg

@@ -225,9 +225,9 @@ export function DictationArea({
                   disabled={Boolean(isCurrentSentenceFullyCorrect)}
                   title="Reveal current word (Tab)"
                   aria-label="Hint"
-                  className="w-7 h-7 flex items-center justify-center rounded-lg border border-amber-400/40 bg-amber-950/60 text-amber-300 shadow-glow-amber disabled:pointer-events-none disabled:opacity-40 transition-all"
+                  className="w-14 h-11 flex items-center justify-center rounded-lg border border-amber-400/40 bg-amber-950/60 text-amber-300 shadow-glow-amber disabled:pointer-events-none disabled:opacity-40 transition-all"
                 >
-                  <svg className="w-4 h-4 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <svg className="w-6 h-6 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
