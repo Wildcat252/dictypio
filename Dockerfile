@@ -1,14 +1,6 @@
-# Web deployment image (Google Cloud Run): FastAPI backend + built React frontend.
+# Web deployment image (Google Cloud Run): FastAPI API backend only.
+# The React frontend is built and deployed separately to Firebase Hosting.
 
-# --- Stage 1: build the frontend ---
-FROM node:22-slim AS frontend
-WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend/ ./
-RUN npm run build
-
-# --- Stage 2: Python backend ---
 FROM python:3.12-slim
 # ffmpeg: audio extraction.
 RUN apt-get update \
@@ -16,7 +8,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 # JS runtime yt-dlp needs for YouTube's challenges. Debian's nodejs (20) is too
 # old for yt-dlp's solver, so take the binary from the official Node 22 image.
-COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:22-slim /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
@@ -25,10 +17,8 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # only: local dev runs from a home IP and doesn't need the extra weight.
 RUN pip install --no-cache-dir "yt-dlp[curl-cffi]==$(pip show yt-dlp | sed -n 's/^Version: //p')"
 COPY backend/ backend/
-COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
-ENV STATIC_DIR=/app/frontend/dist \
-    EAR2FINGER_DOWNLOAD_DIR=/tmp/downloads \
+ENV EAR2FINGER_DOWNLOAD_DIR=/tmp/downloads \
     EAR2FINGER_AUDIO_DIR=/tmp/audio \
     PYTHONUNBUFFERED=1
 

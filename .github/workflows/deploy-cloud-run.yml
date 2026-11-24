@@ -97,10 +97,10 @@ jobs:
             "${audio_flags[@]}" \
             --quiet
 
-  # The frontend on Firebase Hosting (dictypio.web.app). It calls the Cloud Run
+  # The frontend on Firebase Hosting (dictypio.web.app). Independent of the
+  # backend Docker build, so it deploys in parallel. It calls the Cloud Run
   # API cross-origin; CORS_EXTRA_ORIGINS on the service allows it.
   hosting:
-    needs: deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
