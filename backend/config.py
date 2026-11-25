@@ -7,6 +7,11 @@ import os
 QDRANT_LOCAL_PATH = os.getenv("QDRANT_LOCAL_PATH", "").strip() or None
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY") or None
+# Qdrant is optional (it only backs the AI coach). It counts as set up when a
+# local path or a URL is given explicitly; QDRANT_URL's localhost default alone
+# does not, so a deployment with no vector store skips embedding instead of
+# spending the user's Gemini quota on vectors that have nowhere to go.
+QDRANT_CONFIGURED = bool(QDRANT_LOCAL_PATH) or bool((os.getenv("QDRANT_URL") or "").strip())
 # Must match the embedding size requested from Gemini (Matryoshka truncation) and Qdrant collections.
 QDRANT_VECTOR_SIZE = int(os.getenv("QDRANT_VECTOR_SIZE", "768"))
 
