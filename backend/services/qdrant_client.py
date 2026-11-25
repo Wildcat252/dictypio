@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from config import (
     QDRANT_API_KEY,
+    QDRANT_CONFIGURED,
     QDRANT_LOCAL_PATH,
     QDRANT_RECREATE_ON_VECTOR_MISMATCH,
     QDRANT_URL,
@@ -270,8 +271,14 @@ def _embed_texts(db: Session, user_id: int, texts: Sequence[str]) -> List[List[f
     there is simply nothing to embed with, which is an ordinary state rather
     than a failure. Return no vectors so callers skip quietly instead of every
     lesson save raising through the background task and logging a traceback.
+
+    The same goes for a deployment with no Qdrant (QDRANT_CONFIGURED is false):
+    embedding would only burn Gemini quota, so skip it.
     """
     if not texts:
+        return []
+    if not QDRANT_CONFIGURED:
+        logger.debug("qdrant: not configured; skipping semantic indexing")
         return []
 
     try:

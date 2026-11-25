@@ -390,6 +390,18 @@ async def _translate_via_gemini(
     return _stringify_llm_content(raw).strip()
 
 
+def _is_quota_error(exc: Exception) -> bool:
+    """True when a translation provider rejected the call for rate/quota reasons.
+
+    Gemini (LangChain) puts "RESOURCE_EXHAUSTED"/429 in the message; the Cloud
+    Translation helper raises RuntimeError("HTTP 429: ...").
+    """
+    if getattr(exc, "status_code", None) == 429 or getattr(exc, "code", None) == 429:
+        return True
+    text = str(exc)
+    return "RESOURCE_EXHAUSTED" in text or text.startswith("HTTP 429")
+
+
 @router.post("/ai/translate", response_model=TranslateResponse)
 async def translate_text(
     body: TranslateRequest,
@@ -419,6 +431,15 @@ async def translate_text(
         raise
     except Exception as exc:
         logger.warning("ai_translate: %s failed: %s", source, exc)
+        if _is_quota_error(exc):
+            # Say so plainly instead of dumping the provider's raw JSON at the user.
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"{source} has hit its request limit for now, so this sentence "
+                    "can't be translated right now. Please try again later."
+                ),
+            ) from exc
         raise HTTPException(
             status_code=502, detail=f"{source} translation failed: {exc}"
         ) from exc
